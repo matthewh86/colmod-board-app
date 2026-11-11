@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Colonization+ Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky header + filter bar, then the 10 board columns side by side (one stacked list on phones); a card window opens over it.
+   Tokens: the project's shared board style (work/style/project.css, spec 8.5). */
+:root{
+  --bg:#eef1f5; --surface:#fff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
+  --accent:#1f4e8c; --accent-soft:#dfe8f5; --q:#8a5a00; --q-soft:#fff3d6;
+  --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93;
+  --blk-bg:#fde2df; --blk-fg:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
+  --c-park:#8b93a1; --c-back:#586173; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-next:#b42318;
+  --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-rej:#7d4a4a;
+  --chip-l:90%; --chip-s:55%;
+  --f-display:"IM Fell English SC", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
+  --accent:#7fa9e6; --accent-soft:#1d2b40; --q:#e9a55c; --q-soft:#33270f;
+  --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0;
+  --blk-bg:#4a1e1a; --blk-fg:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+  --c-park:#6b7483; --c-back:#9aa3b2; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-next:#f2857a;
+  --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-rej:#c99a9a;
+  --chip-l:24%; --chip-s:35%; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
+  --accent:#7fa9e6; --accent-soft:#1d2b40; --q:#e9a55c; --q-soft:#33270f;
+  --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0;
+  --blk-bg:#4a1e1a; --blk-fg:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+  --c-park:#6b7483; --c-back:#9aa3b2; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-next:#f2857a;
+  --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-rej:#c99a9a;
+  --chip-l:24%; --chip-s:35%; color-scheme:dark }
+html,body{min-height:100%}
+body{background:var(--bg); color:var(--ink); font:15px/1.45 var(--f-body); margin:0}
+button,select,textarea,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.wrap{padding-inline:16px; padding-block:12px 40px}
+header.top{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px}
+h1{font:400 1.7rem/1.1 var(--f-display); margin:0; text-wrap:balance}
+.sync{font-size:.82rem; color:var(--muted)}
+.sync b{font-weight:600; color:var(--ink)}
+.tally{display:flex; flex-wrap:wrap; gap:6px; margin-left:auto}
+.pill{font-size:.75rem; padding:2px 8px; border-radius:999px; background:var(--sunk); color:var(--muted); white-space:nowrap}
+.pill.q{background:var(--q-soft); color:var(--q); font-weight:600}
+.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg); display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding-block:10px; border-bottom:1px solid var(--line); margin-bottom:12px}
+.bar input[type=search]{flex:1 1 180px; min-width:0; max-width:340px; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface)}
+.bar label{display:flex; gap:5px; align-items:center; font-size:.85rem; color:var(--muted); cursor:pointer}
+.note{font-size:.82rem; color:var(--muted); margin:0 0 10px}
+.board{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(260px,1fr); gap:10px; overflow-x:auto; padding-bottom:8px; align-items:start}
+.col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; min-width:0}
+.col h2{margin:0; padding:8px 10px; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px}
+.col h2 .n{font-family:var(--f-mono); color:var(--muted); font-weight:400; margin-left:auto}
+.list{display:flex; flex-direction:column; gap:6px; padding:2px 8px 10px; min-height:24px}
+.empty{font-size:.8rem; color:var(--muted); padding:2px 2px 4px}
+.card{background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--pc,var(--line)); border-radius:6px; padding:8px 10px; text-align:left; width:100%; cursor:pointer; display:grid; gap:4px; position:relative}
+.card:hover{border-color:var(--accent)}
+.card .id{font:500 .78rem var(--f-mono); color:var(--muted)}
+.card .t{font-weight:600; line-height:1.3; padding-right:22px}
+.card .qm{position:absolute; right:8px; top:6px; font-size:1rem}
+.labs{display:flex; flex-wrap:wrap; gap:4px}
+.lab{font-size:.72rem; padding:1px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+.lab.q{border-color:var(--q); color:var(--q); background:var(--q-soft)}
+.lab.ok{border-color:var(--c-done); color:var(--c-done)}
+.lab.blk{background:var(--blk-bg); color:var(--blk-fg); border-color:transparent; font-weight:600}
+.lab.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.chip{font-size:.72rem; padding:1px 7px; border-radius:999px; background:hsl(var(--h),var(--chip-s),var(--chip-l)); color:var(--ink)}
+.time{font:.75rem var(--f-mono); color:var(--muted)}
+.time.over{color:var(--q); font-weight:600}
+/* card window */
+.scrim{position:fixed; inset:0; background:rgba(10,14,20,.55); z-index:20; display:flex; justify-content:center; align-items:flex-start; overflow-y:auto; padding:calc(env(safe-area-inset-top,0px) + 24px) 12px 24px}
+.win{background:var(--surface); border-radius:10px; width:min(760px,100%); padding:18px 18px 24px; display:grid; gap:14px; border-top:5px solid var(--cc)}
+.win .head{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.win h3{font:400 1.5rem/1.15 var(--f-display); margin:0; text-wrap:balance}
+.badge{font:600 .72rem var(--f-body); text-transform:uppercase; letter-spacing:.06em; color:var(--cc)}
+.close{margin-left:auto; border:1px solid var(--line); background:var(--sunk); border-radius:6px; padding:4px 12px; cursor:pointer}
+.st{color:var(--muted); font-size:.92rem}
+.blkb{background:var(--blk-bg); color:var(--blk-fg); padding:8px 10px; border-radius:6px; font-size:.9rem}
+section.box{display:grid; gap:10px}
+section.box > h4{margin:0; font:600 .74rem var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; gap:8px}
+section.box > h4 span{margin-left:auto; text-transform:none; letter-spacing:0; font-weight:500}
+.decs{background:var(--q-soft); border-radius:8px; padding:12px}
+.decs > h4{color:var(--q)}
+.dq{display:grid; gap:8px; padding-bottom:12px; border-bottom:1px solid var(--line)}
+.dq:last-child{border-bottom:0; padding-bottom:0}
+.dq .qt{font-weight:600}
+.dq .hint{font-size:.8rem; color:var(--muted)}
+.choices{display:flex; flex-wrap:wrap; gap:8px}
+.ch{border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:8px 12px; cursor:pointer; display:grid; gap:6px; justify-items:center; min-height:44px; min-width:88px}
+.ch.rec{border:2px dashed var(--q)}
+.ch[aria-pressed=true]{background:var(--q); color:var(--surface); border-color:var(--q)}
+.ch img{width:192px; max-width:100%; image-rendering:pixelated; border-radius:4px}
+textarea{width:100%; min-height:64px; border:1px solid var(--line); border-radius:6px; padding:8px; background:var(--surface); resize:vertical; box-sizing:border-box}
+details.earlier summary{cursor:pointer; color:var(--muted); font-size:.88rem}
+.earl{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px 12px; font-size:.86rem; margin:8px 0}
+.earl .a{font-weight:600}
+.qimg{max-width:320px; width:100%; image-rendering:pixelated; cursor:zoom-in; border-radius:4px}
+.tasks{list-style:none; margin:0; padding:0; display:grid; gap:3px; font-size:.9rem}
+.tasks li.done{color:var(--muted); text-decoration:line-through}
+.log{display:grid; gap:10px}
+.log .e{display:grid; gap:4px; padding-left:10px; border-left:2px solid var(--line)}
+.log .ts{font:.75rem var(--f-mono); color:var(--muted)}
+.log .tx{white-space:pre-wrap}
+.log img{max-width:min(480px,100%); image-rendering:pixelated; cursor:zoom-in; border-radius:4px}
+.desc{white-space:pre-wrap; font-size:.92rem}
+.meta{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:.86rem}
+.meta dt{color:var(--muted)}
+.meta dd{margin:0}
+.ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.pbtn{border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:5px 12px; cursor:pointer; min-height:36px}
+.pbtn[aria-pressed=true]{background:var(--pc); color:var(--surface); border-color:var(--pc)}
+select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--surface); min-height:36px}
+.viewer{position:fixed; inset:0; z-index:30; background:rgba(5,8,12,.88); display:flex; align-items:center; justify-content:center; padding:16px; cursor:zoom-out}
+.viewer img{max-width:100%; max-height:100%; image-rendering:pixelated}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; font-size:.88rem; z-index:40}
+.ro .write{display:none}
+.setup{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; display:grid; gap:10px; max-width:520px; margin:0 0 16px}
+.setup h2{margin:0; font:400 1.3rem var(--f-display)}
+.setup label{display:grid; gap:4px; font-size:.86rem; color:var(--muted)}
+.setup input{padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
+.setup p{margin:0; font-size:.84rem; color:var(--muted)}
+.setup .row{display:flex; gap:8px; flex-wrap:wrap}
+.linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font-size:.82rem; text-decoration:underline}
+@media (max-width:720px){
+  .board{grid-auto-flow:row; grid-auto-columns:auto; overflow-x:visible}
+  .tally{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <h1>Colonization+ Board</h1>
+    <div class="sync" id="sync">Connecting to the board data…</div>
+    <div class="tally" id="tally"></div>
+  </header>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search ids, titles, status, questions" aria-label="Search cards">
+    <label><input type="checkbox" id="openOnly"> Open questions only</label>
+    <label><input type="checkbox" id="showPark"> Parked</label>
+    <label><input type="checkbox" id="showDone"> Done &amp; Rejected</label>
+  </div>
+  <form class="setup" id="setup" hidden>
+    <h2>Connect to the board</h2>
+    <p>The board lives in a private GitHub repository. Paste a fine-grained token that can reach only that repository
+      (Contents: read and write) and has an expiry date. It is kept in this browser only.</p>
+    <label>Owner <input id="sOwner" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <label>Repository <input id="sRepo" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <label>Token <input id="sToken" type="password" autocomplete="off" required></label>
+    <div class="row"><button class="pbtn" type="submit">Connect</button></div>
+    <p id="sErr" role="alert"></p>
+  </form>
+  <p class="note" id="note">Answers, notes, priorities and column moves are saved to the board straight away and reach
+    Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
+  <div class="board" id="board"></div>
+</div>
+<div id="win" hidden></div>
+<div class="viewer" id="viewer" hidden><img id="viewerImg" alt=""></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const COLS = [
+  {k:"park", name:"Parked"}, {k:"back", name:"Backlog"}, {k:"refining", name:"In refinement"}, {k:"refined", name:"Refined"},
+  {k:"next", name:"Next up"}, {k:"prog", name:"In progress"}, {k:"built", name:"Ready to merge"},
+  {k:"test", name:"Merged, in testing"}, {k:"done", name:"Done"}, {k:"rej", name:"Rejected"}];
+const COL_BY_NAME = Object.fromEntries(COLS.map(c => [c.name, c.k]));
+const PRI = {1:"P1 Critical", 2:"P2 High", 3:"P3 Normal", 4:"P4 Big feature"};
+const MEDIA_RX = /^media\/[\w./-]+\.(png|gif|jpg)$/i;
+
+let canWrite = false, meta = {}, loaded = false;
+const cards = new Map();      // id -> card doc (from the desktop vault, written by the sync)
+const changes = new Map();    // change doc id -> change (made here, not yet synced)
+let openId = null;
+const filt = loadFilters();
+
+// ---------- helpers
+function el(tag, attrs = {}, ...kids){
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)){
+    if (k === "class") e.className = v;
+    else if (k === "style") e.style.cssText = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c);
+  return e;
+}
+function loadFilters(){ try { return JSON.parse(localStorage.getItem("br.filters")) || {}; } catch { return {}; } }
+function saveFilters(){ try { localStorage.setItem("br.filters", JSON.stringify(filt)); } catch {} }
+function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3500); }
+function colKey(c){ return COL_BY_NAME[c.column] || c.col || "back"; }
+function fmtDur(ms){ const m = Math.round(Math.abs(ms) / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; }
+function fmtTime(iso){ const d = new Date(iso); if (isNaN(d)) return iso || "";
+  return d.toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}); }
+const blobs = new Map();      // vault media path -> Promise<object URL>
+function mediaUrl(src){
+  if (!blobs.has(src)) blobs.set(src, gh(`contents/vault/${src.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`,
+    {raw: true}).then(r => r.blob()).then(b => URL.createObjectURL(b)));
+  return blobs.get(src);
+}
+function img(src, cls){
+  if (!src || !MEDIA_RX.test(src)) return null;
+  const i = el("img", {class: cls || "", alt: "", loading: "lazy"});
+  mediaUrl(src).then(u => { i.src = u; }, () => i.replaceWith(el("span", {class: "pill"}, "Picture not available")));
+  i.addEventListener("click", ev => { ev.stopPropagation(); if (i.src) showImg(i.src); });
+  return i;
+}
+function showImg(src){ const v = document.getElementById("viewer"); document.getElementById("viewerImg").src = src; v.hidden = false; }
+document.getElementById("viewer").addEventListener("click", () => document.getElementById("viewer").hidden = true);
+
+// The card as the user sees it: the mirrored card with this page's not-yet-synced changes applied.
+function effective(c){
+  const e = structuredClone(c);
+  e.ans = Object.assign({}, c.ans || {});
+  const mine = [...changes.values()].filter(x => x.card === c.id).sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
+  for (const ch of mine){
+    if (ch.field.startsWith("ans.")) e.ans[ch.field.slice(4)] = ch.value;
+    else e[ch.field] = ch.value;
+  }
+  e._pending = mine.length;
+  return e;
+}
+// Open questions: the board's openQ() rule (spec 5.3).
+function openList(c){
+  const a = c.ans || {}, out = [];
+  const qs = (Array.isArray(c.qs) ? c.qs : []).filter(x => x && x.id && x.q);
+  if (colKey(c) !== "done") for (const q of qs) if (!String(a[q.id] ?? "").trim()) out.push(q.id);
+  if (Array.isArray(c.opts)) for (const o of c.opts) if (!a[o.id]) out.push(o.id);
+  if (!out.length && !qs.length && !(c.opts || []).length && c.q && colKey(c) !== "done") out.push("q");
+  return out;
+}
+
+// ---------- writes (one change document per card field: a later edit replaces an earlier one)
+async function change(card, field, value){
+  if (!canWrite){ toast("This view is read-only."); return; }
+  const ts = new Date().toISOString();
+  const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
+  const doc = {card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null};
+  for (const [k, v] of changes) if (v.card === card.id && v.field === field) changes.delete(k);   // the later edit wins
+  changes.set(id, doc); render();
+  const body = {message: `phone: ${card.id} ${field}\n\nHub-Source: user\nHub-Machine: phone`,
+                content: b64(JSON.stringify(doc) + "\n"), branch: BRANCH};
+  for (let attempt = 0; attempt < 3; attempt++){
+    try { await gh(`contents/inbox/phone/${id}.json`, {method: "PUT", body}); wake(); return; }
+    catch (e) {
+      if (e.status === 401 || e.status === 403){ canWrite = false; document.getElementById("app").classList.add("ro");
+        toast("The token can't write to the board (expired, or read-only)."); changes.delete(id); render(); return; }
+      await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+    }
+  }
+  changes.delete(id); render();
+  toast(`Could not save the change to ${card.id}. Try again.`);
+}
+function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for (const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
+
+// ---------- board
+function matches(c){
+  const k = colKey(c);
+  if (k === "park" && !filt.park) return false;
+  if ((k === "done" || k === "rej") && !filt.done) return false;
+  if (filt.open && !openList(c).length) return false;
+  const s = (filt.q || "").trim().toLowerCase();
+  if (!s) return true;
+  const hay = [c.id, c.t, c.st, c.q, c.un, c.d, c.blk, ...(c.opts || []).map(o => o.q), ...(c.qs || []).map(q => q.q)];
+  return hay.some(x => x && String(x).toLowerCase().includes(s));
+}
+function render(){
+  const all = [...cards.values()].map(effective);
+  const open = all.reduce((n, c) => n + (openList(c).length ? 1 : 0), 0);
+  const pend = changes.size;
+  const t = document.getElementById("tally"); t.replaceChildren();
+  const live = all.filter(c => !["done", "rej", "park"].includes(colKey(c)));
+  for (const p of [1, 2, 3, 4]){ const n = live.filter(c => c.pri === p).length; if (n) t.append(el("span", {class: "pill"}, `${n} P${p}`)); }
+  t.append(el("span", {class: "pill q"}, `${open} with open questions`));
+  if (pend) t.append(el("span", {class: "pill"}, `${pend} change${pend === 1 ? "" : "s"} on the way to the desktop`));
+
+  const sync = document.getElementById("sync");
+  if (loaded) sync.replaceChildren(meta.exported_at ? el("span", {}, "Board as of ", el("b", {}, fmtTime(meta.exported_at)),
+    lastCheck ? ` · checked ${fmtTime(lastCheck)}` : "") : el("span", {}, "No board export yet: the desktop's node writes it."));
+
+  const board = document.getElementById("board"); board.replaceChildren();
+  for (const col of COLS){
+    if (col.k === "park" && !filt.park) continue;
+    if ((col.k === "done" || col.k === "rej") && !filt.done) continue;
+    const inCol = all.filter(c => colKey(c) === col.k);
+    const shown = inCol.filter(matches).sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0) || String(a.id).localeCompare(String(b.id)));
+    const list = el("div", {class: "list"});
+    for (const c of shown) list.append(face(c));
+    if (!shown.length) list.append(el("div", {class: "empty"}, loaded ? "No cards" : "Loading…"));
+    board.append(el("section", {class: "col", style: `--cc:var(--c-${col.k})`, "aria-label": col.name},
+      el("h2", {}, col.name, el("span", {class: "n"}, shown.length === inCol.length ? String(inCol.length) : `${shown.length}/${inCol.length}`)), list));
+  }
+  if (openId && !document.activeElement?.closest?.("#win textarea")) renderWin();
+}
+function face(c){
+  const oq = openList(c), tasks = Array.isArray(c.tasks) ? c.tasks : [], td = tasks.filter(x => x && x.done).length;
+  const ep = (meta.epics || {})[c.epic];
+  const labs = el("div", {class: "labs"});
+  if (c.blk) labs.append(el("span", {class: "lab blk", title: c.blk}, "Blocked"));
+  if (oq.length) labs.append(el("span", {class: "lab q"}, oq.length === 1 ? "1 question open" : `${oq.length} questions open`));
+  if (tasks.length) labs.append(el("span", {class: td === tasks.length ? "lab ok" : "lab"}, `Tasks ${td}/${tasks.length}`));
+  if ((c.log || []).length) labs.append(el("span", {class: "lab"}, `${c.log.length} update${c.log.length === 1 ? "" : "s"}`));
+  if (c._pending) labs.append(el("span", {class: "lab pend"}, "On the way"));
+  if (ep) labs.append(el("span", {class: "chip", style: `--h:${ep.hue ?? 200}`}, ep.name));
+  const k = colKey(c);
+  let time = null;
+  if (["prog", "built", "test"].includes(k) && c.eta){
+    const left = new Date(c.eta) - Date.now();
+    time = el("div", {class: left < 0 ? "time over" : "time"}, `ETA ${fmtTime(c.eta)} (${left < 0 ? "overdue " : ""}${fmtDur(left)})`);
+  } else if (k === "next" && c.estimate > 0) time = el("div", {class: "time"}, `Est. ~${fmtDur(c.estimate * 60000)}`);
+  return el("button", {class: "card", style: c.pri ? `--pc:var(--p${c.pri})` : "", onclick: () => { openId = c.id; renderWin(); }},
+    el("span", {class: "id"}, c.id + (c.pri ? ` · P${c.pri}` : "")), oq.length ? el("span", {class: "qm", "aria-label": "Needs an answer"}, "❓") : null,
+    el("span", {class: "t"}, c.t || "(no title)"), labs, time, c.un ? el("div", {class: "time"}, "You: " + c.un) : null);
+}
+
+// ---------- card window
+function renderWin(){
+  const host = document.getElementById("win");
+  const raw = cards.get(openId);
+  if (!raw){ host.hidden = true; host.replaceChildren(); openId = null; return; }
+  const c = effective(raw), k = colKey(c), a = c.ans || {};
+  const win = el("div", {class: "win", role: "dialog", "aria-modal": "true", "aria-label": `${c.id} ${c.t || ""}`, style: `--cc:var(--c-${k})`});
+  win.append(el("div", {class: "head"}, el("span", {class: "badge"}, COLS.find(x => x.k === k)?.name || k),
+    el("span", {class: "id time"}, c.id), c._pending ? el("span", {class: "lab pend"}, `${c._pending} change${c._pending === 1 ? "" : "s"} on the way`) : null,
+    el("button", {class: "close", onclick: closeWin}, "Close")));
+  win.append(el("h3", {}, c.t || "(no title)"));
+  if (c.blk) win.append(el("div", {class: "blkb"}, "Blocked: " + c.blk));
+  if (c.st) win.append(el("div", {class: "st"}, c.st));
+
+  // Decisions
+  const opts = Array.isArray(c.opts) ? c.opts : [];
+  if (opts.length){
+    const box = el("section", {class: "box decs"});
+    const done = opts.filter(o => a[o.id]).length;
+    box.append(el("h4", {}, "Decisions", el("span", {}, `${done}/${opts.length} answered`)));
+    const answered = [], openOnes = [];
+    for (const o of opts) (raw.ans && raw.ans[o.id] ? answered : openOnes).push(o);
+    for (const o of openOnes) box.append(decision(c, o));
+    if (answered.length){
+      const det = el("details", {class: "earlier"}, el("summary", {}, `Earlier decisions (${answered.length})`));
+      const lst = el("div", {class: "earl"});
+      for (const o of answered){
+        const v = a[o.id], ch = (o.choices || []).find(x => x.v === v);
+        const other = a[o.id + "__other_text"];
+        lst.append(el("div", {}, o.q), el("div", {class: "a"}, (v === "__other" ? (other || "Something else") : ch ? ch.t : String(v)) + (other && v !== "__other" ? ` - ${other}` : "")));
+      }
+      det.append(lst);
+      const chg = el("details", {class: "earlier write"}, el("summary", {}, "Change an answer"));
+      for (const o of answered) chg.append(decision(c, o));
+      det.append(chg);
+      box.append(det);
+    }
+    win.append(box);
+  }
+  // Free-text questions
+  const qs = (Array.isArray(c.qs) ? c.qs : []).filter(x => x && x.id && x.q);
+  if (qs.length){
+    const box = el("section", {class: "box decs"});
+    box.append(el("h4", {}, "Questions", el("span", {}, `${qs.filter(q => String(a[q.id] ?? "").trim()).length}/${qs.length} answered`)));
+    for (const q of qs){
+      const ta = el("textarea", {id: `qa-${c.id}-${q.id}`, placeholder: "Your answer (saved when you leave the field)", "aria-label": q.q, disabled: !canWrite});
+      ta.value = a[q.id] ?? "";
+      ta.addEventListener("change", () => change(c, "ans." + q.id, ta.value.trim() ? ta.value : null));
+      box.append(el("div", {class: "dq"}, el("div", {class: "qt"}, q.q), ta));
+    }
+    win.append(box);
+  } else if (c.q && !opts.length && k !== "done") win.append(el("section", {class: "box decs"}, el("h4", {}, "Question"), el("div", {}, c.q)));
+
+  // Tasks
+  const tasks = Array.isArray(c.tasks) ? c.tasks : [];
+  if (tasks.length){
+    const td = tasks.filter(x => x && x.done).length;
+    win.append(el("section", {class: "box"}, el("h4", {}, "Tasks", el("span", {}, `${td}/${tasks.length}`)),
+      el("ul", {class: "tasks"}, tasks.map(x => el("li", {class: x.done ? "done" : ""}, (x.done ? "☑ " : "☐ ") + (x.t || ""))))));
+  }
+  // Times
+  const meta2 = el("dl", {class: "meta"});
+  const add = (k2, v) => { if (v) meta2.append(el("dt", {}, k2), el("dd", {}, v)); };
+  add("Started", c.started ? fmtTime(c.started) : "not started");
+  add("In this column", c.colSince ? fmtDur(Date.now() - new Date(c.colSince)) : "");
+  if (["prog", "built", "test"].includes(k)) add("ETA", c.eta ? `${fmtTime(c.eta)}${c.etaNote ? " - " + c.etaNote : ""}` : "");
+  if (k === "next") add("Estimate", c.estimate ? `~${fmtDur(c.estimate * 60000)}${c.estimateNote ? " - " + c.estimateNote : ""}` : "");
+  add("Ended", c.ended ? fmtTime(c.ended) : "");
+  const ep = (meta.epics || {})[c.epic];
+  add("Epic", ep ? ep.name : c.epic);
+  add("Triage", c.tri);
+  win.append(el("section", {class: "box"}, el("h4", {}, "Details"), meta2));
+  if (c.d) win.append(el("section", {class: "box"}, el("h4", {}, "Description"), el("div", {class: "desc"}, c.d)));
+
+  // Controls: priority, column, note
+  const ctl = el("section", {class: "box write"}, el("h4", {}, "Your changes"));
+  const prow = el("div", {class: "ctl"});
+  for (const p of [1, 2, 3, 4]) prow.append(el("button", {class: "pbtn", style: `--pc:var(--p${p})`, "aria-pressed": c.pri === p ? "true" : "false",
+    onclick: () => change(c, "pri", c.pri === p ? 0 : p)}, PRI[p]));
+  const sel = el("select", {id: `col-${c.id}`, "aria-label": "Move to column"}, COLS.map(x => el("option", {value: x.name, selected: x.k === k}, x.name)));
+  sel.addEventListener("change", () => change(c, "column", sel.value));
+  const note = el("textarea", {id: `un-${c.id}`, placeholder: "Your note on this card (saved when you leave the field)", "aria-label": "Your note"});
+  note.value = c.un || "";
+  note.addEventListener("change", () => change(c, "un", note.value));
+  ctl.append(prow, el("div", {class: "ctl"}, el("label", {for: `col-${c.id}`}, "Column"), sel), note);
+  win.append(ctl);
+
+  // Activity, newest first
+  const log = (Array.isArray(c.log) ? c.log : []).slice().reverse();
+  if (log.length){
+    const box = el("section", {class: "box"}, el("h4", {}, "Activity", el("span", {}, `${log.length} update${log.length === 1 ? "" : "s"}`)));
+    const lst = el("div", {class: "log"});
+    for (const e of log){
+      const imgs = Array.isArray(e.img) ? e.img : e.img ? [e.img] : [];
+      lst.append(el("div", {class: "e"}, el("span", {class: "ts"}, fmtTime(e.ts)), el("div", {class: "tx"}, e.t || ""), imgs.map(s => img(s))));
+    }
+    box.append(lst);
+    win.append(box);
+  }
+  const scrim = el("div", {class: "scrim", onclick: ev => { if (ev.target === ev.currentTarget) closeWin(); }}, win);
+  host.replaceChildren(scrim);
+  host.hidden = false;
+}
+function decision(c, o){
+  const a = c.ans || {}, v = a[o.id], otherKey = o.id + "__other_text";
+  const row = el("div", {class: "choices"});
+  for (const ch of (o.choices || [])){
+    const on = v === ch.v;
+    row.append(el("button", {class: "ch" + (ch.rec ? " rec" : ""), "aria-pressed": on ? "true" : "false", disabled: !canWrite,
+      onclick: () => {
+        // tapping the chosen button again unselects it; "something else" text keeps the question answered
+        const next = on ? (String(a[otherKey] ?? "").trim() ? "__other" : null) : ch.v;
+        change(c, "ans." + o.id, next);
+      }}, ch.img ? img(ch.img) : null, (ch.t || ch.v) + (ch.rec ? " (recommended)" : "")));
+  }
+  const ta = el("textarea", {id: `ot-${c.id}-${o.id}`, disabled: !canWrite, "aria-label": "Something else, or a note",
+    placeholder: "Something else, or a note? (saved when you leave the field; kept when you pick a button)"});
+  ta.value = a[otherKey] ?? "";
+  ta.addEventListener("change", async () => {
+    const txt = ta.value.trim() ? ta.value : null;
+    await change(c, "ans." + otherKey, txt);
+    if (txt && !v) await change(c, "ans." + o.id, "__other");
+    if (!txt && v === "__other") await change(c, "ans." + o.id, null);
+  });
+  return el("div", {class: "dq"}, el("div", {class: "qt"}, o.q), o.img ? img(o.img, "qimg") : null,
+    o.hint ? el("div", {class: "hint"}, o.hint) : null, row, ta);
+}
+function closeWin(){ openId = null; const h = document.getElementById("win"); h.hidden = true; h.replaceChildren(); }
+document.addEventListener("keydown", ev => {
+  if (ev.key !== "Escape") return;
+  const v = document.getElementById("viewer");
+  if (!v.hidden) v.hidden = true; else if (openId) closeWin();
+});
+
+// ---------- filters
+for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"]]){
+  const cb = document.getElementById(id); cb.checked = !!filt[key];
+  cb.addEventListener("change", () => { filt[key] = cb.checked; saveFilters(); render(); });
+}
+const qIn = document.getElementById("q"); qIn.value = filt.q || "";
+qIn.addEventListener("input", () => { filt.q = qIn.value; saveFilters(); render(); });
+
+// ---------- data (GitHub's API from this browser; NODE_SPEC section 7)
+const BRANCH = "board";
+const API = "https://api.github.com";
+const cfgKey = "cb.conn";
+let conn = null, refEtag = null, tip = null, lastCheck = null, timer = null, seenRefused = null;
+function loadConn(){ try { return JSON.parse(localStorage.getItem(cfgKey)) || null; } catch { return null; } }
+function saveConn(c){ try { c ? localStorage.setItem(cfgKey, JSON.stringify(c)) : localStorage.removeItem(cfgKey); } catch {} }
+
+async function gh(path, {method = "GET", body = null, raw = false, etag = null} = {}){
+  const headers = {"Authorization": `Bearer ${conn.token}`, "X-GitHub-Api-Version": "2022-11-28",
+                   "Accept": raw ? "application/vnd.github.raw+json" : "application/vnd.github+json"};
+  if (etag) headers["If-None-Match"] = etag;
+  if (body) headers["Content-Type"] = "application/json";
+  const r = await fetch(`${API}/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/${path}`,
+                        {method, headers, body: body ? JSON.stringify(body) : null, cache: "no-store"});
+  if (r.status === 304) return r;
+  if (!r.ok){ const e = new Error(`GitHub ${r.status}`); e.status = r.status; throw e; }
+  return r;
+}
+
+async function check(){
+  if (!conn || document.hidden) return;
+  try {
+    const r = await gh(`git/ref/heads/${BRANCH}`, {etag: refEtag});      // a 304 costs no API quota
+    lastCheck = new Date().toISOString();
+    if (r.status !== 304){
+      refEtag = r.headers.get("ETag");
+      const sha = (await r.json()).object.sha;
+      if (sha !== tip){ tip = sha; await load(); }
+    }
+    if (!loaded){ loaded = true; }
+    render();
+  } catch (e) {
+    if (e.status === 401 || e.status === 404){ showSetup(e.status === 401 ? "The token was refused (expired or revoked?)."
+                                                         : "The repository or its board branch can't be found with this token."); return; }
+    document.getElementById("sync").textContent = "Can't reach GitHub right now; retrying.";
+  }
+}
+async function load(){
+  const data = await (await gh(`contents/export/board.json?ref=${tip}`, {raw: true})).json();
+  meta = {epics: data.epics || {}, exported_at: data.exported_at};
+  const ids = new Set(Object.keys(data.cards || {}));
+  for (const id of [...cards.keys()]) if (!ids.has(id)) cards.delete(id);
+  for (const [id, doc] of Object.entries(data.cards || {})) cards.set(id, Object.assign({id}, doc));
+  // a change is done once the export is newer than it (the node applies, then exports, in one pass)
+  for (const [k, v] of changes) if (meta.exported_at && meta.exported_at > v.ts) changes.delete(k);
+  try {
+    const refused = await (await gh(`contents/export/phone-refused.json?ref=${tip}`, {raw: true})).json();
+    const fresh = refused.filter(x => seenRefused !== null && x.time > seenRefused);
+    seenRefused = refused.length ? refused[refused.length - 1].time : (seenRefused || "");
+    for (const x of fresh){
+      const name = x.change.split("__");
+      for (const [k] of changes) if (k === x.change) changes.delete(k);
+      toast(`Not applied (${name[0]} ${name[1] || ""}): ${x.why}`);
+    }
+  } catch { if (seenRefused === null) seenRefused = ""; }
+}
+function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); }
+function startPolling(){
+  clearInterval(timer);
+  timer = setInterval(check, 12000);
+  check();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+
+function showSetup(msg){
+  clearInterval(timer);
+  const f = document.getElementById("setup");
+  f.hidden = false;
+  document.getElementById("note").hidden = true;
+  document.getElementById("sErr").textContent = msg || "";
+  if (conn){ document.getElementById("sOwner").value = conn.owner; document.getElementById("sRepo").value = conn.repo; }
+  document.getElementById("sync").textContent = "Not connected.";
+}
+document.getElementById("setup").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  conn = {owner: document.getElementById("sOwner").value.trim(), repo: document.getElementById("sRepo").value.trim(),
+          token: document.getElementById("sToken").value.trim()};
+  document.getElementById("sErr").textContent = "Checking…";
+  try {
+    await gh(`git/ref/heads/${BRANCH}`);
+    saveConn(conn);
+    document.getElementById("sToken").value = "";
+    document.getElementById("setup").hidden = true;
+    document.getElementById("note").hidden = false;
+    canWrite = true;
+    document.getElementById("app").classList.remove("ro");
+    startPolling();
+  } catch (e) {
+    document.getElementById("sErr").textContent = e.status === 401 ? "GitHub refused the token." :
+      e.status === 404 ? "No board branch found: check the owner, the repository and the token's repository access." :
+      "Can't reach GitHub.";
+  }
+});
+document.getElementById("signout").addEventListener("click", () => {
+  saveConn(null); conn = null; cards.clear(); changes.clear(); tip = refEtag = null; loaded = false;
+  for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
+  blobs.clear(); render(); showSetup("");
+});
+
+render();
+conn = loadConn();
+if (conn){ canWrite = true; startPolling(); } else showSetup("");
+</script>
+</html>
