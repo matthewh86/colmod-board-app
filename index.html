@@ -7,164 +7,302 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: sticky header + filter bar, then the 10 board columns side by side (one stacked list on phones); a card window opens over it.
-   Tokens: the project's shared board style (work/style/project.css, spec 8.5). */
+/* The old Work Board's page (legacy/work-board/index.html) on the hub's data: the page scrolls as a whole; the filter bar
+   sticks to the top, the epic column sits left of the board, columns grow to fit their cards (drag the board to pan
+   sideways); one stacked list on phones. A second tab shows the machines and jobs. */
 :root{
-  --bg:#eef1f5; --surface:#fff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
-  --accent:#1f4e8c; --accent-soft:#dfe8f5; --q:#8a5a00; --q-soft:#fff3d6;
-  --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93;
-  --blk-bg:#fde2df; --blk-fg:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
-  --c-park:#8b93a1; --c-back:#586173; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-next:#b42318;
-  --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-rej:#7d4a4a;
-  --chip-l:90%; --chip-s:55%;
-  --f-display:"IM Fell English SC", Georgia, "Times New Roman", serif;
-  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
+  --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
+  --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
+  --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
+  --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
+  --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
-  --accent:#7fa9e6; --accent-soft:#1d2b40; --q:#e9a55c; --q-soft:#33270f;
-  --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0;
-  --blk-bg:#4a1e1a; --blk-fg:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
-  --c-park:#6b7483; --c-back:#9aa3b2; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-next:#f2857a;
-  --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-rej:#c99a9a;
-  --chip-l:24%; --chip-s:35%; color-scheme:dark }}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
+    --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
+    --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
+    --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
+    --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+  }
+}
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
-  --accent:#7fa9e6; --accent-soft:#1d2b40; --q:#e9a55c; --q-soft:#33270f;
-  --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0;
-  --blk-bg:#4a1e1a; --blk-fg:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
-  --c-park:#6b7483; --c-back:#9aa3b2; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-next:#f2857a;
-  --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-rej:#c99a9a;
-  --chip-l:24%; --chip-s:35%; color-scheme:dark }
+  --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
+  --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
+  --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
+  --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+}
 [hidden]{display:none!important}   /* claude.ai's page frame added this; on its own the page must */
-html,body{min-height:100%}
 *,*::before,*::after{box-sizing:border-box}
-body{background:var(--bg); color:var(--ink); font:15px/1.45 var(--f-body); margin:0}
-button,select,textarea,input{font:inherit; color:inherit}
-:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.wrap{padding-inline:16px; padding-block:12px 40px}
-header.top{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px}
-h1{font:400 1.7rem/1.1 var(--f-display); margin:0; text-wrap:balance}
+html,body{min-height:100%}
+body{background:var(--bg); color:var(--ink); font:14px/1.45 var(--f-body); margin:0}
+.wrap{padding-inline:16px; padding-block:0 24px}
+header.top{padding-block:14px 6px; display:grid; gap:8px}
+h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
+.hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
 .sync{font-size:.82rem; color:var(--muted)}
 .sync b{font-weight:600; color:var(--ink)}
-.tally{display:flex; flex-wrap:wrap; gap:6px; margin-left:auto}
-.pill{font-size:.75rem; padding:2px 8px; border-radius:999px; background:var(--sunk); color:var(--muted); white-space:nowrap}
-.pill.q{background:var(--q-soft); color:var(--q); font-weight:600}
-.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg); display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding-block:10px; border-bottom:1px solid var(--line); margin-bottom:12px}
-.bar input[type=search]{flex:1 1 180px; min-width:0; max-width:340px; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface)}
-.bar label{display:flex; gap:5px; align-items:center; font-size:.85rem; color:var(--muted); cursor:pointer}
-.note{font-size:.82rem; color:var(--muted); margin:0 0 10px}
-.board{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(260px,1fr); gap:10px; overflow-x:auto; padding-bottom:8px; align-items:start}
-.col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; min-width:0}
-.col h2{margin:0; padding:8px 10px; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px}
-.col h2 .n{font-family:var(--f-mono); color:var(--muted); font-weight:400; margin-left:auto}
-.list{display:flex; flex-direction:column; gap:6px; padding:2px 8px 10px; min-height:24px}
-.empty{font-size:.8rem; color:var(--muted); padding:2px 2px 4px}
-.card{background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--pc,var(--line)); border-radius:6px; padding:8px 10px; text-align:left; width:100%; cursor:pointer; display:grid; gap:4px; position:relative}
-.card:hover{border-color:var(--accent)}
-.card .id{font:500 .78rem var(--f-mono); color:var(--muted)}
-.card .t{font-weight:600; line-height:1.3; padding-right:22px}
-.card .qm{position:absolute; right:8px; top:6px; font-size:1rem}
-.labs{display:flex; flex-wrap:wrap; gap:4px}
-.lab{font-size:.72rem; padding:1px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
-.lab.q{border-color:var(--q); color:var(--q); background:var(--q-soft)}
-.lab.ok{border-color:var(--c-done); color:var(--c-done)}
-.lab.blk{background:var(--blk-bg); color:var(--blk-fg); border-color:transparent; font-weight:600}
-.lab.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
-.chip{font-size:.72rem; padding:1px 7px; border-radius:999px; background:hsl(var(--h),var(--chip-s),var(--chip-l)); color:var(--ink)}
-.time{font:.75rem var(--f-mono); color:var(--muted)}
-.time.over{color:var(--q); font-weight:600}
-/* card window */
-.scrim{position:fixed; inset:0; background:rgba(10,14,20,.55); z-index:20; display:flex; justify-content:center; align-items:flex-start; overflow-y:auto; padding:calc(env(safe-area-inset-top,0px) + 24px) 12px 24px}
-.win{background:var(--surface); border-radius:10px; width:min(760px,100%); padding:18px 18px 24px; display:grid; gap:14px; border-top:5px solid var(--cc)}
-.win .head{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-.win h3{font:400 1.5rem/1.15 var(--f-display); margin:0; text-wrap:balance}
-.badge{font:600 .72rem var(--f-body); text-transform:uppercase; letter-spacing:.06em; color:var(--cc)}
-.close{margin-left:auto; border:1px solid var(--line); background:var(--sunk); border-radius:6px; padding:4px 12px; cursor:pointer}
-.st{color:var(--muted); font-size:.92rem}
-.blkb{background:var(--blk-bg); color:var(--blk-fg); padding:8px 10px; border-radius:6px; font-size:.9rem}
-section.box{display:grid; gap:10px}
-section.box > h4{margin:0; font:600 .74rem var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; gap:8px}
-section.box > h4 span{margin-left:auto; text-transform:none; letter-spacing:0; font-weight:500}
-.decs{background:var(--q-soft); border-radius:8px; padding:12px}
-.decs > h4{color:var(--q)}
-.dq{display:grid; gap:8px; padding-bottom:12px; border-bottom:1px solid var(--line)}
-.dq:last-child{border-bottom:0; padding-bottom:0}
-.dq .qt{font-weight:600}
-.dq .hint{font-size:.8rem; color:var(--muted)}
-.choices{display:flex; flex-wrap:wrap; gap:8px}
-.ch{border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:8px 12px; cursor:pointer; display:grid; gap:6px; justify-items:center; min-height:44px; min-width:88px}
-.ch.rec{border:2px dashed var(--q)}
-.ch[aria-pressed=true]{background:var(--q); color:var(--surface); border-color:var(--q)}
-.ch img{width:192px; max-width:100%; image-rendering:pixelated; border-radius:4px}
-textarea{width:100%; min-height:64px; border:1px solid var(--line); border-radius:6px; padding:8px; background:var(--surface); resize:vertical; box-sizing:border-box}
-details.earlier summary{cursor:pointer; color:var(--muted); font-size:.88rem}
-.earl{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px 12px; font-size:.86rem; margin:8px 0}
-.earl .a{font-weight:600}
-.qimg{max-width:320px; width:100%; image-rendering:pixelated; cursor:zoom-in; border-radius:4px}
-.tasks{list-style:none; margin:0; padding:0; display:grid; gap:3px; font-size:.9rem}
-.tasks li.done{color:var(--muted); text-decoration:line-through}
-.log{display:grid; gap:10px}
-.log .e{display:grid; gap:4px; padding-left:10px; border-left:2px solid var(--line)}
-.log .ts{font:.75rem var(--f-mono); color:var(--muted)}
-.log .tx{white-space:pre-wrap}
-.log img{max-width:min(480px,100%); image-rendering:pixelated; cursor:zoom-in; border-radius:4px}
-.desc{white-space:pre-wrap; font-size:.92rem}
-.meta{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:.86rem}
-.meta dt{color:var(--muted)}
-.meta dd{margin:0}
-.ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-.pbtn{border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:5px 12px; cursor:pointer; min-height:36px}
-.pbtn[aria-pressed=true]{background:var(--pc); color:var(--surface); border-color:var(--pc)}
-select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--surface); min-height:36px}
-.viewer{position:fixed; inset:0; z-index:30; background:rgba(5,8,12,.88); display:flex; align-items:center; justify-content:center; padding:16px; cursor:zoom-out}
-.viewer img{max-width:100%; max-height:100%; image-rendering:pixelated}
-.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; font-size:.88rem; z-index:40}
-.ro .write{display:none}
-.setup{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; display:grid; gap:10px; max-width:520px; margin:0 0 16px}
-.setup h2{margin:0; font:400 1.3rem var(--f-display)}
-.setup label{display:grid; gap:4px; font-size:.86rem; color:var(--muted)}
-.setup input{padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
-.setup p{margin:0; font-size:.84rem; color:var(--muted)}
-.setup .row{display:flex; gap:8px; flex-wrap:wrap}
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:10px 0 0}
-.tab{border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
+.tally{display:flex; flex-wrap:wrap; gap:6px}
+.tally span{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
+.tally b{font-weight:600}
+.tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0}
+.tab{font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
-.board{cursor:grab}
-.board .card{cursor:pointer}
+.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.bar input:not([type=checkbox]),.bar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
+.bar input:not([type=checkbox]){flex:1 1 180px; min-width:0}
+.fwrap{position:relative}
+.qwrap{position:relative; flex:1 1 180px; min-width:0; display:flex}
+.bar .qwrap input{flex:1 1 auto; width:100%; padding-right:26px}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; display:none}
+.qclr{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:20px; height:20px; padding:0; border:0; border-radius:50%; background:var(--sunk); color:var(--muted); font:600 14px/20px var(--f-body); text-align:center; cursor:pointer}
+.qclr:hover{background:var(--accent-soft); color:var(--accent)}
+.fbtn{display:inline-flex; align-items:center; gap:5px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 9px; cursor:pointer}
+.fbtn:hover,.fbtn[aria-expanded="true"]{border-color:var(--accent); color:var(--accent)}
+.fcount{font-size:.7rem; font-weight:600; color:var(--on-accent); background:var(--accent); border-radius:999px; padding:0 6px}
+.fpop{position:absolute; top:calc(100% + 4px); left:0; z-index:8; min-width:190px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:8px 10px; display:grid; gap:6px}
+.fpop .fh{font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.fpop input[type=checkbox]{margin:0; flex:none; width:15px; height:15px; accent-color:var(--accent)}
+.fpop label{display:flex; gap:8px; align-items:center; line-height:1.2; font-size:.85rem; cursor:pointer; white-space:nowrap}
+.bar .savest{font-size:.8rem; color:var(--muted); margin-left:auto}
+.note{font-size:.82rem; color:var(--muted); margin:10px 0 0}
+.linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; font-size:.82rem; text-decoration:underline}
+.main{display:grid; grid-template-columns:200px minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
+.board{display:grid; grid-template-columns:repeat(var(--ncol,8), minmax(260px,1fr)); gap:10px; overflow-x:auto; padding-bottom:8px; align-items:stretch; cursor:grab; min-height:calc(100dvh - 190px)}   /* fills the window even with few cards, so the empty space below still drags the board */
 body.panning, body.panning *{cursor:grabbing!important; user-select:none!important}
 .automark{position:fixed; z-index:50; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%; border:1.5px solid var(--muted); background:var(--surface); pointer-events:none; display:grid; place-items:center}
 .automark::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--muted)}
-body.autoscrolling, body.autoscrolling *{cursor:all-scroll!important}
-.status{display:grid; gap:14px; margin:0 0 16px}
+body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
+.col.collapsed{align-self:start}
+@media (max-width:720px){ .main{grid-template-columns:1fr} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+.col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; display:flex; flex-direction:column; min-width:0}
+.col > h2{margin:0; padding:8px 10px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none}
+.col > h2 .n{font-family:var(--f-mono); color:var(--muted); font-weight:400}
+.col > h2 .tw{margin-left:auto; color:var(--muted); font-size:.9rem}
+.col .hint{font-size:.75rem; color:var(--muted); padding:0 10px 6px; margin:0}
+.list{display:flex; flex-direction:column; gap:6px; padding:4px 8px 10px; min-height:48px; flex:1 1 auto}   /* fills its column: the whole height is a drop target */
+.col.collapsed .list,.col.collapsed .hint{display:none}
+.list.over{outline:2px dashed var(--accent); outline-offset:-4px; border-radius:6px}
+.card{position:relative; background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--pc,var(--line)); border-radius:6px; padding:7px 9px; display:grid; gap:4px; cursor:grab}
+.card.dragging{display:none}   /* the moving card leaves its place; the drop slot shows where it will land */
+.dropslot{border:2px dashed var(--accent); background:var(--accent-soft); border-radius:6px; flex:none; box-sizing:border-box}
+.list .card.shunt{transition:transform .15s ease-out}
+@media (prefers-reduced-motion: reduce){ .list .card.shunt{transition:none} }
+.card:not(.full){-webkit-user-select:none; user-select:none}   /* board cards are dragged, not text-selected */
+.card.ghost{position:fixed; z-index:40; margin:0; pointer-events:none; opacity:.95; box-shadow:0 8px 24px rgba(0,0,0,.25); cursor:grabbing}   /* the card under the pointer while dragging */
+.card.ghost .hov{display:none !important}
+.card.ghost .fcount{position:absolute; top:-8px; right:-8px}
+body.carddrag,body.carddrag *{cursor:grabbing !important}
+.col > h2.over{outline:2px dashed var(--accent); outline-offset:-3px; border-radius:6px}
+body.selmode .card{cursor:pointer}
+body.selmode .card .hov{display:none !important}
+.card.sel{outline:2px solid var(--accent); outline-offset:1px; background:var(--accent-soft)}
+.card.sel::after{content:"\2713"; position:absolute; top:5px; right:7px; font-size:.8rem; font-weight:700; color:var(--accent)}
+.fbtn.on{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.selbar{z-index:25; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom,0px)); display:flex; flex-wrap:wrap; align-items:center; gap:6px; background:var(--surface); color:var(--ink); border:1px solid var(--accent); border-radius:8px; padding:7px 10px; box-shadow:0 4px 16px rgba(0,0,0,.2); width:max-content; max-width:calc(100% - 32px); font-size:.85rem}
+.selbar b{font-variant-numeric:tabular-nums}
+.selbar button,.selbar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:4px 8px; cursor:pointer}
+.selbar button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+.selbar button:disabled,.selbar select:disabled{opacity:.45; cursor:default}
+body.ro #selbtn{display:none}
+.selbar .hint{color:var(--muted); font-size:.78rem}
+.card .hov{position:absolute; top:4px; right:4px; display:none; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.card:hover .hov,.card:focus-within .hov{display:flex}
+.card .hov button{font:inherit; font-size:.8rem; line-height:1; width:24px; height:22px; border:0; border-radius:4px; background:transparent; color:var(--ink); cursor:pointer}
+.card .hov button:hover{background:var(--accent-soft); color:var(--accent)}
+@media (hover:none){ .card .hov{display:none !important} }
+.card.p1{--pc:var(--p1)} .card.p2{--pc:var(--p2)} .card.p3{--pc:var(--p3)} .card.p4{--pc:var(--p4)}
+.card .top{display:flex; gap:6px; align-items:baseline}
+.card .id{font-family:var(--f-mono); font-size:.72rem; color:var(--muted)}
+.card .qmark{font-size:.8rem; line-height:1; margin-left:2px}
+.card .pri{font-family:var(--f-mono); font-size:.7rem; font-weight:500; color:var(--pc,var(--muted)); margin-left:auto}
+.card .t{font-weight:600; font-size:.86rem; text-wrap:pretty}
+.card .st{font-size:.78rem; color:var(--muted)}
+.card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
+.card .blkb{font-size:.85rem; color:var(--blk-ink); background:var(--blk-bg); border-radius:6px; padding:6px 9px; margin:4px 0}
+.card .lnk{font-size:.78rem} .card .lnk a{color:inherit; opacity:.8} .card .lnk a:hover{opacity:1}
+.card .qb{font-size:.76rem; background:var(--q-soft); color:var(--ink); border-left:3px solid var(--q); padding:3px 6px; border-radius:3px}
+.labs{display:flex; flex-wrap:wrap; gap:4px}
+.lab{font-size:.68rem; font-weight:600; letter-spacing:.03em; padding:1px 7px; border-radius:999px; background:var(--q-soft); color:var(--q); border:1px solid var(--q)}
+.lab.ok{background:transparent; color:var(--c-done); border-color:var(--c-done)}
+.lab.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.card .qb::before{content:"Question: "; font-weight:600; color:var(--q)}
+.decs{display:grid; gap:8px; background:var(--q-soft); border-left:3px solid var(--q); border-radius:3px; padding:6px 8px; cursor:auto}
+.decs .dh{font-size:.72rem; font-weight:600; color:var(--q); text-transform:uppercase; letter-spacing:.06em; display:flex; gap:6px}
+.decs .dh span{margin-left:auto; color:var(--muted); font-weight:500; text-transform:none; letter-spacing:0}
+.decs .fold{border-top:1px solid var(--line); padding-top:4px}
+.decs .fold > summary{cursor:pointer; font-size:.78rem; font-weight:600; color:var(--muted); list-style-position:inside}
+.decs .fold > summary:hover, .decs .fold > summary:focus-visible{color:var(--ink)}
+.decs .fold[open] > summary{margin-bottom:6px}
+.decs .fold.past{display:grid; gap:4px}
+.decs .pd{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2px 10px; font-size:.78rem; padding:3px 0; border-bottom:1px dotted var(--line)}
+.decs .pd .pdq{color:var(--muted)}
+.decs .pd .pda{color:var(--ink); font-weight:500}
+@media (max-width:520px){ .decs .pd{grid-template-columns:1fr} }
+.decs .fold.pedit{margin-top:4px}
+.decs .fold.pedit .dq{margin-bottom:8px}
+.dq{display:grid; gap:4px}
+.dq .qt{font-size:.78rem; font-weight:600}
+.dq .ch{display:flex; flex-wrap:wrap; gap:4px}
+.dq button{font:inherit; font-size:.74rem; text-align:left; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:5px; padding:3px 7px; cursor:pointer; max-width:100%}
+.dq button.rec{border-style:dashed; border-color:var(--q)}
+.dq button[aria-pressed="true"]{background:var(--q); border-color:var(--q); color:var(--surface); border-style:solid}
+.dq .hint{font-size:.7rem; color:var(--muted)}
+.chip{display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:500; padding:1px 7px; border-radius:999px; background:hsl(var(--h) var(--chip-s) var(--chip-l)); color:var(--chip-ink); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+.chipedit{position:relative; cursor:pointer; padding-right:8px}
+.chipedit:hover,.chipedit:focus-within{outline:2px solid hsl(var(--h) 60% 45%); outline-offset:1px}
+.chipedit select{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; font:inherit}   /* covers the whole pill */
+.chip::before{content:""; width:6px; height:6px; border-radius:50%; background:hsl(var(--h) 60% 45%); flex:none}
+.epics{display:flex; flex-direction:column; gap:6px; padding-bottom:4px}
+.epics h2{margin:0; padding:8px 2px 2px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
+.epic{flex:none; display:grid; gap:3px; min-width:0; text-align:left; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-top:3px solid hsl(var(--h) 55% 50%); border-radius:6px; padding:6px 9px; cursor:pointer}
+.epic[aria-pressed="true"]{outline:2px solid var(--accent); outline-offset:-1px}
+.epic .en{font-size:.78rem; font-weight:600}
+.epic .ec{font-size:.7rem; color:var(--muted); font-variant-numeric:tabular-nums}
+.epic .eb{height:4px; border-radius:2px; background:var(--sunk); overflow:hidden}
+.epic .eb i{display:block; height:100%; background:hsl(var(--h) 55% 50%)}
+/* themes: one level above the epics (larger name, tinted, a stripe on the left), their epics nested below */
+.tgroup{display:grid; gap:6px}
+.thead{position:relative; display:grid}
+.epic.theme{background:hsl(var(--h) var(--chip-s) var(--chip-l)); border-top:1px solid var(--line); border-left:5px solid hsl(var(--h) 55% 50%); padding:7px 30px 7px 10px}
+.theme .tn{font-family:var(--f-display); font-size:1.08rem; line-height:1.15}
+.theme .eb{height:5px; background:var(--surface)}
+.tnone{font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:6px 30px 0 2px}
+.ttw{position:absolute; top:5px; right:5px; width:22px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font:inherit; font-size:.85rem; line-height:22px; cursor:pointer}
+.ttw:hover{background:var(--surface); color:var(--accent)}
+.tepics{display:grid; gap:6px; margin-left:8px; padding-left:8px; border-left:2px solid hsl(var(--h) 55% 50% / .45)}
+.tgroup.collapsed .tepics{display:none}
+.card .tpath{font-size:.78rem; color:var(--muted); margin-right:4px}
+@media (max-width:720px){   /* the epics column becomes a strip that scrolls sideways inside itself: each theme chip, then its epic chips (after the base rules, so it wins) */
+  .epics{flex-direction:row; align-items:stretch; overflow-x:auto; overflow-y:visible; max-height:none; height:auto} .epics h2{flex:none; align-self:center; padding:0 2px}
+  .epic{min-width:150px} .epic.theme{min-width:170px}
+  .tgroup,.tepics{display:flex; flex-direction:row; flex:none; align-items:stretch} .tepics{margin-left:0; padding-left:6px} .thead{flex:none} .tnone{align-self:center; padding:0 30px 0 2px}
+}
+.tline{display:flex; flex-wrap:wrap; gap:2px 10px; align-items:baseline}
+.eta{font-size:.7rem; font-family:var(--f-mono); color:var(--c-prog)}
+.eta.late{color:var(--c-decide); font-weight:600}
+.times .eta{font-size:inherit; font-family:inherit}
+.tcount{font-size:.7rem; font-family:var(--f-mono); color:var(--muted)}
+.tcount.ok{color:var(--c-done)}
+.archn{margin:6px 10px 10px; font-size:12px; color:var(--muted)}
+.times{display:flex; flex-wrap:wrap; gap:4px 16px; font-size:.8rem; color:var(--muted)}
+.times b{color:var(--ink); font-weight:600}
+.tlist{display:grid; gap:4px}
+.tlist .th{font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); display:flex; gap:6px}
+.tlist .th span{margin-left:auto; text-transform:none; letter-spacing:0; font-weight:500}
+ul.tasks{list-style:none; margin:0; padding:0; display:grid; gap:2px; font-size:.85rem}
+ul.tasks li{display:flex; gap:6px; align-items:baseline}
+ul.tasks li .tick{font-size:1rem; line-height:1}
+ul.tasks li.done{color:var(--muted)}
+ul.tasks li.done span:last-child{text-decoration:line-through; text-decoration-thickness:1px}
+/* art decisions: a picture per choice (and per question), shown in the card window so a pick needs no other page */
+.decs .ch button.pic{display:inline-flex; flex-direction:column; align-items:center; gap:4px; max-width:100%}
+.decs .ch button.pic img, .decs .qimg{display:block; max-width:100%; height:auto; image-rendering:pixelated; border-radius:3px; background:#000}
+.decs .qimg{margin:4px 0}
+.nopic{font-size:.72rem; color:var(--muted); border:1px dashed var(--line); border-radius:4px; padding:2px 8px; width:max-content; max-width:100%}
+/* activity log (Jira-style): every update appended to the card, newest first, with screenshots */
+.acts{display:grid; gap:8px; border-top:1px dashed var(--line); padding-top:8px}
+.acts .ah{font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between}
+.acts .ah span{text-transform:none; letter-spacing:0; font-weight:500}
+.acts .ai{display:grid; gap:4px; border-left:3px solid var(--line); padding-left:8px}
+.acts .at{font-size:.72rem; color:var(--muted)}
+.acts .ax{font-size:.82rem; white-space:pre-wrap; overflow-wrap:anywhere}
+.acts .aimgs{display:flex; flex-wrap:wrap; gap:6px}
+.acts .aimgs img, .card .d img{display:block; max-width:min(100%,480px); height:auto; image-rendering:pixelated; border:1px solid var(--line); border-radius:3px; background:#000}
+#imgview{position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.82); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:16px; cursor:zoom-out}
+#imgview img{max-width:100%; max-height:calc(100% - 48px); width:auto; height:auto; image-rendering:pixelated; background:#000; border-radius:3px}
+#imgview .ivcap{color:#e5e9ef; font-size:.8rem; max-width:80ch; text-align:center}
+#imgview .ivclose{position:absolute; top:calc(8px + env(safe-area-inset-top, 0px)); right:12px; font:600 1.4rem/1 var(--f-body); color:#e5e9ef; background:transparent; border:0; cursor:pointer}
+img.zoom{cursor:zoom-in}
+img.zoom:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.card .more{display:none; gap:8px; border-top:1px dashed var(--line); padding-top:6px; margin-top:2px; cursor:auto}
+.card.open .more{display:grid}
+.card .d{font-size:.8rem; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; display:grid; gap:6px}
+.card .meta{font-size:.72rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:2px 10px}
+.row{display:flex; flex-wrap:wrap; gap:4px; align-items:center}
+.row .lbl{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); min-width:52px}
+.row button{font:inherit; font-size:.76rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:5px; padding:2px 8px; cursor:pointer}
+.row button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.row select{font:inherit; font-size:.78rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:2px 4px; min-width:0}
+.card textarea{font:inherit; font-size:.8rem; color:var(--ink); background:transparent; border:1px solid var(--line); border-radius:5px; padding:4px 6px; resize:vertical; min-height:2.4em; width:100%}
+.ro .card .row button,.ro .card .row select,.ro .card textarea,.ro .dq button{pointer-events:none; opacity:.6}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.empty{color:var(--muted); padding:30px 0; text-align:center}
+.modal{position:fixed; inset:0; z-index:20; background:rgba(10,14,20,.55); display:flex; align-items:flex-start; justify-content:center; padding:calc(24px + env(safe-area-inset-top,0px)) 16px 24px; overflow:auto}
+.mpanel{width:min(680px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
+.mhead{display:flex; align-items:center; gap:8px}
+.mcol{font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-left:3px solid var(--cc); padding-left:6px}
+.mclose{margin-left:auto; font:inherit; font-size:.8rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:3px 10px; cursor:pointer}
+.card.full{cursor:auto; border:0; border-left:4px solid var(--pc,var(--line)); padding:2px 0 2px 12px; font-size:15px}
+.card.full .t{font-size:1.1rem; text-wrap:balance}
+.card.full .st,.card.full .d,.card.full .meta{font-size:.9rem}
+.card.full .d{max-width:70ch}
+.card.full .dq .qt{font-size:.9rem}
+.card.full .dq button{font-size:.85rem; padding:5px 9px}
+.card.full textarea{min-height:5em; font-size:.9rem}
+.card.full textarea.other{min-height:2.4em; font-size:.85rem}
+body.modal-open{overflow:hidden}
+.rankbtn{font:inherit; font-size:.7rem; font-weight:600; letter-spacing:.04em; text-transform:none; border:1px solid var(--line); background:var(--surface); color:var(--accent); border-radius:999px; padding:1px 9px; cursor:pointer}
+.rankbtn:hover{border-color:var(--accent); background:var(--accent-soft)}
+.rk{width:min(820px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:12px}
+.rk h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
+.rk .rkq{color:var(--muted); font-size:.9rem}
+.rk .rkbar{height:5px; border-radius:3px; background:var(--sunk); overflow:hidden} .rk .rkbar i{display:block; height:100%; background:var(--accent)}
+.rk .pair{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%,300px),1fr)); gap:12px}
+.rk .opt{display:grid; gap:6px; align-content:start; text-align:left; font:inherit; color:var(--ink); background:var(--bg); border:2px solid var(--line); border-left:5px solid var(--pc,var(--line)); border-radius:8px; padding:10px 12px; cursor:pointer; min-width:0}
+.rk .opt:hover,.rk .opt:focus-visible{border-color:var(--accent); outline:none}
+.rk .opt.p1{--pc:var(--p1)} .rk .opt.p2{--pc:var(--p2)} .rk .opt.p3{--pc:var(--p3)} .rk .opt.p4{--pc:var(--p4)}
+.rk .opt .ot{font-weight:600; font-size:1rem}
+.rk .opt .od{font-size:.84rem; color:var(--muted)}
+.rk .opt .om{font-size:.74rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:2px 10px}
+.rk .keys{font-size:.75rem; color:var(--muted)}
+.rk .acts{display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between}
+.rk .acts span{display:flex; flex-wrap:wrap; gap:8px}
+.rk .acts button{font:inherit; font-size:.84rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:5px 12px; cursor:pointer}
+.rk .acts button.pri{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.rk ol{margin:0; padding-left:1.6em; max-height:50dvh; overflow:auto; font-size:.86rem}
+.toast{z-index:1100; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; font-size:.85rem; max-width:calc(100% - 32px)}
+/* the connect form */
+.setup{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; display:grid; gap:10px; max-width:520px; margin:14px 0 16px}
+.setup h2{margin:0; font:400 1.3rem var(--f-display)}
+.setup label{display:grid; gap:4px; font-size:.86rem; color:var(--muted)}
+.setup input{font:inherit; color:var(--ink); padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
+.setup p{margin:0; font-size:.84rem; color:var(--muted)}
+.pbtn{font:inherit; color:var(--ink); border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:5px 12px; cursor:pointer; min-height:36px}
+body.noconn .bar, body.noconn .main, body.noconn #empty, body.noconn #note{display:none}
+/* machines and jobs */
+.status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
 .status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
-.mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0}
+.mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0; align-content:start}
 .mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
+dl.facts{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:.86rem; margin:0}
+dl.facts dt{color:var(--muted)}
+dl.facts dd{margin:0; overflow-wrap:anywhere}
 .state{font-size:.72rem; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
 .state.ok{color:var(--c-done); border-color:var(--c-done)}
 .state.warn{color:var(--q); border-color:var(--q)}
-.state.bad{color:var(--blk-fg); background:var(--blk-bg); border-color:transparent}
+.state.bad{color:var(--blk-ink); background:var(--blk-bg); border-color:transparent}
 .meter{height:8px; border-radius:999px; background:var(--line); overflow:hidden}
 .meter span{display:block; height:100%; background:var(--c-done)}
 .tblwrap{overflow-x:auto}
 table.st{border-collapse:collapse; width:100%; font-size:.82rem}
 table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
 table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
-.linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font-size:.82rem; text-decoration:underline}
-@media (max-width:720px){
-  .board{grid-auto-flow:row; grid-auto-columns:auto; overflow-x:visible}
-  .tally{margin-left:0}
-}
-@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+table.st td small{color:var(--muted)}
 </style>
 
 <div class="wrap" id="app">
   <header class="top">
-    <h1>Colonization+ Board</h1>
-    <div class="sync" id="sync">Connecting to the board data…</div>
+    <div class="hrow"><h1>Colonization+ Board</h1><div class="sync" id="sync">Connecting to the board data…</div></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -172,462 +310,1101 @@ table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertica
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
   </nav>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
-  <div class="bar">
-    <input type="search" id="q" placeholder="Search ids, titles, status, questions" aria-label="Search cards">
-    <label><input type="checkbox" id="openOnly"> Open questions only</label>
-    <label><input type="checkbox" id="showPark"> Parked</label>
-    <label><input type="checkbox" id="showDone"> Done &amp; Rejected</label>
-  </div>
-  <form class="setup" id="setup" hidden>
-    <h2>Connect to the board</h2>
-    <p>The board lives in a private GitHub repository. Paste a fine-grained token that can reach only that repository
-      (Contents: read and write) and has an expiry date. It is kept in this browser only.</p>
-    <label>Owner <input id="sOwner" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
-    <label>Repository <input id="sRepo" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
-    <label>Token <input id="sToken" type="password" autocomplete="off" required></label>
-    <div class="row"><button class="pbtn" type="submit">Connect</button></div>
-    <p id="sErr" role="alert"></p>
-  </form>
-  <p class="note" id="note">Answers, notes, priorities and column moves are saved to the board straight away and reach
-    Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
-  <div class="board" id="board"></div>
+    <div class="bar">
+      <span class="qwrap"><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
+      <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Big feature</option><option value="0">No priority</option></select>
+      <select id="ft" aria-label="Theme filter"><option value="">All themes</option></select>
+      <select id="fe" aria-label="Epic filter"><option value="">All epics</option></select>
+      <label style="font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="fq" style="flex:none"> Open questions</label>
+      <span class="fwrap">
+        <button type="button" id="fcols" class="fbtn" aria-haspopup="true" aria-expanded="false" title="Show or hide columns">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M1.5 2.5h13l-5 6v4.5l-3 1.5v-6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span>Columns</span><b id="fcount" class="fcount" hidden></b>
+        </button>
+        <div id="fpop" class="fpop" role="group" aria-label="Show columns" hidden></div>
+      </span>
+      <button type="button" id="selbtn" class="fbtn" aria-pressed="false" title="Select several cards to reorder or move them together">☑ Select</button>
+      <span class="savest" id="savest" role="status"></span>
+    </div>
+    <form class="setup" id="setup" hidden>
+      <h2>Connect to the board</h2>
+      <p>The board lives in a private GitHub repository. Paste a fine-grained token that can reach only that repository
+        (Contents: read and write) and has an expiry date. It is kept in this browser only.</p>
+      <label>Owner <input id="sOwner" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <label>Repository <input id="sRepo" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <label>Token <input id="sToken" type="password" autocomplete="off" required></label>
+      <div class="row"><button class="pbtn" type="submit">Connect</button></div>
+      <p id="sErr" role="alert"></p>
+    </form>
+    <div class="main">
+      <nav class="epics" id="epics" aria-label="Epics"></nav>
+      <div class="board" id="board"></div>
+    </div>
+    <div class="empty" id="empty" hidden></div>
+    <p class="note" id="note">Answers, notes, priorities, epics, moves and card order are saved to the board straight away and reach
+      Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
   </div>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
 </div>
-<div id="win" hidden></div>
-<div class="viewer" id="viewer" hidden><img id="viewerImg" alt=""></div>
-<div class="toast" id="toast" hidden></div>
+<div class="modal" id="modal" hidden></div>
+<div class="modal" id="rankm" hidden></div>
+<div class="selbar" id="selbar" role="toolbar" aria-label="Selected cards" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 const COLS = [
-  {k:"park", name:"Parked"}, {k:"back", name:"Backlog"}, {k:"refining", name:"In refinement"}, {k:"refined", name:"Refined"},
-  {k:"next", name:"Next up"}, {k:"prog", name:"In progress"}, {k:"built", name:"Ready to merge"},
-  {k:"test", name:"Merged, in testing"}, {k:"done", name:"Done"}, {k:"rej", name:"Rejected"}];
+  {k:"park", name:"Parked", cc:"--c-park", hint:"Want, Later and deferred items."},
+  {k:"back", name:"Backlog", cc:"--c-back", hint:"Must items not yet scheduled."},
+  {k:"refining", name:"In refinement", cc:"--c-refining", hint:"Being refined with you: art previews or design questions in progress."},
+  {k:"refined", name:"Refined", cc:"--c-refined", hint:"Refined by you: decisions made, ready to schedule."},
+  {k:"next", name:"Next up", cc:"--c-next", hint:"Claude works top to bottom."},
+  {k:"prog", name:"In progress", cc:"--c-prog", hint:""},
+  {k:"built", name:"Ready to merge", cc:"--c-built", hint:"Built on its branch; its own tests pass; waiting for the next batch merge."},
+  {k:"test", name:"Merged, in testing", cc:"--c-test", hint:"In master; the full suite and promotion are pending or failing."},
+  {k:"done", name:"Done", cc:"--c-done", hint:"Committed and tested."},
+  {k:"rej", name:"Rejected", cc:"--c-rej", hint:"Decided against; kept for the record."},
+];
 const COL_BY_NAME = Object.fromEntries(COLS.map(c => [c.name, c.k]));
-const PRI = {1:"P1 Critical", 2:"P2 High", 3:"P3 Normal", 4:"P4 Big feature"};
-const MEDIA_RX = /^media\/[\w./-]+\.(png|gif|jpg)$/i;
+const COL_NAME = Object.fromEntries(COLS.map(c => [c.k, c.name]));
+const NEEDS_ANSWERS = ["built", "test", "done"];   // no move there while a question is open (the desktop refuses it too)
+const PRI = {1:"P1",2:"P2",3:"P3",4:"P4"};
+const OTHER = "__other_text";   // ans[id + OTHER]: a typed answer to a multiple-choice question
+const MEDIA_RX = /^media\/[\w.\/-]+\.(png|gif|jpg)$/i;
+const $ = s => document.querySelector(s);
+const raw = new Map();          // id -> card doc as exported by the desktop (export/board.json)
+const cards = new Map();        // id -> the card as the user sees it: raw + this page's changes that are still on the way
+const changes = new Map();      // change id -> {card, field, value, ts, base_upd[, rank]} made here, not yet in an export
+const sentAt = new Map();       // change id -> when its file reached GitHub
+const epics = new Map();        // key -> {name,hue,order,blurb,theme}
+const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
+let readOnly = true, loaded = false, hubStatus = null, meta = {};
+let dragId = null, openId = null;
+let selMode = false, dragGroup = null, selAnchor = null;
+let drag = null;                 // the card being pressed or dragged (see "card drag")
+const picked = new Set();          // ids selected in select mode
 
-let canWrite = false, meta = {}, loaded = false, hubStatus = null;
-const cards = new Map();      // id -> card doc (from the desktop vault, written by the sync)
-const changes = new Map();    // change doc id -> change (made here, not yet synced)
-let openId = null;
-const filt = loadFilters();
+function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null; } }
+const collapsed = new Set(ls("kb.collapsed") || ["done","park","rej"]);
+const filt = Object.assign({q:"",p:"",t:"",e:"",qo:false,hide:{}}, ls("kb.filters") || {});
+if(!filt.hide || typeof filt.hide !== "object") filt.hide = {};
+const tcollapsed = new Set(ls("kb.tcollapsed") || []);   // themes whose epics are folded away in the epics column
 
-// ---------- helpers
-function el(tag, attrs = {}, ...kids){
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)){
-    if (k === "class") e.className = v;
-    else if (k === "style") e.style.cssText = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of kids.flat()) if (c != null && c !== false) e.append(c);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true, 4000); }
+function setRO(v){ readOnly = v; document.body.classList.toggle("ro", v); }
+
+function el(tag, attrs={}, ...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==undefined&&v!==null&&v!==false) e.setAttribute(k, v===true?"":v); }
+  for(const k of kids.flat()) if(k!=null&&k!==false) e.append(k);
   return e;
 }
-function loadFilters(){ try { return JSON.parse(localStorage.getItem("br.filters")) || {}; } catch { return {}; } }
-function saveFilters(){ try { localStorage.setItem("br.filters", JSON.stringify(filt)); } catch {} }
-function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3500); }
-function colKey(c){ return COL_BY_NAME[c.column] || c.col || "back"; }
-function fmtDur(ms){ const m = Math.round(Math.abs(ms) / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
-  return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`; }
-function fmtTime(iso){ const d = new Date(iso); if (isNaN(d)) return iso || "";
-  return d.toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}); }
-const blobs = new Map();      // vault media path -> Promise<object URL>
+
+// ---------- pictures: the vault's media are private, so they come through the API and are shown as blob URLs
+const blobs = new Map(), blobUrl = new Map(), noPic = new Set();   // media path -> Promise<object URL> / the URL / failed
 function mediaUrl(src){
-  if (!blobs.has(src)) blobs.set(src, gh(`contents/vault/${src.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`,
-    {raw: true}).then(r => r.blob()).then(b => URL.createObjectURL(b)));
+  if(!blobs.has(src)) blobs.set(src, gh(`contents/vault/${src.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`, {raw:true})
+    .then(r=>r.blob()).then(b=>{ const u = URL.createObjectURL(b); blobUrl.set(src, u); return u; }, e=>{ noPic.add(src); throw e; }));
   return blobs.get(src);
 }
-function img(src, cls){
-  if (!src || !MEDIA_RX.test(src)) return null;
-  const i = el("img", {class: cls || "", alt: "", loading: "lazy"});
-  mediaUrl(src).then(u => { i.src = u; }, () => i.replaceWith(el("span", {class: "pill"}, "Picture not available")));
-  i.addEventListener("click", ev => { ev.stopPropagation(); if (i.src) showImg(i.src); });
+const mediaImg = s => (typeof s === "string" && MEDIA_RX.test(s)) ? s : null;
+function pic(src, attrs){   // an <img> for a media path; a picture that is gone (archived cards' media) becomes a short note
+  const gone = () => el("span",{class:"nopic"}, "Picture not available");
+  if(noPic.has(src)) return gone();
+  const i = el("img", attrs);
+  if(blobUrl.has(src)) i.src = blobUrl.get(src);
+  else mediaUrl(src).then(u=>{ i.src = u; }, ()=>{ i.replaceWith(gone()); });
   return i;
 }
-function showImg(src){ const v = document.getElementById("viewer"); document.getElementById("viewerImg").src = src; v.hidden = false; }
-document.getElementById("viewer").addEventListener("click", () => document.getElementById("viewer").hidden = true);
 
-// The card as the user sees it: the mirrored card with this page's not-yet-synced changes applied.
-function effective(c){
-  const e = structuredClone(c);
-  e.ans = Object.assign({}, c.ans || {});
-  const mine = [...changes.values()].filter(x => x.card === c.id).sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
-  for (const ch of mine){
-    if (ch.field.startsWith("ans.")) e.ans[ch.field.slice(4)] = ch.value;
-    else e[ch.field] = ch.value;
+// ---------- the card as shown: the exported card with this page's not-yet-synced changes applied (oldest first)
+function rebuild(){
+  cards.clear();
+  for(const [id, c] of raw){
+    const e = structuredClone(c);
+    e.id = id; e.col = COL_BY_NAME[c.column] || c.col || "back"; if(e.col === "decide") e.col = "back";
+    e.ans = Object.assign({}, c.ans && typeof c.ans === "object" ? c.ans : {}); e._pending = 0;
+    cards.set(id, e);
   }
-  e._pending = mine.length;
-  return e;
-}
-// Open questions: the board's openQ() rule (spec 5.3).
-function openList(c){
-  const a = c.ans || {}, out = [];
-  const qs = (Array.isArray(c.qs) ? c.qs : []).filter(x => x && x.id && x.q);
-  if (colKey(c) !== "done") for (const q of qs) if (!String(a[q.id] ?? "").trim()) out.push(q.id);
-  if (Array.isArray(c.opts)) for (const o of c.opts) if (!a[o.id]) out.push(o.id);
-  if (!out.length && !qs.length && !(c.opts || []).length && c.q && colKey(c) !== "done") out.push("q");
-  return out;
+  const list = [...changes.values()].sort((a,b)=>(a.ts||"").localeCompare(b.ts||""));
+  for(const ch of list){
+    const c = cards.get(ch.card); if(!c) continue;
+    const f = ch.field;
+    if(f.startsWith("ans.")) c.ans[f.slice(4)] = ch.value;
+    else if(f === "column"){
+      const k = COL_BY_NAME[ch.value] || ch.value;
+      if(c.col !== k){
+        c.col = k; c.column = COL_NAME[k] || ch.value; c.colSince = ch.ts;
+        if((k === "prog" || k === "built" || k === "test") && !c.started) c.started = ch.ts;
+        if(k === "done" && !c.ended) c.ended = ch.ts;
+      }
+      if(ch.rank != null) c.rank = ch.rank;
+    }
+    else if(f === "order"){ ch.value.forEach((id, n)=>{ const x = cards.get(id); if(x){ x.rank = (n + 1) * 1000; x._pending++; } }); continue; }
+    else c[f] = ch.value;   // un, pri, rank, epic
+    c._pending++;
+  }
 }
 
-// ---------- writes (one change document per card field: a later edit replaces an earlier one)
-async function change(card, field, value){
-  if (!canWrite){ toast("This view is read-only."); return; }
-  const ts = new Date().toISOString();
+// ---------- writes: every change is one new file in inbox/phone/ on the board branch; the desktop applies it through
+// the board's rules (and refuses anything else). Files go up one at a time, in the order the changes were made.
+let lastStamp = 0, sending = 0, sendq = Promise.resolve();
+function change(card, field, value, extra){
+  if(readOnly){ toast("This view is read-only."); return; }
+  lastStamp = Math.max(Date.now(), lastStamp + 1);   // one per millisecond: the stamp is in the file's name
+  const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
-  const doc = {card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null};
-  for (const [k, v] of changes) if (v.card === card.id && v.field === field) changes.delete(k);   // the later edit wins
-  changes.set(id, doc); render();
-  const body = {message: `phone: ${card.id} ${field}\n\nHub-Source: user\nHub-Machine: phone`,
+  const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
+  for(const [k, v] of changes) if(v.card === card.id && v.field === field) changes.delete(k);   // the later edit wins on screen
+  changes.set(id, doc);
+  sending++; saveState();
+  sendq = sendq.then(()=>send(id, doc)).then(()=>{ sending--; saveState(); });
+}
+async function send(id, doc){
+  const body = {message: `phone: ${doc.card} ${doc.field}\n\nHub-Source: user\nHub-Machine: phone`,
                 content: b64(JSON.stringify(doc) + "\n"), branch: BRANCH};
-  for (let attempt = 0; attempt < 3; attempt++){
-    try { await gh(`contents/inbox/phone/${id}.json`, {method: "PUT", body}); wake(); return; }
-    catch (e) {
-      if (e.status === 401 || e.status === 403){ canWrite = false; document.getElementById("app").classList.add("ro");
-        toast("The token can't write to the board (expired, or read-only)."); changes.delete(id); render(); return; }
-      await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+  for(let attempt = 0; attempt < 4; attempt++){
+    if(!conn) return;
+    try{ await gh(`contents/inbox/phone/${id}.json`, {method:"PUT", body}); sentAt.set(id, new Date().toISOString()); wake(); return; }
+    catch(e){
+      if(e.status === 401 || e.status === 403){ setRO(true); toast("The token can't write to the board (expired, or read-only).");
+        changes.delete(id); rebuild(); render(); return; }
+      await new Promise(r=>setTimeout(r, 800 * (attempt + 1)));
     }
   }
-  changes.delete(id); render();
-  toast(`Could not save the change to ${card.id}. Try again.`);
+  changes.delete(id); rebuild(); render();
+  toast(`Could not save the change to ${doc.card}. Try again.`);
 }
-function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for (const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
-
-// ---------- board
-function matches(c){
-  const k = colKey(c);
-  if (k === "park" && !filt.park) return false;
-  if ((k === "done" || k === "rej") && !filt.done) return false;
-  if (filt.open && !openList(c).length) return false;
-  const s = (filt.q || "").trim().toLowerCase();
-  if (!s) return true;
-  const hay = [c.id, c.t, c.st, c.q, c.un, c.d, c.blk, ...(c.opts || []).map(o => o.q), ...(c.qs || []).map(q => q.q)];
-  return hay.some(x => x && String(x).toLowerCase().includes(s));
+function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
+function saveState(){
+  const n = changes.size;
+  $("#savest").textContent = readOnly ? (conn ? "Read-only" : "") : sending ? "Saving…" : n ? n + (n===1?" change":" changes") + " on the way" : loaded ? "Saved" : "";
 }
-function keepScroll(fn){
-  const board = document.getElementById("board"), scrim = document.querySelector("#win .scrim");
-  const x = board.scrollLeft, y = window.scrollY, m = scrim ? scrim.scrollTop : 0;
-  fn();
-  board.scrollLeft = x; window.scrollTo(window.scrollX, y);
-  const s2 = document.querySelector("#win .scrim"); if (s2) s2.scrollTop = m;
+// how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
+function openCount(c, col){
+  const a = c.ans || {}, qs = qList(c), opts = Array.isArray(c.opts) ? c.opts : [];
+  let n = opts.filter(o=>o && o.id && !a[o.id]).length;
+  if(col !== "done") n += qs.filter(x=>!String(a[x.id]||"").trim()).length;
+  if(!n && !qs.length && !opts.length && c.q && col !== "done") n = 1;
+  return n;
 }
-function render(){ keepScroll(renderNow); }
-function renderNow(){
-  const all = [...cards.values()].map(effective);
-  const open = all.reduce((n, c) => n + (openList(c).length ? 1 : 0), 0);
-  const pend = changes.size;
-  const t = document.getElementById("tally"); t.replaceChildren();
-  const live = all.filter(c => !["done", "rej", "park"].includes(colKey(c)));
-  for (const p of [1, 2, 3, 4]){ const n = live.filter(c => c.pri === p).length; if (n) t.append(el("span", {class: "pill"}, `${n} P${p}`)); }
-  t.append(el("span", {class: "pill q"}, `${open} with open questions`));
-  if (pend) t.append(el("span", {class: "pill"}, `${pend} change${pend === 1 ? "" : "s"} on the way to the desktop`));
-
-  const sync = document.getElementById("sync");
-  if (loaded) sync.replaceChildren(meta.exported_at ? el("span", {}, "Board as of ", el("b", {}, fmtTime(meta.exported_at)),
-    lastCheck ? ` · checked ${fmtTime(lastCheck)}` : "") : el("span", {}, "No board export yet: the desktop's node writes it."));
-
-  renderStatus();
-  const board = document.getElementById("board"); board.replaceChildren();
-  for (const col of COLS){
-    if (col.k === "park" && !filt.park) continue;
-    if ((col.k === "done" || col.k === "rej") && !filt.done) continue;
-    const inCol = all.filter(c => colKey(c) === col.k);
-    const shown = inCol.filter(matches).sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0) || String(a.id).localeCompare(String(b.id)));
-    const list = el("div", {class: "list"});
-    for (const c of shown) list.append(face(c));
-    if (!shown.length) list.append(el("div", {class: "empty"}, loaded ? "No cards" : "Loading…"));
-    board.append(el("section", {class: "col", style: `--cc:var(--c-${col.k})`, "aria-label": col.name},
-      el("h2", {}, col.name, el("span", {class: "n"}, shown.length === inCol.length ? String(inCol.length) : `${shown.length}/${inCol.length}`)), list));
+// The old board's write(id, patch): the patch's fields become change files. {col, rank} is one `column` change that
+// carries its place; a rank alone is a `rank` change. Times (colSince, started, ended) are the desktop's to set.
+function write(id, patch, quiet){
+  if(readOnly) return;
+  const base = raw.get(id), c = cards.get(id); if(!base || !c) return;
+  if(patch.col !== undefined && patch.col !== c.col && NEEDS_ANSWERS.includes(patch.col) && openCount(c, patch.col)){
+    toast(id + " has open questions: answer them before moving it to " + COL_NAME[patch.col] + ".");
+    if(!quiet) render();
+    return;
   }
-  if (openId && !document.activeElement?.closest?.("#win textarea")) renderWin();
+  if(patch.ans) for(const [k, v] of Object.entries(patch.ans)) change(base, "ans." + k, v);
+  if(patch.pri !== undefined) change(base, "pri", patch.pri);
+  if(patch.un !== undefined) change(base, "un", patch.un);
+  if(patch.epic !== undefined) change(base, "epic", patch.epic);
+  if(patch.col !== undefined && patch.col !== c.col) change(base, "column", COL_NAME[patch.col], patch.rank !== undefined ? {rank: patch.rank} : null);
+  else if(patch.rank !== undefined) change(base, "rank", patch.rank);
+  rebuild();
+  if(!quiet) render();
 }
+
+function matches(c){
+  if(filt.p!=="" && String(c.pri||0)!==filt.p) return false;
+  if(filt.e && (c.epic||"")!==filt.e) return false;
+  if(filt.t && epicTheme(c.epic)!==filt.t) return false;
+  if(filt.qo && !openQ(c)) return false;
+  if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
+    ...(Array.isArray(c.opts)?c.opts:[]).map(o=>o&&o.q), ...qList(c).map(x=>x.q)].some(x=>x&&String(x).toLowerCase().includes(s))) return false; }
+  return true;
+}
+// a card waiting on an answer: an unanswered decision, or a free-text question on a card without decisions (not on Done cards)
+// qs = [{id, q}]: free-text questions, answered in a text field each (the answer is stored in ans[id])
+function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q) : []; }
+function openQ(c){
+  const a = c.ans || {}, qs = qList(c);
+  if(c.col !== "done" && qs.some(x=>!String(a[x.id]||"").trim())) return true;
+  if(Array.isArray(c.opts) && c.opts.length) return c.opts.some(o=>!a[o.id]);
+  return !qs.length && !!(c.q && c.col!=="done");
+}
+function colCards(k){ return [...cards.values()].filter(c=>c.col===k).sort((a,b)=>(a.rank??0)-(b.rank??0) || a.id.localeCompare(b.id)); }
+
+// Which decisions / questions count as "earlier" is fixed when the card window opens (first full render), so an
+// answer given while the card is open stays in place instead of folding away; it folds the next time the card opens.
+let PAST_SNAP = null;   // {id, keys: Set of opt / question ids answered at open}
+function pastAtOpen(c, ids, isAnswered){
+  if(!PAST_SNAP || PAST_SNAP.id !== c.id) PAST_SNAP = {id: c.id, keys: new Set()};
+  if(!PAST_SNAP.seen){ PAST_SNAP.seen = new Set(); }
+  for(const id of ids){
+    if(PAST_SNAP.seen.has(id)) continue;   // decided at first sight only
+    PAST_SNAP.seen.add(id);
+    if(isAnswered(id)) PAST_SNAP.keys.add(id);
+  }
+  return id => PAST_SNAP.keys.has(id);
+}
+
+// Picture viewer: a click on a log, description or question picture shows it full size over the page.
+function viewImg(src, alt){
+  let v = document.getElementById("imgview");
+  if(!v){
+    v = el("div",{id:"imgview", role:"dialog", "aria-modal":"true", "aria-label":"Picture", tabindex:"-1"},
+      el("button",{class:"ivclose", "aria-label":"Close picture"}, "×"), el("img",{alt:""}), el("div",{class:"ivcap"}));
+    v.addEventListener("click", ev => { ev.stopPropagation(); closeImg(); });
+    document.body.append(v);
+  }
+  v.querySelector("img").src = src; v.querySelector("img").alt = alt || "";
+  v.querySelector(".ivcap").textContent = alt || "";
+  v.hidden = false; v.focus({preventScroll:true});
+}
+function closeImg(){ const v = document.getElementById("imgview"); if(v && !v.hidden){ v.hidden = true; return true; } return false; }
+document.addEventListener("click", ev => {
+  const t = ev.target;
+  if(t && t.tagName === "IMG" && t.classList.contains("zoom")){ ev.stopPropagation(); ev.preventDefault(); if(t.currentSrc || t.src) viewImg(t.currentSrc || t.src, t.alt); }
+}, true);
+document.addEventListener("keydown", ev => {
+  const t = ev.target;
+  if((ev.key === "Enter" || ev.key === " ") && t && t.tagName === "IMG" && t.classList.contains("zoom")){ ev.preventDefault(); if(t.currentSrc || t.src) viewImg(t.currentSrc || t.src, t.alt); }
+  if(ev.key === "Escape" && closeImg()){ ev.preventDefault(); ev.stopImmediatePropagation(); }
+}, true);
+
+// A collapsed section (<details>) that stays open across re-renders once the viewer opens it (key per card).
+const OPEN_FOLDS = new Set();
+function foldEl(key, title, cls, ...kids){
+  const d = el("details",{class:"fold "+(cls||""), open:OPEN_FOLDS.has(key), onclick:ev=>ev.stopPropagation()}, el("summary",{}, title), ...kids);
+  d.addEventListener("toggle", ()=>{ if(d.open) OPEN_FOLDS.add(key); else OPEN_FOLDS.delete(key); });
+  return d;
+}
+
+function fmtDur(ms){
+  if(!(ms >= 0)) return "";
+  const m = Math.floor(ms/60000), d = Math.floor(m/1440), h = Math.floor((m%1440)/60), mm = m%60;
+  return d ? d+"d "+h+"h" : h ? h+"h "+mm+"m" : mm+"m";
+}
+function fmtTime(iso){
+  if(!iso) return "";
+  const t = new Date(iso); if(isNaN(t)) return "";
+  return t.toLocaleString(undefined, {year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+function taskCount(c){
+  const t = Array.isArray(c.tasks) ? c.tasks : [];
+  return [t.filter(x=>x && x.done).length, t.length];
+}
+function etaText(c){
+  const t = c.eta ? Date.parse(c.eta) : NaN;
+  if(isNaN(t)) return null;
+  const left = t - Date.now();
+  const when = new Date(t).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"});
+  const sameDay = new Date(t).toDateString() === new Date().toDateString();
+  const label = (sameDay ? when : fmtTime(c.eta));
+  return {late: left < 0, text: left < 0 ? "ETA " + label + " (overdue " + fmtDur(-left) + ")" : "ETA " + label + " (" + fmtDur(left) + ")"};
+}
+function colTip(c){
+  const col = COLS.find(x=>x.k===c.col);
+  const since = c.colSince ? Date.parse(c.colSince) : NaN;
+  return isNaN(since) ? "" : "⏳ "+fmtDur(Date.now()-since)+(col?" in "+col.name:"");
+}
+// the description: text, with the vault's picture embeds (![[media/...|320]]) shown as pictures
+function descEl(d){
+  const p = el("div",{class:"d"}), rx = /!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+  let i = 0, m;
+  const text = s => { s = s.replace(/^\s+|\s+$/g, ""); if(s) p.append(el("span",{}, s)); };
+  while((m = rx.exec(d))){
+    text(d.slice(i, m.index)); i = rx.lastIndex;
+    const src = mediaImg(m[1].trim());
+    if(src) p.append(pic(src, {alt:"Picture in the description", loading:"lazy", class:"zoom", tabindex:"0", title:"Click to enlarge"}));
+  }
+  text(d.slice(i));
+  return p;
+}
+
+function cardEl(c, full=false){
+  const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
+  const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
+  e.append(el("div",{class:"top"}, el("span",{class:"id"},c.id),
+    c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
+    c._pending ? el("span",{class:"lab pend", title:"Your change is on its way to the desktop"}, full ? c._pending+(c._pending===1?" change":" changes")+" on the way" : "On the way") : null,
+    el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
+    openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null));
+  if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
+  e.append(el("div",{class:"t"}, c.t||""));
+  const ep = epics.get(c.epic);
+  const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
+  const tpath = th ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th.name+" ›") : null;
+  if(full && !readOnly && epics.size){   // card window: the epic pill is a drop-down
+    const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value && ev.target.value !== c.epic) write(c.id,{epic:ev.target.value}); }});
+    if(!ep) es.append(el("option",{value:"", selected:true}, c.epic ? c.epic : "(no epic)"));
+    for(const [k,v] of sortedEpics()) es.append(el("option",{value:k, selected:k===c.epic}, v.name));
+    e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(ep?ep.hue:210), title:"Change this card's epic"},
+      el("span",{"aria-hidden":"true"}, (ep?ep.name:"(no epic)")+" ▾"), es)));
+  } else if(ep) e.append(el("div",{}, tpath, el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
+  if(c.st && full) e.append(el("div",{class:"st"}, c.st));   // board cards stay short: details in the card window
+  if(c.link && /^https:\/\/[\w.-]+\//.test(c.link))        // the change-log entry for this card
+    e.append(el("div",{class:"lnk"}, el("a",{href:c.link, target:"_blank", rel:"noopener", onclick:ev=>ev.stopPropagation(),
+      title:"Open this item in the change log"}, full ? "What changed (change log) ↗" : "Changes ↗")));
+  const opts = Array.isArray(c.opts) ? c.opts.filter(o=>o && o.id) : [];
+  const ans = (c.ans && typeof c.ans === "object") ? c.ans : {};
+  if(opts.length){
+    const done = opts.filter(o=>ans[o.id]).length;
+    if(!full){
+      if(done < opts.length) e.append(el("div",{class:"labs"}, el("span",{class:"lab"}, (opts.length-done)+(opts.length-done===1?" decision open":" decisions open"))));   // answered decisions stay in the card window only
+    } else {
+      const box = el("div",{class:"decs", onclick:ev=>ev.stopPropagation()}, el("div",{class:"dh"}, "Decisions", el("span",{}, done+"/"+opts.length+" answered")));
+      const optEl = o => {
+        const row = el("div",{class:"ch"});
+        for(const ch of (o.choices||[])){
+          const sel = ans[o.id]===ch.v;
+          const src = mediaImg(ch.img);   // choice picture: a media file of the card
+          const label = (ch.t || String(ch.v)) + (ch.rec?" (recommended)":"");
+          row.append(el("button",{type:"button", class:(ch.rec?"rec ":"")+(src?"pic":""), "aria-pressed":String(sel), title:ch.rec?"Recommended":"",
+            onclick:()=>write(c.id,{ans:{[o.id]: sel ? (ans[o.id+OTHER] ? "__other" : null) : ch.v}})},   // typed text is kept
+            src ? pic(src, {alt:label, loading:"lazy"}) : null, src ? el("span",{}, label) : label));
+        }
+        // typed text (ans[id + OTHER]) sits beside the chosen button as a note; with no button chosen it is the answer
+        // (ans[id] = "__other"). Choosing or unchoosing a button never clears it.
+        const oid = "qo-"+c.id+"-"+o.id;
+        const other = el("textarea",{id:oid, class:"other", placeholder:"Something else, or a note? Write it here (saved when you leave the field; kept when you pick a button)", "aria-label":"Other answer: "+o.q, onclick:ev=>ev.stopPropagation()});
+        other.value = ans[o.id+OTHER] || "";
+        other.addEventListener("blur", ()=>{
+          const v = other.value.trim();
+          if(v === String(ans[o.id+OTHER]||"")) return;
+          const keep = ans[o.id] && ans[o.id] !== "__other";   // a chosen button stays chosen
+          const want = v ? (keep ? ans[o.id] : "__other") : (keep ? ans[o.id] : null);
+          const patch = {[o.id+OTHER]: v || null};
+          if(want !== (ans[o.id] ?? null)) patch[o.id] = want;
+          write(c.id,{ans: patch});
+        });
+        const qsrc = mediaImg(o.img);   // e.g. the original, for comparison
+        return el("div",{class:"dq"}, el("div",{class:"qt"}, o.q), qsrc ? pic(qsrc, {class:"qimg zoom", alt:o.q, loading:"lazy", tabindex:"0", title:"Click to enlarge"}) : null,
+          row, other, o.hint?el("div",{class:"hint"},o.hint):null);
+      };
+      // open decisions in full; answered ones fold into "Earlier decisions" (question -> answer), with the full
+      // controls one more click away under "Change an answer"
+      const wasDone = pastAtOpen(c, opts.map(o=>"o:"+o.id), k=>!!ans[k.slice(2)]);
+      for(const o of opts) if(!wasDone("o:"+o.id)) box.append(optEl(o));
+      const past = opts.filter(o=>wasDone("o:"+o.id));
+      if(past.length){
+        const answerOf = o => {
+          const ch = (o.choices||[]).find(x=>x.v===ans[o.id]);
+          const note = String(ans[o.id+OTHER]||"").trim();
+          return ch ? ch.t + (note ? " — " + note : "") : (note || (ans[o.id] == null ? "(no answer)" : String(ans[o.id])));
+        };
+        box.append(foldEl("past:"+c.id, "Earlier decisions ("+past.length+")", "past",
+          ...past.map(o => el("div",{class:"pd"}, el("span",{class:"pdq"}, o.q), el("span",{class:"pda"}, answerOf(o)))),
+          foldEl("edit:"+c.id, "Change an answer", "pedit", ...past.map(optEl))));
+      }
+      e.append(box);
+    }
+  } else if(c.q && !qList(c).length) e.append(full ? el("div",{class:"qb"}, c.q) : el("div",{class:"labs"}, el("span",{class:"lab"}, "Question")));
+  const qs = qList(c);
+  if(qs.length){   // free-text questions: a text field under each, saved when you leave it
+    const qdone = qs.filter(x=>String(ans[x.id]||"").trim()).length;
+    if(!full){
+      if(qdone < qs.length) e.append(el("div",{class:"labs"}, el("span",{class:"lab"}, (qs.length-qdone)+(qs.length-qdone===1?" question open":" questions open"))));
+    } else {
+      const box = el("div",{class:"decs", onclick:ev=>ev.stopPropagation()}, el("div",{class:"dh"}, "Questions", el("span",{}, qdone+"/"+qs.length+" answered")));
+      const qEl = x => {
+        const tid = "qa-"+c.id+"-"+x.id;
+        const ta = el("textarea",{id:tid, placeholder:"Your answer (saved when you leave the field)", onclick:ev=>ev.stopPropagation()});
+        ta.value = ans[x.id] || "";
+        ta.addEventListener("blur", ()=>{ const v = ta.value.trim(); if(v !== String(ans[x.id]||"")) write(c.id,{ans:{[x.id]: v || null}}); });
+        return el("div",{class:"dq"}, el("label",{class:"qt", for:tid}, x.q), ta);
+      };
+      const qDone = pastAtOpen(c, qs.map(x=>"q:"+x.id), k=>!!String(ans[k.slice(2)]||"").trim());
+      for(const x of qs) if(!qDone("q:"+x.id)) box.append(qEl(x));
+      const pastQ = qs.filter(x=>qDone("q:"+x.id));
+      if(pastQ.length) box.append(foldEl("pastq:"+c.id, "Earlier answers ("+pastQ.length+")", "past", ...pastQ.map(qEl)));
+      e.append(box);
+    }
+  }
+  // activity log = [{ts, t, img?: ["media/..png", ...]}] appended as work goes on (newest shown first, like Jira).
+  // The export carries the latest entries and log_n, how many there are in all.
+  const acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
+  const actN = Math.max(acts.length, Number(c.log_n) || 0);
+  if(actN){
+    if(!full) e.append(el("div",{class:"labs"}, el("span",{class:"lab ok"}, actN+(actN===1?" update":" updates"))));
+    else {
+      const box = el("div",{class:"acts", onclick:ev=>ev.stopPropagation()}, el("div",{class:"ah"}, "Activity",
+        el("span",{}, actN > acts.length ? "the latest "+acts.length+" of "+actN+" updates" : actN+(actN===1?" update":" updates"))));
+      for(const a of acts.slice().reverse()){
+        const imgs = (Array.isArray(a.img) ? a.img : a.img ? [a.img] : []).map(mediaImg).filter(Boolean);
+        box.append(el("div",{class:"ai"},
+          el("div",{class:"at"}, a.ts ? fmtTime(a.ts) : ""),
+          a.t ? el("div",{class:"ax"}, String(a.t)) : null,
+          imgs.length ? el("div",{class:"aimgs"}, ...imgs.map(src => pic(src, {alt:a.t||"screenshot", loading:"lazy", class:"zoom", tabindex:"0", title:"Click to enlarge"}))) : null));
+      }
+      e.append(box);
+    }
+  }
+  const [tdone, ttotal] = taskCount(c);
+  const eta = (c.col === "prog" || c.col === "built" || c.col === "test") ? etaText(c) : null;
+  const startedNow = c.col === "prog" && c.colSince ? "Started " + fmtTime(c.colSince) : null;
+  const est = c.col === "next" && c.estimate > 0 ? "Est. ~" + fmtDur(c.estimate * 60000) : null;
+  if(!full && (ttotal || eta || startedNow || est)) e.append(el("div",{class:"tline"},
+    est ? el("span",{class:"eta", title: c.estimateNote || ""}, est) : null,
+    ttotal ? el("span",{class:"tcount"+(tdone===ttotal?" ok":"")}, "Tasks "+tdone+"/"+ttotal) : null,
+    startedNow ? el("span",{class:"tcount", title: tip || ""}, startedNow) : null,
+    eta ? el("span",{class:"eta"+(eta.late?" late":"")}, eta.text) : null));
+  if(full){
+    const more = el("div",{class:"more"});
+    const times = el("div",{class:"times"},
+      el("span",{}, el("b",{},"Start "), c.started ? fmtTime(c.started) : "not started"),
+      el("span",{}, el("b",{},"End "), c.ended ? fmtTime(c.ended) : "not finished"),
+      (c.col === "next" && c.estimate > 0) ? el("span",{}, el("b",{},"Estimate "), "~" + fmtDur(c.estimate * 60000) + (c.estimateNote ? " — " + c.estimateNote : "")) : null,
+      (!c.ended && c.eta) ? el("span",{class:"eta"+(etaText(c)&&etaText(c).late?" late":"")}, el("b",{},"ETA "), fmtTime(c.eta) + (c.etaNote ? " — " + c.etaNote : "")) : null,
+      tip ? el("span",{}, tip) : null);
+    more.append(times);
+    if(ttotal){
+      const ul = el("ul",{class:"tasks"});
+      for(const t of c.tasks) if(t) ul.append(el("li",{class:t.done?"done":""}, el("span",{class:"tick","aria-hidden":"true"}, t.done?"☑":"☐"), el("span",{}, t.t||"")));
+      more.append(el("div",{class:"tlist"}, el("div",{class:"th"}, "Tasks", el("span",{}, tdone+"/"+ttotal+" done")), ul));
+    }
+    if(c.d) more.append(descEl(String(c.d)));
+    more.append(el("div",{class:"meta"}, ...[c.g&&("Group: "+c.g), c.cat&&("Area: "+c.cat), c.imp&&("Impact: "+c.imp), c.dif&&("Effort: "+c.dif), c.tri&&("Triage: "+c.tri)].filter(Boolean).map(s=>el("span",{},s))));
+    const pr = el("div",{class:"row"}, el("span",{class:"lbl"},"Priority"));
+    for(const p of [1,2,3,4]) pr.append(el("button",{type:"button", "aria-pressed":String(c.pri===p), onclick:ev=>{ev.stopPropagation(); write(c.id,{pri:c.pri===p?0:p});}}, PRI[p]));
+    more.append(pr);
+    const sel = el("select",{"aria-label":"Column", onclick:ev=>ev.stopPropagation(), onchange:ev=>moveTo(c.id, ev.target.value, 0)});
+    for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===c.col}, col.name));
+    more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
+      el("button",{type:"button", title:"Move to top", onclick:ev=>{ev.stopPropagation(); moveTo(c.id,c.col,0);}},"Top"),
+      el("button",{type:"button", title:"Move up", onclick:ev=>{ev.stopPropagation(); nudge(c.id,-1);}},"↑"),
+      el("button",{type:"button", title:"Move down", onclick:ev=>{ev.stopPropagation(); nudge(c.id,1);}},"↓")));
+    const ta = el("textarea",{placeholder:"Your note (saved when you leave the field)", "aria-label":"Your note", onclick:ev=>ev.stopPropagation()});
+    ta.value = c.un||"";
+    ta.addEventListener("blur", ()=>{ const v=ta.value.trim(); if(v!==(c.un||"")) write(c.id,{un:v}); });
+    more.append(ta);
+    e.append(more); return e;
+  }
+  if(!readOnly){   // hover controls: rank within the column
+    const hb = (label, tip, fn) => el("button",{type:"button", title:tip, "aria-label":tip+" ("+c.id+")", draggable:"false",
+      onclick:ev=>{ ev.stopPropagation(); fn(); }, onmousedown:ev=>ev.stopPropagation()}, label);
+    e.append(el("div",{class:"hov"},
+      hb("⤒","Move to top", ()=>moveTo(c.id, c.col, 0)),
+      hb("↑","Move up", ()=>nudge(c.id,-1)),
+      hb("↓","Move down", ()=>nudge(c.id,1)),
+      hb("⤓","Move to bottom", ()=>moveTo(c.id, c.col, colCards(c.col).filter(x=>x.id!==c.id).length))));
+  }
+  if(picked.has(c.id)){ e.classList.add("sel"); e.setAttribute("aria-selected","true"); }
+  e.addEventListener("click", ev=>{ if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); });
+  e.addEventListener("keydown", ev=>{ if(ev.target===e && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); } });
+  if(!readOnly) e.addEventListener("pointerdown", ev=>cardPress(ev, c.id, e));   // drag to move (see "card drag" below)
+  return e;
+}
+
+let lastFocus = null;
+function openCard(id){ lastFocus = document.activeElement; openId = id; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); }
+function closeCard(){ openId = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }
+function renderModal(){
+  const box = $("#modal");
+  const c = openId && cards.get(openId);
+  if(!c){ openId = null; box.hidden = true; box.textContent = ""; if(!rank) document.body.classList.remove("modal-open"); return; }
+  const old = box.querySelector(".mpanel");
+  const keepScroll = old ? old.scrollTop : 0, keepBox = box.scrollTop, same = old && old.dataset.id === c.id;
+  box.textContent = "";
+  const col = COLS.find(x=>x.k===c.col);
+  const panel = el("div",{class:"mpanel", role:"dialog", "aria-modal":"true", "aria-label":c.id+" "+(c.t||""), "data-id":c.id},
+    el("div",{class:"mhead"}, el("span",{class:"mcol", style:"--cc:var("+(col?col.cc:"--muted")+")"}, col?col.name:""),
+      el("button",{type:"button", class:"mclose", "aria-label":"Close", onclick:closeCard}, "Close")),
+    cardEl(c, true));
+  box.append(panel);
+  box.hidden = false; document.body.classList.add("modal-open");
+  if(same){ panel.scrollTop = keepScroll; box.scrollTop = keepBox; }   // a redraw of the open card keeps its place
+}
+
+function rankAt(colKey, index, exclude){
+  const list = colCards(colKey).filter(c=>c.id!==exclude);
+  const prev = list[index-1], next = list[index];
+  if(!prev && !next) return 1000;
+  if(!prev) return (next.rank??0) - 1000;
+  if(!next) return (prev.rank??0) + 1000;
+  return ((prev.rank??0) + (next.rank??0)) / 2;
+}
+function moveTo(id, colKey, index){
+  const c = cards.get(id); if(!c) return;
+  const r = rankAt(colKey, index, id);
+  if(c.col===colKey && c.rank===r){ render(); return; }
+  write(id, {col:colKey, rank:r});
+}
+// several cards: placed together, in their current order, at `index` of the column without them
+function moveMany(ids, colKey, index){
+  const set = new Set(ids);
+  const list = colCards(colKey).filter(c=>!set.has(c.id));
+  const prev = list[index-1], next = list[index], n = ids.length;
+  let lo, hi;
+  if(prev && next){ lo = prev.rank??0; hi = next.rank??0; }
+  else if(prev){ lo = prev.rank??0; hi = lo + 1000*(n+1); }
+  else if(next){ hi = next.rank??0; lo = hi - 1000*(n+1); }
+  else { lo = 0; hi = 1000*(n+1); }
+  const step = (hi - lo) / (n + 1);
+  ids.forEach((id, k) => { if(cards.has(id)) write(id, {col:colKey, rank:lo + step*(k+1)}, true); });
+  render();
+}
+// selection
+function selOrder(){   // board order: column, then rank
+  const ci = k => COLS.findIndex(x=>x.k===k);
+  return [...picked].filter(id=>cards.has(id)).sort((a,b)=>{ const A=cards.get(a), B=cards.get(b); return ci(A.col)-ci(B.col) || (A.rank??0)-(B.rank??0) || a.localeCompare(b); });
+}
+function toggleSel(id, range){
+  const c = cards.get(id); if(!c) return;
+  const a0 = selAnchor && cards.get(selAnchor);
+  if(range && a0 && a0.col === c.col){   // Shift: every shown card between the last clicked one and this one
+    const vis = colCards(c.col).filter(matches).map(x=>x.id);
+    const a = vis.indexOf(selAnchor), b = vis.indexOf(id);
+    if(a >= 0 && b >= 0){ for(const x of vis.slice(Math.min(a,b), Math.max(a,b)+1)) picked.add(x); render(); return; }
+  }
+  picked.has(id) ? picked.delete(id) : picked.add(id); selAnchor = id; render();
+}
+function setSelMode(on){
+  selMode = on; if(!on){ picked.clear(); selAnchor = null; }
+  document.body.classList.toggle("selmode", on);
+  const b = $("#selbtn"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "☑ Done selecting" : "☑ Select";
+  render();
+}
+function selByCol(){ const m = new Map(); for(const id of selOrder()){ const k = cards.get(id).col; if(!m.has(k)) m.set(k, []); m.get(k).push(id); } return m; }
+function selMove(how){   // per column: the selected cards are gathered into one block
+  for(const [k, ids] of selByCol()){
+    const set = new Set(ids), full = colCards(k);
+    const rest = full.length - ids.length;
+    const first = full.findIndex(c=>set.has(c.id));
+    let last = -1; full.forEach((c,i)=>{ if(set.has(c.id)) last = i; });
+    let idx;
+    if(how === "top") idx = 0;
+    else if(how === "bottom") idx = rest;
+    else if(how === "up") idx = first > 0 ? full.slice(0, first-1).filter(c=>!set.has(c.id)).length : 0;
+    else idx = full.slice(0, last+2).filter(c=>!set.has(c.id)).length;
+    moveMany(ids, k, idx);
+  }
+}
+function renderSelBar(){
+  const bar = $("#selbar");
+  if(!selMode || readOnly){ bar.hidden = true; bar.textContent = ""; return; }
+  bar.textContent = "";
+  const n = [...picked].filter(id=>cards.has(id)).length;
+  const btn = (label, tip, fn) => el("button",{type:"button", title:tip, disabled:!n, onclick:fn}, label);
+  const to = el("select",{"aria-label":"Move the selected cards to a column", disabled:!n, onchange:ev=>{ const k = ev.target.value; ev.target.value = ""; if(k) moveMany(selOrder(), k, 0); }},
+    el("option",{value:""}, "Move to…"), ...COLS.map(col=>el("option",{value:col.k}, col.name)));
+  bar.append(el("b",{}, n + " selected"),
+    btn("⤒ Top","Move the selected cards to the top of their column", ()=>selMove("top")),
+    btn("↑ Up","Move the selected cards up one place, together", ()=>selMove("up")),
+    btn("↓ Down","Move the selected cards down one place, together", ()=>selMove("down")),
+    btn("⤓ Bottom","Move the selected cards to the bottom of their column", ()=>selMove("bottom")),
+    to,
+    btn("Clear","Clear the selection", ()=>{ picked.clear(); selAnchor = null; render(); }),
+    el("span",{class:"hint"}, n ? "Drag a selected card to move them all" : "Click cards to select; Shift+click for a range"));
+  bar.hidden = false;
+}
+function nudge(id, dir){
+  const c = cards.get(id); if(!c) return; const list = colCards(c.col); const i = list.findIndex(x=>x.id===id);
+  const j = i + dir; if(j<0 || j>=list.length) return;
+  moveTo(id, c.col, j);   // index in the list without this card
+}
+
+function renderSync(){
+  const sync = $("#sync"); if(!conn || !loaded) return;
+  sync.replaceChildren(meta.exported_at ? el("span",{}, "Board as of ", el("b",{}, fmtTime(meta.exported_at)),
+    lastCheck ? " · checked " + new Date(lastCheck).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", second:"2-digit"}) : "")
+    : el("span",{}, "No board export yet: the desktop's node writes it."));
+}
+// Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
+// column's scroll and the open card window's scroll. Not while a text box in a card has the focus, nor during a drag.
+function render(){
+  const ae = document.activeElement;
+  const focusId = ae && ae.closest && ae.closest(".card") && ae.closest(".card").dataset.id;
+  const focusTa = ae && ae.tagName==="TEXTAREA";
+  if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
+  if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
+  render.later = false;
+  renderSync(); saveState(); renderStatus();
+  const board = $("#board");
+  const px = window.scrollX, py = window.scrollY;
+  const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
+  const hold = board.offsetHeight; if(hold) board.style.minHeight = hold + "px";   // the page keeps its height while the board is rebuilt
+  board.textContent = "";
+  const all = [...cards.values()];
+  const allA = [...all, ...ARCH.items];   // stats count archived Done / Rejected cards too
+  $("#empty").hidden = all.length>0;
+  if(!all.length) $("#empty").textContent = loaded ? "The board has no live cards." : "Loading…";
+  const shown = COLS.filter(col => !(filt.hide && filt.hide[col.k]));
+  board.style.setProperty("--ncol", Math.max(1, shown.length));
+  for(const col of shown){
+    const inCol = colCards(col.k);
+    const list = inCol.filter(matches);
+    const total = inCol.length;
+    const isC = collapsed.has(col.k);
+    const sec = el("section",{class:"col"+(isC?" collapsed":""), style:"--cc:var("+col.cc+")", "aria-label":col.name, "data-col":col.k});
+    const rankBtn = ((col.k === "back" || col.k === "park" || col.k === "refining" || col.k === "refined") && !readOnly && total > 1)
+      ? el("button",{type:"button", class:"rankbtn", title:"Rank "+col.name+" by choosing between pairs of cards",
+          onclick:ev=>{ ev.stopPropagation(); startRank(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "⇅ Rank") : null;
+    const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, list.length===total?String(total):list.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"▸":"▾"));
+    const tog = ()=>{ isC?collapsed.delete(col.k):collapsed.add(col.k); ls("kb.collapsed",[...collapsed]); render(); };
+    h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
+    sec.append(h);
+    if(col.hint) sec.append(el("p",{class:"hint"}, col.hint));
+    const ul = el("div",{class:"list", "data-col":col.k});
+    for(const c of list) ul.append(cardEl(c));
+    sec.append(ul);
+    const na = ARCH.items.filter(c=>c.col===col.k).length;
+    if(na && !isC) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)."));
+    board.append(sec);
+    if(sc[col.k]) ul.scrollTop = sc[col.k];
+  }
+  board.scrollLeft = sl;
+  renderEpics(allA);
+  // tally
+  const t = $("#tally"); t.textContent = "";
+  if(loaded){
+    const must = allA.filter(c=>c.tri==="Must" && c.col!=="rej");
+    const doneMust = must.filter(c=>c.col==="done").length;
+    t.append(el("span",{}, el("b",{}, doneMust+" / "+must.length), " Must items done"));
+    for(const p of [1,2,3,4]){ const open = all.filter(c=>c.pri===p && c.col!=="done" && c.col!=="park" && c.col!=="rej").length; t.append(el("span",{}, el("b",{},String(open)), " open "+PRI[p])); }
+    const qs = all.filter(openQ).length;
+    if(qs) t.append(el("span",{}, el("b",{},String(qs)), " open questions"));
+    if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change on the way to the desktop" : " changes on the way to the desktop"));
+  }
+  if(focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
+  renderSelBar();
+  renderModal();
+  board.style.minHeight = "";
+  if(window.scrollX !== px || window.scrollY !== py) window.scrollTo(px, py);
+}
+
+function sortedEpics(){ return [...epics.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99) || a[1].name.localeCompare(b[1].name)); }
+function sortedThemes(){ return [...themes.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)); }
+function epicTheme(k){ const t = epics.get(k)?.theme; return t && themes.has(t) ? t : ""; }   // "" = no or an unknown theme
+const ARCH = {items:[]};   // the archived Done / Rejected cards, for the counts: {id, col, epic, tri, pri}
+function cardStats(all, keep){   // done / all (Rejected left out); open = not Done or Parked
+  const mine = all.filter(c=>keep(c) && c.col!=="rej"), open = mine.filter(c=>c.col!=="done" && c.col!=="park").length;
+  const done = mine.filter(c=>c.col==="done").length;
+  return {n:mine.length, done, open, pct: mine.length ? Math.round(100*done/mine.length) : 0};
+}
+function statKids(st){ return [el("span",{class:"ec"}, st.done+"/"+st.n+" done · "+st.open+" open"), el("span",{class:"eb"}, el("i",{style:"width:"+st.pct+"%"}))]; }
+function setTheme(t){ filt.t = t; if(filt.e && epicTheme(filt.e)!==t) filt.e = ""; syncFilters(); }   // an epic of another theme is dropped
+function setEpic(k){ filt.e = k; if(k) filt.t = epicTheme(k); syncFilters(); }                        // an epic sets its theme
+function syncFilters(){ fillThemes(); fillEpics(); ls("kb.filters",filt); render(); }
+function renderEpics(all){
+  const box = $("#epics"); const x = box.scrollTop, xl = box.scrollLeft; box.textContent = "";
+  box.hidden = !epics.size;
+  box.append(el("h2",{},"Epics"));
+  const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
+      onclick:()=>setEpic(filt.e===k ? "" : k)},
+      el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
+  // epics grouped under their theme; epics with no or an unknown theme last, under "(no theme)"
+  const groups = sortedThemes().map(([k,v])=>({k, v, eps: sortedEpics().filter(([ek])=>epicTheme(ek)===k)}));
+  const loose = sortedEpics().filter(([ek])=>!epicTheme(ek));
+  if(loose.length && themes.size) groups.push({k:"", v:null, eps:loose});
+  for(const g of groups){
+    const ck = g.k || "-", isC = tcollapsed.has(ck), hue = g.v ? g.v.hue : 210, nm = g.v ? g.v.name : "(no theme)";
+    const tog = el("button",{type:"button", class:"ttw", "aria-expanded":String(!isC), "aria-label":(isC?"Show":"Hide")+" the epics of "+nm,
+      title:isC?"Show its epics":"Hide its epics", onclick:()=>{ isC ? tcollapsed.delete(ck) : tcollapsed.add(ck); ls("kb.tcollapsed",[...tcollapsed]); render(); }}, isC?"▸":"▾");
+    const head = g.v
+      ? el("button",{type:"button", class:"epic theme", style:"--h:"+hue, "aria-pressed":String(filt.t===g.k), title:((g.v.blurb||"")+" Click to filter by this theme.").trim(),
+          onclick:()=>setTheme(filt.t===g.k ? "" : g.k)},
+          el("span",{class:"tn"}, g.v.name), ...statKids(cardStats(all, c=>epicTheme(c.epic)===g.k)))
+      : el("div",{class:"tnone"}, nm);
+    box.append(el("div",{class:"tgroup"+(isC?" collapsed":""), style:"--h:"+hue, role:"group", "aria-label":g.v ? "Theme "+nm : "Epics with no theme"},
+      el("div",{class:"thead"}, head, g.eps.length ? tog : null),
+      el("div",{class:"tepics"}, ...g.eps.map(([k,v])=>epicBtn(k,v)))));
+  }
+  if(!themes.size) for(const [k,v] of sortedEpics()) box.append(epicBtn(k,v));   // no themes: the plain list
+  box.scrollTop = x; box.scrollLeft = xl;
+}
+// filters
+$("#q").value = filt.q||""; $("#fp").value = filt.p||""; $("#fq").checked = !!filt.qo;
+$("#q").addEventListener("input", e=>{ filt.q=e.target.value; $("#qclr").hidden = !filt.q; ls("kb.filters",filt); render(); });
+$("#qclr").hidden = !filt.q;
+$("#qclr").addEventListener("click", ()=>{ const q=$("#q"); q.value=""; q.dispatchEvent(new Event("input")); q.focus(); });
+$("#fp").addEventListener("change", e=>{ filt.p=e.target.value; ls("kb.filters",filt); render(); });
+$("#ft").addEventListener("change", e=>setTheme(e.target.value));
+$("#fe").addEventListener("change", e=>setEpic(e.target.value));
+$("#fq").addEventListener("change", e=>{ filt.qo=e.target.checked; ls("kb.filters",filt); render(); });
+function fcount(){ const n = COLS.filter(c => filt.hide[c.k]).length; const b = $("#fcount"); b.hidden = !n; b.textContent = n ? n + " hidden" : ""; }
+$("#fpop").append(el("div",{class:"fh"}, "Show columns"));
+for(const col of COLS){   // which columns show
+  const cb = el("input",{type:"checkbox", id:"fc-"+col.k}); cb.checked = !filt.hide[col.k];
+  cb.addEventListener("change", ()=>{ filt.hide = {...filt.hide, [col.k]: !cb.checked}; ls("kb.filters", filt); fcount(); render(); });
+  $("#fpop").append(el("label",{}, cb, " "+col.name));
+}
+fcount(); fillThemes();   // the theme select stays hidden until themes exist
+$("#fcols").addEventListener("click", ev=>{ ev.stopPropagation(); const p = $("#fpop"); p.hidden = !p.hidden; $("#fcols").setAttribute("aria-expanded", String(!p.hidden)); });
+document.addEventListener("click", ev=>{ const p = $("#fpop"); if(!p.hidden && !ev.target.closest(".fwrap")){ p.hidden = true; $("#fcols").setAttribute("aria-expanded","false"); } });
+document.addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#fpop").hidden){ $("#fpop").hidden = true; $("#fcols").setAttribute("aria-expanded","false"); $("#fcols").focus(); } });
+function fillEpics(){   // with a theme chosen: only its epics
+  const sel = $("#fe"); sel.textContent=""; sel.append(el("option",{value:""},"All epics"));
+  for(const [k,v] of sortedEpics()) if(!filt.t || epicTheme(k)===filt.t) sel.append(el("option",{value:k, selected:k===filt.e}, v.name));
+  sel.hidden = !epics.size;
+}
+function fillThemes(){
+  const sel = $("#ft"); sel.textContent=""; sel.append(el("option",{value:""},"All themes"));
+  for(const [k,v] of sortedThemes()) sel.append(el("option",{value:k, selected:k===filt.t}, v.name));
+  sel.hidden = !themes.size;
+}
+document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
+document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
+$("#selbtn").addEventListener("click", ()=>setSelMode(!selMode));
+
+// Ranking game (Backlog, Parked, In refinement, Refined): binary insertion of the cards (in their current order), one
+// "which is higher?" at a time. The answers are replayed from the start on every step, so Undo is exact; saving early
+// keeps the cards ranked so far on top and the rest below them in their current order. The result is one `order`
+// change: the column's card ids, top first.
+let rank = null;   // {col, items, answers}
+function rankSim(items, answers){
+  let k = 0; const sorted = [items[0]];
+  for(let i = 1; i < items.length; i++){
+    let lo = 0, hi = sorted.length;
+    while(lo < hi){
+      const mid = (lo + hi) >> 1;
+      if(k >= answers.length) return {pending:[items[i], sorted[mid]], sorted, i};
+      if(answers[k++]) hi = mid; else lo = mid + 1;   // true: the new card ranks above sorted[mid]
+    }
+    sorted.splice(lo, 0, items[i]);
+  }
+  return {sorted, i:items.length};
+}
+function rankLeft(sim){   // comparisons still to come, about
+  let n = 0, len = sim.sorted.length + 1;
+  for(let i = sim.i + 1; i < rank.items.length; i++, len++) n += Math.ceil(Math.log2(len + 1));
+  return n + (sim.pending ? 1 : 0);
+}
+function startRank(colKey){ const items = colCards(colKey).map(c=>c.id); if(items.length < 2 || readOnly) return; rank = {col: colKey, items, answers: []}; renderRank(); }
+function endRank(){ rank = null; renderRank(); }
+function saveRank(order){
+  const now = colCards(rank.col).map(c=>c.id);   // the column as it is now (a card may have left or joined meanwhile)
+  const top = order.filter(id=>now.includes(id));
+  const ids = top.concat(rank.items.filter(id=>!top.includes(id) && now.includes(id)), now.filter(id=>!rank.items.includes(id)));
+  const name = (COLS.find(x=>x.k===rank.col)||{}).name || "Column";
+  if(ids.length && ids.some((id, n)=>id !== now[n])){
+    change(raw.get(ids[0]), "order", ids);
+    rebuild();
+    toast(name + " order saved (" + ids.length + " cards).");
+  } else toast(name + ": the order is unchanged.");
+  endRank(); render();
+}
+function rankOpt(id, side){
+  const c = cards.get(id) || {id, t:id};
+  const ep = epics.get(c.epic);
+  const text = String(c.d || "").replace(/!\[\[[^\]]*\]\]/g, "").trim();
+  const d = text.length > 260 ? text.slice(0, 257).replace(/\s+\S*$/, "") + "…" : text;
+  return el("button",{type:"button", class:"opt"+(c.pri?" p"+c.pri:""), "data-side":side, onclick:()=>rankAnswer(side === "a")},
+    el("span",{class:"om"}, el("span",{}, c.id), c.pri ? el("span",{}, PRI[c.pri]) : null, ep ? el("span",{class:"chip", style:"--h:"+ep.hue}, ep.name) : null),
+    el("span",{class:"ot"}, c.t || ""),
+    d ? el("span",{class:"od"}, d) : null,
+    el("span",{class:"om"}, ...[c.imp && ("Impact: "+c.imp), c.dif && ("Effort: "+c.dif), c.tri && ("Triage: "+c.tri)].filter(Boolean).map(x=>el("span",{},x))));
+}
+function rankAnswer(newHigher){ if(!rank) return; rank.answers.push(!!newHigher); renderRank(); }
+function renderRank(){
+  const box = $("#rankm");
+  if(!rank){ box.hidden = true; box.textContent = ""; if(!openId) document.body.classList.remove("modal-open"); return; }
+  const sim = rankSim(rank.items, rank.answers);
+  box.textContent = ""; box.hidden = false; document.body.classList.add("modal-open");
+  const done = rank.answers.length, left = rankLeft(sim), pct = Math.round(100 * done / Math.max(1, done + left));
+  const colName = (COLS.find(x=>x.k===rank.col)||{}).name || "column";
+  const panel = el("div",{class:"rk", role:"dialog", "aria-modal":"true", "aria-label":"Rank "+colName});
+  if(sim.pending){
+    const [a, b] = sim.pending;
+    panel.append(el("h3",{}, "Which should be ranked higher?"),
+      el("div",{class:"rkq"}, "Comparison " + (done + 1) + " · about " + left + " to go · " + sim.sorted.length + " of " + rank.items.length + " cards placed"),
+      el("div",{class:"rkbar"}, el("i",{style:"width:"+pct+"%"})),
+      el("div",{class:"pair"}, rankOpt(a, "a"), rankOpt(b, "b")),
+      el("div",{class:"keys"}, "Keys: ← left card, → right card, Backspace undo, Esc cancel."),
+      el("div",{class:"acts"},
+        el("span",{}, el("button",{type:"button", onclick:()=>rankAnswer(false), title:"Keeps the current order for this pair"}, "Can't decide"),
+          el("button",{type:"button", disabled: done ? null : true, onclick:()=>{ rank.answers.pop(); renderRank(); }}, "Undo")),
+        el("span",{}, el("button",{type:"button", onclick:endRank}, "Cancel"),
+          el("button",{type:"button", class:"pri", onclick:()=>saveRank(sim.sorted), title:"Cards not compared yet stay below, in their current order"}, "Save order so far"))));
+  } else {
+    const ol = el("ol",{}); sim.sorted.forEach(id => ol.append(el("li",{}, id + ": " + ((cards.get(id)||{}).t || ""))));
+    panel.append(el("h3",{}, "Your "+colName+" order"), el("div",{class:"rkq"}, done + " comparisons. Top to bottom:"), ol,
+      el("div",{class:"acts"}, el("span",{}, el("button",{type:"button", disabled: done ? null : true, onclick:()=>{ rank.answers.pop(); renderRank(); }}, "Undo")),
+        el("span",{}, el("button",{type:"button", onclick:endRank}, "Cancel"), el("button",{type:"button", class:"pri", onclick:()=>saveRank(sim.sorted)}, "Save this order"))));
+  }
+  box.append(panel);
+  const first = panel.querySelector(".opt") || panel.querySelector(".pri"); if(first) first.focus({preventScroll:true});
+}
+document.addEventListener("keydown", ev=>{
+  if(!rank) return;
+  const sim = rankSim(rank.items, rank.answers);
+  if(ev.key === "Escape"){ ev.preventDefault(); endRank(); }
+  else if(ev.key === "Backspace" && rank.answers.length){ ev.preventDefault(); rank.answers.pop(); renderRank(); }
+  else if(sim.pending && ev.key === "ArrowLeft"){ ev.preventDefault(); rankAnswer(true); }
+  else if(sim.pending && ev.key === "ArrowRight"){ ev.preventDefault(); rankAnswer(false); }
+});
+document.getElementById("rankm").addEventListener("click", ev=>{ if(ev.target.id === "rankm") endRank(); });
+document.getElementById("modal").addEventListener("click", ev=>{ if(ev.target.id==="modal") closeCard(); });
+
+// card drag with pointer events (not native HTML5 drag, which blocks the mouse wheel in Chromium): the wheel scrolls
+// the page (Shift+wheel or a sideways wheel the board) while a card is held, and the pointer's edge zones auto-scroll.
+// Mouse: drag after moving 5px (less is a click). Touch and pen: drag after a 350ms press; moving sooner scrolls. Esc cancels.
+function cardPress(ev, id, e){
+  if(drag || readOnly || ev.isPrimary === false) return;
+  if(ev.pointerType === "mouse" && ev.button !== 0) return;
+  if(ev.target.closest("button, select, input, textarea, a, .hov")) return;
+  drag = {id, src:e, pid:ev.pointerId, type:ev.pointerType, x0:ev.clientX, y0:ev.clientY, x:ev.clientX, y:ev.clientY, active:false};
+  if(ev.pointerType !== "mouse") drag.timer = setTimeout(()=>{ if(drag && !drag.active) dragStart(); }, 350);
+  addEventListener("pointermove", dragMove, true); addEventListener("pointerup", dragUp, true); addEventListener("pointercancel", dragCancel, true);
+  addEventListener("keydown", dragKey, true); addEventListener("blur", dragCancel);
+}
+function dragStart(){
+  const d = drag, e = d.src; if(!e.isConnected){ dragCancel(); return; }
+  d.active = true; dragId = d.id;
+  d.group = dragGroup = (selMode && picked.has(d.id) && picked.size>1) ? selOrder() : null;
+  const r = e.getBoundingClientRect();
+  d.ox = d.x0 - r.left; d.oy = d.y0 - r.top;
+  const g = e.cloneNode(true); g.classList.add("ghost"); g.classList.remove("dragging"); g.removeAttribute("tabindex"); g.removeAttribute("data-id"); g.setAttribute("aria-hidden","true");
+  g.style.width = r.width + "px";
+  if(d.group) g.append(el("b",{class:"fcount"}, d.group.length + " cards"));
+  d.slot = el("div",{class:"dropslot", "aria-hidden":"true"}); d.slot.style.height = r.height + "px";
+  e.parentNode.insertBefore(d.slot, e);   // the slot starts where the card was, so nothing jumps when it lifts
+  if(d.group) document.querySelectorAll(".card.sel").forEach(x=>x.classList.add("dragging")); e.classList.add("dragging");
+  document.body.append(g); d.ghost = g;
+  document.body.classList.add("carddrag");
+  try{ getSelection().removeAllRanges(); }catch(_){}
+  addEventListener("scroll", dragTrack, true);
+  d.raf = requestAnimationFrame(dragAuto);
+  dragTrack();
+}
+function dragMove(ev){
+  const d = drag; if(!d || ev.pointerId !== d.pid) return;
+  d.x = ev.clientX; d.y = ev.clientY;
+  if(!d.active){
+    if(Math.max(Math.abs(d.x-d.x0), Math.abs(d.y-d.y0)) <= 5) return;
+    if(d.type !== "mouse"){ dragCancel(); return; }   // touch/pen moved before the long press: it's a scroll
+    dragStart();
+  }
+  ev.preventDefault(); dragTrack();
+}
+function dragTarget(x, y){   // a column's list, or the header of a collapsed column (drops at its top)
+  const hit = document.elementFromPoint(x, y); if(!hit) return null;
+  const ul = hit.closest("#board .list"); if(ul) return {el:ul, col:ul.dataset.col, head:false};
+  const h = hit.closest("#board .col.collapsed > h2"); if(h) return {el:h, col:h.parentElement.dataset.col, head:true};
+  return null;
+}
+function dragTrack(){   // follows the pointer and re-finds the drop target (also after the page or board scrolled)
+  const d = drag; if(!d || !d.active) return;
+  d.ghost.style.left = (d.x - d.ox) + "px"; d.ghost.style.top = (d.y - d.oy) + "px";
+  const t = dragTarget(d.x, d.y);
+  if(d.over && (!t || t.el !== d.over)) d.over.classList.remove("over");
+  if(t) t.el.classList.add("over");
+  d.over = t && t.el; d.target = t;
+  placeSlot(d, t);
+}
+function layoutTop(x){   // a card's top without the shunt animation's transform, so the slot doesn't chase moving cards
+  const m = new DOMMatrixReadOnly(getComputedStyle(x).transform);
+  return x.getBoundingClientRect().top - m.m42;
+}
+function placeSlot(d, t){   // shunt preview: the slot moves to the drop position and the cards around it slide aside
+  const slot = d.slot; if(!slot) return;
+  let list = null, before = null;
+  if(t && !t.head){
+    list = t.el;
+    const vis = [...list.querySelectorAll(".card:not(.dragging)")];
+    before = vis.find(x=>{ const r = x.getBoundingClientRect(); const top = layoutTop(x); return d.y < top + r.height/2; }) || null;
+  }
+  const curList = slot.parentNode, curNext = slot.nextElementSibling;
+  if(list === curList && (before === curNext || (!before && !curNext))) return;
+  const affected = new Set();
+  [curList, list].forEach(l=>{ if(l) l.querySelectorAll(".card:not(.dragging)").forEach(x=>affected.add(x)); });
+  const old = new Map([...affected].map(x=>[x, layoutTop(x)]));
+  if(list) list.insertBefore(slot, before); else slot.remove();
+  affected.forEach(x=>{
+    const dy = old.get(x) - layoutTop(x); if(!dy) return;
+    x.classList.remove("shunt"); x.style.transform = "translateY(" + dy + "px)";
+    x.getBoundingClientRect();   // apply the start position before animating back
+    x.classList.add("shunt"); x.style.transform = "";
+  });
+}
+function dragAuto(){   // near the window's top/bottom edge the page scrolls; near the board's left/right edge the board does
+  const d = drag; if(!d || !d.active) return;
+  const Z = 48, sp = n => Math.ceil(20 * Math.min(1, n / Z));
+  const top = Math.max(0, $(".bar").getBoundingClientRect().bottom) + 24;
+  let vy = 0; if(d.y < top) vy = -sp(top - d.y); else if(d.y > innerHeight - Z) vy = sp(d.y - (innerHeight - Z));
+  if(vy) scrollBy(0, vy);
+  const board = $("#board"), br = board.getBoundingClientRect();
+  if(board.scrollWidth > board.clientWidth && d.y >= br.top && d.y <= br.bottom){
+    const L = Math.max(br.left, 0), R = Math.min(br.right, innerWidth);
+    if(d.x < L + Z) board.scrollLeft -= sp(L + Z - d.x); else if(d.x > R - Z) board.scrollLeft += sp(d.x - (R - Z));
+  }
+  d.raf = requestAnimationFrame(dragAuto);
+}
+function dragUp(ev){
+  const d = drag; if(!d || ev.pointerId !== d.pid) return;
+  if(!d.active){ dragEnd(); return; }   // a click: the card's click handler opens or selects it
+  ev.preventDefault();
+  d.x = ev.clientX; d.y = ev.clientY; dragTrack();
+  const t = d.target, id = d.id, group = d.group;
+  let idx = 0;
+  if(t && !t.head){   // index among the column's full ordering (filters may hide cards): the visible card after the drop slot
+    const moving = new Set(group || [id]);
+    let before = null;
+    if(d.slot && d.slot.parentNode === t.el){ for(let x = d.slot.nextElementSibling; x; x = x.nextElementSibling) if(x.classList.contains("card") && !moving.has(x.dataset.id)){ before = x; break; } }
+    else { const vis = [...t.el.querySelectorAll(".card")].filter(x=>!moving.has(x.dataset.id)); before = vis.find(x=>{ const r=x.getBoundingClientRect(); return d.y < r.top + r.height/2; }); }
+    const full = colCards(t.col).filter(c=>!moving.has(c.id));
+    idx = before ? full.findIndex(c=>c.id===before.dataset.id) : full.length;
+  }
+  dragEnd(true);
+  if(t) group ? moveMany(group, t.col, idx) : moveTo(id, t.col, idx);
+}
+function dragCancel(){ if(drag) dragEnd(drag.active); }
+function dragKey(ev){ if(ev.key === "Escape" && drag && drag.active){ ev.preventDefault(); ev.stopImmediatePropagation(); dragCancel(); } }
+function dragEnd(wasActive){
+  const d = drag; if(!d) return;
+  clearTimeout(d.timer); cancelAnimationFrame(d.raf);
+  removeEventListener("pointermove", dragMove, true); removeEventListener("pointerup", dragUp, true); removeEventListener("pointercancel", dragCancel, true);
+  removeEventListener("keydown", dragKey, true); removeEventListener("blur", dragCancel); removeEventListener("scroll", dragTrack, true);
+  if(d.ghost) d.ghost.remove();
+  if(d.slot) d.slot.remove();
+  document.querySelectorAll(".list .card.shunt").forEach(x=>{ x.classList.remove("shunt"); x.style.transform = ""; });
+  if(d.over) d.over.classList.remove("over");
+  document.querySelectorAll(".card.dragging").forEach(x=>x.classList.remove("dragging"));
+  document.body.classList.remove("carddrag");
+  drag = null; dragId = null; dragGroup = null;
+  if(wasActive){   // the pointerup after a drag is not a click on what lies below
+    const eat = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
+    addEventListener("click", eat, true); setTimeout(()=>removeEventListener("click", eat, true), 0);
+  }
+  if(d.renderLater) render();
+}
+document.addEventListener("touchmove", ev=>{ if(drag && drag.active) ev.preventDefault(); }, {passive:false});   // a held card doesn't scroll the page under the finger
+document.addEventListener("contextmenu", ev=>{ if(drag) ev.preventDefault(); });   // nor opens the long-press menu
+
+// drag the board with the mouse (anywhere except on cards and controls): sideways scrolls the columns, up/down the
+// page; touch keeps native scrolling
+(()=>{
+  const board = $("#board"); let pan = null, moved = false;
+  board.addEventListener("pointerdown", ev=>{
+    moved = false;
+    if(ev.pointerType !== "mouse" || ev.button !== 0 || ev.target.closest(".card, button, select, input, textarea, a")) return;
+    pan = {x:ev.clientX, y:ev.clientY, left:board.scrollLeft, top:window.scrollY, id:ev.pointerId};
+  });
+  board.addEventListener("pointermove", ev=>{
+    if(!pan) return;
+    const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
+    if(!moved && Math.max(Math.abs(dx), Math.abs(dy)) > 4){ moved = true; document.body.classList.add("panning"); try{ board.setPointerCapture(pan.id); }catch(_){} try{ getSelection().removeAllRanges(); }catch(_){} }
+    if(moved){ board.scrollLeft = pan.left - dx; window.scrollTo(window.scrollX, pan.top - dy); ev.preventDefault(); }
+  });
+  const end = ()=>{ if(pan){ pan = null; document.body.classList.remove("panning"); } };
+  board.addEventListener("pointerup", end); board.addEventListener("pointercancel", end);
+  board.addEventListener("click", ev=>{ if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; } }, true);   // a pan isn't a click (column headers collapse on click)
+})();
+// middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways): the further the
+// pointer from the click point, the faster; it stops when the button is released
+(()=>{
+  const board = $("#board"), mark = el("div",{class:"automark", "aria-hidden":"true"}); let auto = null;
+  mark.hidden = true; document.body.append(mark);
+  const speed = d => { const a = Math.abs(d) - 12; return a > 0 ? Math.sign(d) * Math.min(60, a * a / 300) : 0; };   // 12 px dead zone
+  const step = ()=>{ if(auto){ board.scrollLeft += speed(auto.mx - auto.x); window.scrollBy(0, speed(auto.my - auto.y)); } };   // every 16 ms (a timer keeps going where animation frames are throttled)
+  const stop = ()=>{ if(!auto) return; clearInterval(auto.tick); auto = null; mark.hidden = true; document.body.classList.remove("autoscrolling"); };
+  board.addEventListener("mousedown", ev=>{
+    if(ev.button !== 1 || ev.target.closest("a")) return;   // a middle click on a link still opens it in a new tab
+    ev.preventDefault();
+    if(auto){ stop(); return; }
+    auto = {x:ev.clientX, y:ev.clientY, mx:ev.clientX, my:ev.clientY, tick:0};
+    mark.style.left = ev.clientX + "px"; mark.style.top = ev.clientY + "px"; mark.hidden = false;
+    document.body.classList.add("autoscrolling"); auto.tick = setInterval(step, 16);
+  });
+  addEventListener("mousemove", ev=>{ if(auto){ auto.mx = ev.clientX; auto.my = ev.clientY; } });
+  addEventListener("mouseup", ev=>{ if(auto && ev.button === 1) stop(); });   // middle button up always ends it
+  addEventListener("mousedown", ev=>{ if(auto && ev.button !== 1){ ev.preventDefault(); ev.stopPropagation(); stop(); } }, true);   // any other click just stops it
+  addEventListener("keydown", ev=>{ if(auto && ev.key === "Escape") stop(); });
+  addEventListener("blur", stop);
+})();
+document.addEventListener("focusout", ev=>{ if(ev.target.tagName==="TEXTAREA") setTimeout(()=>{ if(render.later) render(); }, 0); });
+
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
-const TONE = {online: "ok", idle: "ok", up: "ok", done: "ok", busy: "warn", running: "warn", claimed: "warn", queued: "warn",
-              stale: "bad", down: "bad", failed: "bad"};
-function stateEl(text){ return el("span", {class: "state " + (TONE[text] || "")}, text); }
+const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
+              stale:"bad", down:"bad", failed:"bad", lost:"bad"};
+function stateEl(text){ return el("span",{class:"state " + (TONE[text] || "")}, text); }
 function renderStatus(){
   const host = document.getElementById("status");
-  if (host.hidden) return;
+  if(host.hidden) return;
   host.replaceChildren();
-  if (!hubStatus){ host.append(el("p", {class: "note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
-  const fact = l => (hubStatus.facts.find(f => f.label === l) || {}).value;
+  if(!hubStatus){ host.append(el("p",{class:"note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
+  const facts = Array.isArray(hubStatus.facts) ? hubStatus.facts : [];
+  const fact = l => (facts.find(f => f.label === l) || {}).value;
   // machines: online while the last report is under 30 minutes old (worked out here, so it is always current)
-  const mach = el("div", {class: "mach"});
-  for (const m of hubStatus.machines || []){
+  const mach = el("div",{class:"mach"});
+  for(const m of hubStatus.machines || []){
     const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "stale";
-    const dl = el("dl", {class: "meta"});
-    const add = (k, v) => dl.append(el("dt", {}, k), el("dd", {}, v == null || v === "" ? "-" : String(v)));
+    const local = Array.isArray(m.working_on) ? m.working_on.filter(Boolean).map(String) : [];
+    const dl = el("dl",{class:"facts"});
+    const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
     add("Last report", isNaN(age) ? "-" : `${fmtDur(age * 60000)} ago`);
+    if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
     add("Offers", m.offers);
     add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
-    if (m.comfy !== "-") add("ComfyUI", m.comfy);
-    if (m.llm !== "-") add("Local LLM", m.llm);
+    if(m.comfy !== "-") add("ComfyUI", m.comfy);
+    if(m.llm !== "-") add("Local LLM", m.llm);
     add("Running job", m.running_job || "none");
     add("Queued for it", m.queued);
-    mach.append(el("div", {class: "mcard"}, el("div", {class: "mh"}, el("span", {class: "mn"}, m.machine), stateEl(st)), dl));
+    mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
+      st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl));
   }
-  host.append(el("h2", {}, "Machines"), mach);
+  host.append(el("h2",{}, "Machines"), mach);
   // testing and release
   const done = Number(fact("Done")), total = Number(fact("Total"));
-  const dl = el("dl", {class: "meta"});
-  for (const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
-    const v = fact(l); if (v) dl.append(el("dt", {}, k), el("dd", {}, v));
+  const dl = el("dl",{class:"facts"});
+  for(const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
+    const v = fact(l); if(v) dl.append(el("dt",{}, k), el("dd",{}, v));
   }
   const upd = fact("Development state written");
-  if (upd) dl.append(el("dt", {}, "Written"), el("dd", {}, fmtTime(upd)));
-  const tcard = el("div", {class: "mcard"}, dl);
-  if (total > 0){
+  if(upd) dl.append(el("dt",{}, "Written"), el("dd",{}, fmtTime(upd)));
+  const tcard = el("div",{class:"mcard"}, dl);
+  if(total > 0){
     const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
-    tcard.prepend(el("div", {}, `${done} of ${total} finished`), el("div", {class: "meter"}, bar));
+    tcard.prepend(el("div",{}, `${done} of ${total} finished`), el("div",{class:"meter"}, bar));
   }
-  host.append(el("h2", {}, "Testing and release"), tcard);
+  host.append(el("h2",{}, "Testing and release"), tcard);
+  // local work (what each machine is doing outside the hub's job queue): running and lost first, then the latest finished
+  if(Array.isArray(hubStatus.work)){
+    const when = w => String(w.ended || w.started || "");
+    const live = hubStatus.work.filter(w => w && (w.state === "running" || w.state === "lost")).sort((a, b) => String(b.started || "").localeCompare(String(a.started || "")));
+    const fin = hubStatus.work.filter(w => w && w.state !== "running" && w.state !== "lost").sort((a, b) => when(b).localeCompare(when(a))).slice(0, 12);
+    const wb = el("tbody");
+    for(const w of [...live, ...fin]){
+      const t0 = Date.parse(w.started), t1 = w.ended ? Date.parse(w.ended) : (w.state === "running" ? Date.now() : NaN);
+      wb.append(el("tr",{}, el("td",{}, stateEl(w.state || "-")), el("td",{}, w.machine || "-"),
+        el("td",{}, w.title || w.id || "-", w.kind ? el("small",{}, " · " + w.kind) : null),
+        el("td",{}, w.started ? fmtTime(w.started) : "-"),
+        el("td",{}, isNaN(t0) || isNaN(t1) ? "-" : fmtDur(Math.max(0, t1 - t0)) + (w.state === "running" ? " so far" : "")),
+        el("td",{}, w.note || "")));
+    }
+    host.append(el("h2",{}, "Local work"), live.length + fin.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
+      el("thead",{}, el("tr",{}, ...["State", "Machine", "Work", "Started", "Took", "Note"].map(h => el("th",{}, h)))), wb)) : el("p",{class:"note"}, "No local work recorded."));
+  }
   // jobs
   const jobs = hubStatus.jobs || [];
   const tb = el("tbody");
-  for (const j of jobs) tb.append(el("tr", {}, el("td", {}, stateEl(j.state)), el("td", {}, j.machine || j.target || "-"), el("td", {}, j.kind || "-"),
-    el("td", {}, j.build || "-"), el("td", {}, j.tests || "-"), el("td", {}, j.result || "-")));
-  host.append(el("h2", {}, "Hub jobs"), jobs.length ? el("div", {class: "tblwrap"}, el("table", {class: "st"},
-    el("thead", {}, el("tr", {}, ...["State", "Machine", "Kind", "Build", "Tests", "Result"].map(h => el("th", {}, h)))), tb)) : el("p", {class: "note"}, "No hub jobs yet."));
+  for(const j of jobs) tb.append(el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"), el("td",{}, j.kind || "-"),
+    el("td",{}, j.build || "-"), el("td",{}, j.tests || "-"), el("td",{}, j.result || "-")));
+  host.append(el("h2",{}, "Hub jobs"), jobs.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("thead",{}, el("tr",{}, ...["State", "Machine", "Kind", "Build", "Tests", "Result"].map(h => el("th",{}, h)))), tb)) : el("p",{class:"note"}, "No hub jobs yet."));
   // hub facts
   const hb = el("tbody");
-  for (const f of hubStatus.facts.filter(f => f.group === "hub")) hb.append(el("tr", {}, el("td", {}, f.label), el("td", {}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
-  host.append(el("h2", {}, "Hub"), el("div", {class: "tblwrap"}, el("table", {class: "st"}, hb)));
+  for(const f of facts.filter(f => f.group === "hub")) hb.append(el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
+  host.append(el("h2",{}, "Hub"), el("div",{class:"tblwrap"}, el("table",{class:"st"}, hb)));
 }
-function face(c){
-  const oq = openList(c), tasks = Array.isArray(c.tasks) ? c.tasks : [], td = tasks.filter(x => x && x.done).length;
-  const ep = (meta.epics || {})[c.epic];
-  const labs = el("div", {class: "labs"});
-  if (c.blk) labs.append(el("span", {class: "lab blk", title: c.blk}, "Blocked"));
-  if (oq.length) labs.append(el("span", {class: "lab q"}, oq.length === 1 ? "1 question open" : `${oq.length} questions open`));
-  if (tasks.length) labs.append(el("span", {class: td === tasks.length ? "lab ok" : "lab"}, `Tasks ${td}/${tasks.length}`));
-  if ((c.log || []).length) labs.append(el("span", {class: "lab"}, `${c.log.length} update${c.log.length === 1 ? "" : "s"}`));
-  if (c._pending) labs.append(el("span", {class: "lab pend"}, "On the way"));
-  if (ep) labs.append(el("span", {class: "chip", style: `--h:${ep.hue ?? 200}`}, ep.name));
-  const k = colKey(c);
-  let time = null;
-  if (["prog", "built", "test"].includes(k) && c.eta){
-    const left = new Date(c.eta) - Date.now();
-    time = el("div", {class: left < 0 ? "time over" : "time"}, `ETA ${fmtTime(c.eta)} (${left < 0 ? "overdue " : ""}${fmtDur(left)})`);
-  } else if (k === "next" && c.estimate > 0) time = el("div", {class: "time"}, `Est. ~${fmtDur(c.estimate * 60000)}`);
-  return el("button", {class: "card", style: c.pri ? `--pc:var(--p${c.pri})` : "", onclick: () => { openId = c.id; renderWin(); }},
-    el("span", {class: "id"}, c.id + (c.pri ? ` · P${c.pri}` : "")), oq.length ? el("span", {class: "qm", "aria-label": "Needs an answer"}, "❓") : null,
-    el("span", {class: "t"}, c.t || "(no title)"), labs, time, c.un ? el("div", {class: "time"}, "You: " + c.un) : null);
-}
-
-// ---------- card window
-function renderWin(){
-  const host = document.getElementById("win");
-  const raw = cards.get(openId);
-  if (!raw){ host.hidden = true; host.replaceChildren(); openId = null; return; }
-  const c = effective(raw), k = colKey(c), a = c.ans || {};
-  const win = el("div", {class: "win", role: "dialog", "aria-modal": "true", "aria-label": `${c.id} ${c.t || ""}`, style: `--cc:var(--c-${k})`});
-  win.append(el("div", {class: "head"}, el("span", {class: "badge"}, COLS.find(x => x.k === k)?.name || k),
-    el("span", {class: "id time"}, c.id), c._pending ? el("span", {class: "lab pend"}, `${c._pending} change${c._pending === 1 ? "" : "s"} on the way`) : null,
-    el("button", {class: "close", onclick: closeWin}, "Close")));
-  win.append(el("h3", {}, c.t || "(no title)"));
-  if (c.blk) win.append(el("div", {class: "blkb"}, "Blocked: " + c.blk));
-  if (c.st) win.append(el("div", {class: "st"}, c.st));
-
-  // Decisions
-  const opts = Array.isArray(c.opts) ? c.opts : [];
-  if (opts.length){
-    const box = el("section", {class: "box decs"});
-    const done = opts.filter(o => a[o.id]).length;
-    box.append(el("h4", {}, "Decisions", el("span", {}, `${done}/${opts.length} answered`)));
-    const answered = [], openOnes = [];
-    for (const o of opts) (raw.ans && raw.ans[o.id] ? answered : openOnes).push(o);
-    for (const o of openOnes) box.append(decision(c, o));
-    if (answered.length){
-      const det = el("details", {class: "earlier"}, el("summary", {}, `Earlier decisions (${answered.length})`));
-      const lst = el("div", {class: "earl"});
-      for (const o of answered){
-        const v = a[o.id], ch = (o.choices || []).find(x => x.v === v);
-        const other = a[o.id + "__other_text"];
-        lst.append(el("div", {}, o.q), el("div", {class: "a"}, (v === "__other" ? (other || "Something else") : ch ? ch.t : String(v)) + (other && v !== "__other" ? ` - ${other}` : "")));
-      }
-      det.append(lst);
-      const chg = el("details", {class: "earlier write"}, el("summary", {}, "Change an answer"));
-      for (const o of answered) chg.append(decision(c, o));
-      det.append(chg);
-      box.append(det);
-    }
-    win.append(box);
-  }
-  // Free-text questions
-  const qs = (Array.isArray(c.qs) ? c.qs : []).filter(x => x && x.id && x.q);
-  if (qs.length){
-    const box = el("section", {class: "box decs"});
-    box.append(el("h4", {}, "Questions", el("span", {}, `${qs.filter(q => String(a[q.id] ?? "").trim()).length}/${qs.length} answered`)));
-    for (const q of qs){
-      const ta = el("textarea", {id: `qa-${c.id}-${q.id}`, placeholder: "Your answer (saved when you leave the field)", "aria-label": q.q, disabled: !canWrite});
-      ta.value = a[q.id] ?? "";
-      ta.addEventListener("change", () => change(c, "ans." + q.id, ta.value.trim() ? ta.value : null));
-      box.append(el("div", {class: "dq"}, el("div", {class: "qt"}, q.q), ta));
-    }
-    win.append(box);
-  } else if (c.q && !opts.length && k !== "done") win.append(el("section", {class: "box decs"}, el("h4", {}, "Question"), el("div", {}, c.q)));
-
-  // Tasks
-  const tasks = Array.isArray(c.tasks) ? c.tasks : [];
-  if (tasks.length){
-    const td = tasks.filter(x => x && x.done).length;
-    win.append(el("section", {class: "box"}, el("h4", {}, "Tasks", el("span", {}, `${td}/${tasks.length}`)),
-      el("ul", {class: "tasks"}, tasks.map(x => el("li", {class: x.done ? "done" : ""}, (x.done ? "☑ " : "☐ ") + (x.t || ""))))));
-  }
-  // Times
-  const meta2 = el("dl", {class: "meta"});
-  const add = (k2, v) => { if (v) meta2.append(el("dt", {}, k2), el("dd", {}, v)); };
-  add("Started", c.started ? fmtTime(c.started) : "not started");
-  add("In this column", c.colSince ? fmtDur(Date.now() - new Date(c.colSince)) : "");
-  if (["prog", "built", "test"].includes(k)) add("ETA", c.eta ? `${fmtTime(c.eta)}${c.etaNote ? " - " + c.etaNote : ""}` : "");
-  if (k === "next") add("Estimate", c.estimate ? `~${fmtDur(c.estimate * 60000)}${c.estimateNote ? " - " + c.estimateNote : ""}` : "");
-  add("Ended", c.ended ? fmtTime(c.ended) : "");
-  const ep = (meta.epics || {})[c.epic];
-  add("Epic", ep ? ep.name : c.epic);
-  add("Triage", c.tri);
-  win.append(el("section", {class: "box"}, el("h4", {}, "Details"), meta2));
-  if (c.d) win.append(el("section", {class: "box"}, el("h4", {}, "Description"), el("div", {class: "desc"}, c.d)));
-
-  // Controls: priority, column, note
-  const ctl = el("section", {class: "box write"}, el("h4", {}, "Your changes"));
-  const prow = el("div", {class: "ctl"});
-  for (const p of [1, 2, 3, 4]) prow.append(el("button", {class: "pbtn", style: `--pc:var(--p${p})`, "aria-pressed": c.pri === p ? "true" : "false",
-    onclick: () => change(c, "pri", c.pri === p ? 0 : p)}, PRI[p]));
-  const sel = el("select", {id: `col-${c.id}`, "aria-label": "Move to column"}, COLS.map(x => el("option", {value: x.name, selected: x.k === k}, x.name)));
-  sel.addEventListener("change", () => change(c, "column", sel.value));
-  const note = el("textarea", {id: `un-${c.id}`, placeholder: "Your note on this card (saved when you leave the field)", "aria-label": "Your note"});
-  note.value = c.un || "";
-  note.addEventListener("change", () => change(c, "un", note.value));
-  ctl.append(prow, el("div", {class: "ctl"}, el("label", {for: `col-${c.id}`}, "Column"), sel), note);
-  win.append(ctl);
-
-  // Activity, newest first
-  const log = (Array.isArray(c.log) ? c.log : []).slice().reverse();
-  if (log.length){
-    const box = el("section", {class: "box"}, el("h4", {}, "Activity", el("span", {}, `${log.length} update${log.length === 1 ? "" : "s"}`)));
-    const lst = el("div", {class: "log"});
-    for (const e of log){
-      const imgs = Array.isArray(e.img) ? e.img : e.img ? [e.img] : [];
-      lst.append(el("div", {class: "e"}, el("span", {class: "ts"}, fmtTime(e.ts)), el("div", {class: "tx"}, e.t || ""), imgs.map(s => img(s))));
-    }
-    box.append(lst);
-    win.append(box);
-  }
-  const scrim = el("div", {class: "scrim", onclick: ev => { if (ev.target === ev.currentTarget) closeWin(); }}, win);
-  host.replaceChildren(scrim);
-  host.hidden = false;
-}
-function decision(c, o){
-  const a = c.ans || {}, v = a[o.id], otherKey = o.id + "__other_text";
-  const row = el("div", {class: "choices"});
-  for (const ch of (o.choices || [])){
-    const on = v === ch.v;
-    row.append(el("button", {class: "ch" + (ch.rec ? " rec" : ""), "aria-pressed": on ? "true" : "false", disabled: !canWrite,
-      onclick: () => {
-        // tapping the chosen button again unselects it; "something else" text keeps the question answered
-        const next = on ? (String(a[otherKey] ?? "").trim() ? "__other" : null) : ch.v;
-        change(c, "ans." + o.id, next);
-      }}, ch.img ? img(ch.img) : null, (ch.t || ch.v) + (ch.rec ? " (recommended)" : "")));
-  }
-  const ta = el("textarea", {id: `ot-${c.id}-${o.id}`, disabled: !canWrite, "aria-label": "Something else, or a note",
-    placeholder: "Something else, or a note? (saved when you leave the field; kept when you pick a button)"});
-  ta.value = a[otherKey] ?? "";
-  ta.addEventListener("change", async () => {
-    const txt = ta.value.trim() ? ta.value : null;
-    await change(c, "ans." + otherKey, txt);
-    if (txt && !v) await change(c, "ans." + o.id, "__other");
-    if (!txt && v === "__other") await change(c, "ans." + o.id, null);
-  });
-  return el("div", {class: "dq"}, el("div", {class: "qt"}, o.q), o.img ? img(o.img, "qimg") : null,
-    o.hint ? el("div", {class: "hint"}, o.hint) : null, row, ta);
-}
-function closeWin(){ openId = null; const h = document.getElementById("win"); h.hidden = true; h.replaceChildren(); }
-document.addEventListener("keydown", ev => {
-  if (ev.key !== "Escape") return;
-  const v = document.getElementById("viewer");
-  if (!v.hidden) v.hidden = true; else if (openId) closeWin();
-});
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
 function showTab(name, fromHash){
   const tab = name === "status" ? "status" : "board";
-  filt.tab = tab; saveFilters();
+  filt.tab = tab; ls("kb.filters", filt);
   document.getElementById("view-board").hidden = tab !== "board";
   document.getElementById("status").hidden = tab !== "status";
-  for (const b of document.querySelectorAll(".tab")){
+  for(const b of document.querySelectorAll(".tab")){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
     b.tabIndex = on ? 0 : -1;
   }
-  if (!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
+  if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   renderStatus();
 }
-for (const b of document.querySelectorAll(".tab")){
+for(const b of document.querySelectorAll(".tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
   b.addEventListener("keydown", ev => {
-    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    if(ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
     const next = b.dataset.tab === "board" ? "status" : "board";
     showTab(next); document.getElementById("tab-" + next).focus();
   });
 }
 window.addEventListener("hashchange", () => showTab(location.hash.slice(1), true));
 showTab(["board", "status"].includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
-
-// ---------- moving around the board with the mouse, as on the old Work Board (legacy/work-board/index.html)
-// Left button anywhere except on cards and controls: sideways scrolls the columns, up / down the page. Touch keeps
-// its native scrolling.
-(() => {
-  const board = document.getElementById("board"); let pan = null, moved = false;
-  board.addEventListener("pointerdown", ev => {
-    moved = false;
-    if (ev.pointerType !== "mouse" || ev.button !== 0 || ev.target.closest(".card, button, select, input, textarea, a")) return;
-    pan = {x: ev.clientX, y: ev.clientY, left: board.scrollLeft, top: window.scrollY, id: ev.pointerId};
-  });
-  board.addEventListener("pointermove", ev => {
-    if (!pan) return;
-    const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
-    if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) > 4){
-      moved = true; document.body.classList.add("panning");
-      try { board.setPointerCapture(pan.id); } catch {}
-      try { getSelection().removeAllRanges(); } catch {}
-    }
-    if (moved){ board.scrollLeft = pan.left - dx; window.scrollTo(window.scrollX, pan.top - dy); ev.preventDefault(); }
-  });
-  const end = () => { if (pan){ pan = null; document.body.classList.remove("panning"); } };
-  board.addEventListener("pointerup", end); board.addEventListener("pointercancel", end);
-  board.addEventListener("click", ev => { if (moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; } }, true);   // a pan isn't a click
-})();
-// Middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways). The further
-// the pointer is from where it was pressed, the faster; it stops when the button is released.
-(() => {
-  const board = document.getElementById("board"), mark = el("div", {class: "automark", "aria-hidden": "true"}); let auto = null;
-  mark.hidden = true; document.body.append(mark);
-  const speed = d => { const a = Math.abs(d) - 12; return a > 0 ? Math.sign(d) * Math.min(60, a * a / 300) : 0; };   // 12 px dead zone
-  const step = () => { if (auto){ board.scrollLeft += speed(auto.mx - auto.x); window.scrollBy(0, speed(auto.my - auto.y)); } };
-  const stop = () => { if (!auto) return; clearInterval(auto.tick); auto = null; mark.hidden = true; document.body.classList.remove("autoscrolling"); };
-  board.addEventListener("mousedown", ev => {
-    if (ev.button !== 1 || ev.target.closest("a")) return;
-    ev.preventDefault();
-    if (auto){ stop(); return; }
-    auto = {x: ev.clientX, y: ev.clientY, mx: ev.clientX, my: ev.clientY, tick: 0};
-    mark.style.left = ev.clientX + "px"; mark.style.top = ev.clientY + "px"; mark.hidden = false;
-    document.body.classList.add("autoscrolling"); auto.tick = setInterval(step, 16);   // a timer keeps going where frames are throttled
-  });
-  addEventListener("mousemove", ev => { if (auto){ auto.mx = ev.clientX; auto.my = ev.clientY; } });
-  addEventListener("mouseup", ev => { if (auto && ev.button === 1) stop(); });
-  addEventListener("mousedown", ev => { if (auto && ev.button !== 1){ ev.preventDefault(); ev.stopPropagation(); stop(); } }, true);   // any other click just stops it
-  addEventListener("keydown", ev => { if (auto && ev.key === "Escape") stop(); });
-  addEventListener("blur", stop);
-})();
-
-// ---------- filters
-for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"]]){
-  const cb = document.getElementById(id); cb.checked = !!filt[key];
-  cb.addEventListener("change", () => { filt[key] = cb.checked; saveFilters(); render(); });
-}
-const qIn = document.getElementById("q"); qIn.value = filt.q || "";
-qIn.addEventListener("input", () => { filt.q = qIn.value; saveFilters(); render(); });
 
 // ---------- data (GitHub's API from this browser; NODE_SPEC section 7)
 const BRANCH = "board";
@@ -649,45 +1426,55 @@ async function gh(path, {method = "GET", body = null, raw = false, etag = null} 
   return r;
 }
 
+// A poll that finds no new commit redraws nothing (only the "checked" time in the header changes).
 async function check(){
   if (!conn || document.hidden) return;
   try {
-    let changed = false;
     const r = await gh(`git/ref/heads/${BRANCH}`, {etag: refEtag});      // a 304 costs no API quota
     lastCheck = new Date().toISOString();
+    let fresh = false;
     if (r.status !== 304){
-      refEtag = r.headers.get("ETag");
+      const etag = r.headers.get("ETag");
       const sha = (await r.json()).object.sha;
-      if (sha !== tip){ tip = sha; await load(); changed = true; }
+      if (sha !== tip){ await load(sha); tip = sha; fresh = true; }
+      refEtag = etag;                                                    // only once the new tip is loaded: a failed load is tried again
     }
-    if (!loaded){ loaded = true; changed = true; }
-    if (changed) render();
-    else if (!document.getElementById("status").hidden) keepScroll(renderStatus);   // "x ago" keeps counting
+    if (!loaded){ loaded = true; fresh = true; }
+    if (fresh) render(); else renderSync();
   } catch (e) {
     if (e.status === 401 || e.status === 404){ showSetup(e.status === 401 ? "The token was refused (expired or revoked?)."
                                                          : "The repository or its board branch can't be found with this token."); return; }
     document.getElementById("sync").textContent = "Can't reach GitHub right now; retrying.";
   }
 }
-async function load(){
-  const data = await (await gh(`contents/export/board.json?ref=${tip}`, {raw: true})).json();
-  meta = {epics: data.epics || {}, exported_at: data.exported_at};
-  const ids = new Set(Object.keys(data.cards || {}));
-  for (const id of [...cards.keys()]) if (!ids.has(id)) cards.delete(id);
-  for (const [id, doc] of Object.entries(data.cards || {})) cards.set(id, Object.assign({id}, doc));
-  try { hubStatus = await (await gh(`contents/export/status.json?ref=${tip}`, {raw: true})).json(); } catch { hubStatus = null; }
-  // a change is done once the export is newer than it (the node applies, then exports, in one pass)
-  for (const [k, v] of changes) if (meta.exported_at && meta.exported_at > v.ts) changes.delete(k);
+async function load(sha){
+  const data = await (await gh(`contents/export/board.json?ref=${sha}`, {raw: true})).json();
+  meta = {exported_at: data.exported_at};
+  raw.clear();
+  for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
+  epics.clear(); themes.clear();
+  for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
+  for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
+  ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
+    .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
+  if (filt.t && themes.size && !themes.has(filt.t)){ filt.t = ""; ls("kb.filters", filt); }   // a remembered theme that is gone
+  if (filt.e && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
+  try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); } catch { hubStatus = null; }
+  // a change is done once an export is newer than it (the node applies, then exports, in one pass); one whose file
+  // has not reached GitHub yet stays on screen
+  for (const [k, v] of changes) if (sentAt.has(k) && meta.exported_at && meta.exported_at > v.ts
+      && (meta.exported_at > sentAt.get(k) || Date.now() - Date.parse(sentAt.get(k)) > 180000)){ changes.delete(k); sentAt.delete(k); }
   try {
-    const refused = await (await gh(`contents/export/phone-refused.json?ref=${tip}`, {raw: true})).json();
+    const refused = await (await gh(`contents/export/phone-refused.json?ref=${sha}`, {raw: true})).json();
     const fresh = refused.filter(x => seenRefused !== null && x.time > seenRefused);
     seenRefused = refused.length ? refused[refused.length - 1].time : (seenRefused || "");
     for (const x of fresh){
-      const name = x.change.split("__");
-      for (const [k] of changes) if (k === x.change) changes.delete(k);
+      const name = String(x.change).split("__");
+      changes.delete(x.change); sentAt.delete(x.change);
       toast(`Not applied (${name[0]} ${name[1] || ""}): ${x.why}`);
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
+  rebuild(); fillThemes(); fillEpics();
 }
 function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); }
 function startPolling(){
@@ -700,9 +1487,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) chec
 function showSetup(msg){
   showTab("board");          // the connect form lives on the board tab
   clearInterval(timer);
-  const f = document.getElementById("setup");
-  f.hidden = false;
-  document.getElementById("note").hidden = true;
+  document.getElementById("setup").hidden = false;
+  document.body.classList.add("noconn");
   document.getElementById("sErr").textContent = msg || "";
   if (conn){ document.getElementById("sOwner").value = conn.owner; document.getElementById("sRepo").value = conn.repo; }
   document.getElementById("sync").textContent = "Not connected.";
@@ -716,10 +1502,11 @@ document.getElementById("setup").addEventListener("submit", async ev => {
     await gh(`git/ref/heads/${BRANCH}`);
     saveConn(conn);
     document.getElementById("sToken").value = "";
+    document.getElementById("sErr").textContent = "";
     document.getElementById("setup").hidden = true;
-    document.getElementById("note").hidden = false;
-    canWrite = true;
-    document.getElementById("app").classList.remove("ro");
+    document.body.classList.remove("noconn");
+    setRO(false);
+    document.getElementById("sync").textContent = "Connecting to the board data…";
     startPolling();
   } catch (e) {
     document.getElementById("sErr").textContent = e.status === 401 ? "GitHub refused the token." :
@@ -728,13 +1515,17 @@ document.getElementById("setup").addEventListener("submit", async ev => {
   }
 });
 document.getElementById("signout").addEventListener("click", () => {
-  saveConn(null); conn = null; cards.clear(); changes.clear(); tip = refEtag = null; loaded = false;
+  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); epics.clear(); themes.clear(); ARCH.items = [];
+  tip = refEtag = null; loaded = false; hubStatus = null; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
-  blobs.clear(); render(); showSetup("");
+  blobs.clear(); blobUrl.clear(); noPic.clear();
+  setRO(true); if (selMode) setSelMode(false);
+  fillThemes(); fillEpics(); render(); showSetup("");
 });
 
-render();
+fillEpics(); render();
+setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
 conn = loadConn();
-if (conn){ canWrite = true; startPolling(); } else showSetup("");
+if (conn){ setRO(false); startPolling(); } else showSetup("");
 </script>
 </html>
