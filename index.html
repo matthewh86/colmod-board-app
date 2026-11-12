@@ -37,7 +37,9 @@
   --c-park:#6b7483; --c-back:#9aa3b2; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-next:#f2857a;
   --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-rej:#c99a9a;
   --chip-l:24%; --chip-s:35%; color-scheme:dark }
+[hidden]{display:none!important}   /* claude.ai's page frame added this; on its own the page must */
 html,body{min-height:100%}
+*,*::before,*::after{box-sizing:border-box}
 body{background:var(--bg); color:var(--ink); font:15px/1.45 var(--f-body); margin:0}
 button,select,textarea,input{font:inherit; color:inherit}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
