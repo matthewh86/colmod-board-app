@@ -134,6 +134,9 @@ select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; backgro
 .board{cursor:grab}
 .board .card{cursor:pointer}
 body.panning, body.panning *{cursor:grabbing!important; user-select:none!important}
+.automark{position:fixed; z-index:50; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%; border:1.5px solid var(--muted); background:var(--surface); pointer-events:none; display:grid; place-items:center}
+.automark::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--muted)}
+body.autoscrolling, body.autoscrolling *{cursor:all-scroll!important}
 .status{display:grid; gap:14px; margin:0 0 16px}
 .status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
@@ -563,46 +566,51 @@ for (const b of document.querySelectorAll(".tab")){
 window.addEventListener("hashchange", () => showTab(location.hash.slice(1), true));
 showTab(["board", "status"].includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
 
-// ---------- drag to move around the board: the left button on empty board space, the middle button anywhere on it.
-// Sideways moves the board's own scroll, up and down the page's. Cards keep their click.
+// ---------- moving around the board with the mouse, as on the old Work Board (legacy/work-board/index.html)
+// Left button anywhere except on cards and controls: sideways scrolls the columns, up / down the page. Touch keeps
+// its native scrolling.
 (() => {
-  const board = document.getElementById("board");
-  let drag = null;
-  const scroller = () => document.scrollingElement || document.documentElement;
-  board.addEventListener("mousedown", ev => { if (ev.button === 1) ev.preventDefault(); });   // no browser autoscroll
+  const board = document.getElementById("board"); let pan = null, moved = false;
   board.addEventListener("pointerdown", ev => {
-    if (ev.pointerType !== "mouse" || (ev.button !== 0 && ev.button !== 1)) return;
-    if (ev.button === 0 && ev.target.closest(".card, button, input, select, textarea, a")) return;
-    drag = {id: ev.pointerId, x: ev.clientX, y: ev.clientY, left: board.scrollLeft, top: scroller().scrollTop, moved: false};
+    moved = false;
+    if (ev.pointerType !== "mouse" || ev.button !== 0 || ev.target.closest(".card, button, select, input, textarea, a")) return;
+    pan = {x: ev.clientX, y: ev.clientY, left: board.scrollLeft, top: window.scrollY, id: ev.pointerId};
   });
-  window.addEventListener("pointermove", ev => {
-    if (!drag || ev.pointerId !== drag.id) return;
-    const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
-    if (!drag.moved){
-      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-      drag.moved = true; document.body.classList.add("panning");
-      try { board.setPointerCapture(ev.pointerId); } catch {}
+  board.addEventListener("pointermove", ev => {
+    if (!pan) return;
+    const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
+    if (!moved && Math.max(Math.abs(dx), Math.abs(dy)) > 4){
+      moved = true; document.body.classList.add("panning");
+      try { board.setPointerCapture(pan.id); } catch {}
+      try { getSelection().removeAllRanges(); } catch {}
     }
-    board.scrollLeft = drag.left - dx;
-    scroller().scrollTop = drag.top - dy;
+    if (moved){ board.scrollLeft = pan.left - dx; window.scrollTo(window.scrollX, pan.top - dy); ev.preventDefault(); }
+  });
+  const end = () => { if (pan){ pan = null; document.body.classList.remove("panning"); } };
+  board.addEventListener("pointerup", end); board.addEventListener("pointercancel", end);
+  board.addEventListener("click", ev => { if (moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; } }, true);   // a pan isn't a click
+})();
+// Middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways). The further
+// the pointer is from where it was pressed, the faster; it stops when the button is released.
+(() => {
+  const board = document.getElementById("board"), mark = el("div", {class: "automark", "aria-hidden": "true"}); let auto = null;
+  mark.hidden = true; document.body.append(mark);
+  const speed = d => { const a = Math.abs(d) - 12; return a > 0 ? Math.sign(d) * Math.min(60, a * a / 300) : 0; };   // 12 px dead zone
+  const step = () => { if (auto){ board.scrollLeft += speed(auto.mx - auto.x); window.scrollBy(0, speed(auto.my - auto.y)); } };
+  const stop = () => { if (!auto) return; clearInterval(auto.tick); auto = null; mark.hidden = true; document.body.classList.remove("autoscrolling"); };
+  board.addEventListener("mousedown", ev => {
+    if (ev.button !== 1 || ev.target.closest("a")) return;
     ev.preventDefault();
+    if (auto){ stop(); return; }
+    auto = {x: ev.clientX, y: ev.clientY, mx: ev.clientX, my: ev.clientY, tick: 0};
+    mark.style.left = ev.clientX + "px"; mark.style.top = ev.clientY + "px"; mark.hidden = false;
+    document.body.classList.add("autoscrolling"); auto.tick = setInterval(step, 16);   // a timer keeps going where frames are throttled
   });
-  const end = ev => {
-    if (!drag || (ev && ev.pointerId !== drag.id)) return;
-    if (drag.moved){
-      // the press ended a drag, not a click: swallow the click (and the middle button's auxclick) that follows
-      const swallow = c => { c.preventDefault(); c.stopPropagation(); };
-      for (const t of ["click", "auxclick"]){
-        window.addEventListener(t, swallow, {capture: true, once: true});
-        setTimeout(() => window.removeEventListener(t, swallow, true), 60);
-      }
-    }
-    try { board.releasePointerCapture(drag.id); } catch {}
-    drag = null; document.body.classList.remove("panning");
-  };
-  window.addEventListener("pointerup", end);
-  window.addEventListener("pointercancel", end);
-  window.addEventListener("blur", () => end());
+  addEventListener("mousemove", ev => { if (auto){ auto.mx = ev.clientX; auto.my = ev.clientY; } });
+  addEventListener("mouseup", ev => { if (auto && ev.button === 1) stop(); });
+  addEventListener("mousedown", ev => { if (auto && ev.button !== 1){ ev.preventDefault(); ev.stopPropagation(); stop(); } }, true);   // any other click just stops it
+  addEventListener("keydown", ev => { if (auto && ev.key === "Escape") stop(); });
+  addEventListener("blur", stop);
 })();
 
 // ---------- filters
