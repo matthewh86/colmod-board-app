@@ -988,7 +988,7 @@ function renderEpics(all){
   box.closest(".main").classList.toggle("ecol", folded);
   box.append(el("h2",{}, el("button",{type:"button", class:"ecbtn", "aria-expanded":String(!folded),
       title: folded ? "Show the epics" : "Fold the epics to the side", "aria-label": folded ? "Show the epics" : "Fold the epics to the side",
-      onclick:()=>{ filt.ecol = !folded; saveFilters(); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Epics")));
+      onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Epics")));
   if(folded){ box.scrollTop = 0; return; }
   const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
