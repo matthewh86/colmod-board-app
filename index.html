@@ -305,7 +305,15 @@ function matches(c){
   const hay = [c.id, c.t, c.st, c.q, c.un, c.d, c.blk, ...(c.opts || []).map(o => o.q), ...(c.qs || []).map(q => q.q)];
   return hay.some(x => x && String(x).toLowerCase().includes(s));
 }
-function render(){
+function keepScroll(fn){
+  const board = document.getElementById("board"), scrim = document.querySelector("#win .scrim");
+  const x = board.scrollLeft, y = window.scrollY, m = scrim ? scrim.scrollTop : 0;
+  fn();
+  board.scrollLeft = x; window.scrollTo(window.scrollX, y);
+  const s2 = document.querySelector("#win .scrim"); if (s2) s2.scrollTop = m;
+}
+function render(){ keepScroll(renderNow); }
+function renderNow(){
   const all = [...cards.values()].map(effective);
   const open = all.reduce((n, c) => n + (openList(c).length ? 1 : 0), 0);
   const pend = changes.size;
@@ -644,15 +652,17 @@ async function gh(path, {method = "GET", body = null, raw = false, etag = null} 
 async function check(){
   if (!conn || document.hidden) return;
   try {
+    let changed = false;
     const r = await gh(`git/ref/heads/${BRANCH}`, {etag: refEtag});      // a 304 costs no API quota
     lastCheck = new Date().toISOString();
     if (r.status !== 304){
       refEtag = r.headers.get("ETag");
       const sha = (await r.json()).object.sha;
-      if (sha !== tip){ tip = sha; await load(); }
+      if (sha !== tip){ tip = sha; await load(); changed = true; }
     }
-    if (!loaded){ loaded = true; }
-    render();
+    if (!loaded){ loaded = true; changed = true; }
+    if (changed) render();
+    else if (!document.getElementById("status").hidden) keepScroll(renderStatus);   // "x ago" keeps counting
   } catch (e) {
     if (e.status === 401 || e.status === 404){ showSetup(e.status === 401 ? "The token was refused (expired or revoked?)."
                                                          : "The repository or its board branch can't be found with this token."); return; }
