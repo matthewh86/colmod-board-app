@@ -126,6 +126,22 @@ select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; backgro
 .setup input{padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
 .setup p{margin:0; font-size:.84rem; color:var(--muted)}
 .setup .row{display:flex; gap:8px; flex-wrap:wrap}
+.status{display:grid; gap:14px; margin:0 0 16px}
+.status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
+.mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
+.mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0}
+.mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
+.state{font-size:.72rem; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+.state.ok{color:var(--c-done); border-color:var(--c-done)}
+.state.warn{color:var(--q); border-color:var(--q)}
+.state.bad{color:var(--blk-fg); background:var(--blk-bg); border-color:transparent}
+.meter{height:8px; border-radius:999px; background:var(--line); overflow:hidden}
+.meter span{display:block; height:100%; background:var(--c-done)}
+.tblwrap{overflow-x:auto}
+table.st{border-collapse:collapse; width:100%; font-size:.82rem}
+table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
+table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
 .linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font-size:.82rem; text-decoration:underline}
 @media (max-width:720px){
   .board{grid-auto-flow:row; grid-auto-columns:auto; overflow-x:visible}
@@ -145,6 +161,7 @@ select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; backgro
     <label><input type="checkbox" id="openOnly"> Open questions only</label>
     <label><input type="checkbox" id="showPark"> Parked</label>
     <label><input type="checkbox" id="showDone"> Done &amp; Rejected</label>
+    <label><input type="checkbox" id="showStatus"> Machines &amp; jobs</label>
   </div>
   <form class="setup" id="setup" hidden>
     <h2>Connect to the board</h2>
@@ -158,6 +175,7 @@ select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; backgro
   </form>
   <p class="note" id="note">Answers, notes, priorities and column moves are saved to the board straight away and reach
     Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
+  <section class="status" id="status" hidden aria-label="Machines, jobs and hub state"></section>
   <div class="board" id="board"></div>
 </div>
 <div id="win" hidden></div>
@@ -285,6 +303,7 @@ function render(){
   if (loaded) sync.replaceChildren(meta.exported_at ? el("span", {}, "Board as of ", el("b", {}, fmtTime(meta.exported_at)),
     lastCheck ? ` · checked ${fmtTime(lastCheck)}` : "") : el("span", {}, "No board export yet: the desktop's node writes it."));
 
+  renderStatus();
   const board = document.getElementById("board"); board.replaceChildren();
   for (const col of COLS){
     if (col.k === "park" && !filt.park) continue;
@@ -298,6 +317,59 @@ function render(){
       el("h2", {}, col.name, el("span", {class: "n"}, shown.length === inCol.length ? String(inCol.length) : `${shown.length}/${inCol.length}`)), list));
   }
   if (openId && !document.activeElement?.closest?.("#win textarea")) renderWin();
+}
+// ---------- machines, jobs and hub state (export/status.json, written by the primary node)
+const TONE = {online: "ok", idle: "ok", up: "ok", done: "ok", busy: "warn", running: "warn", claimed: "warn", queued: "warn",
+              stale: "bad", down: "bad", failed: "bad"};
+function stateEl(text){ return el("span", {class: "state " + (TONE[text] || "")}, text); }
+function renderStatus(){
+  const host = document.getElementById("status");
+  host.hidden = !filt.status;
+  if (host.hidden) return;
+  host.replaceChildren();
+  if (!hubStatus){ host.append(el("p", {class: "note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
+  const fact = l => (hubStatus.facts.find(f => f.label === l) || {}).value;
+  // machines: online while the last report is under 30 minutes old (worked out here, so it is always current)
+  const mach = el("div", {class: "mach"});
+  for (const m of hubStatus.machines || []){
+    const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "stale";
+    const dl = el("dl", {class: "meta"});
+    const add = (k, v) => dl.append(el("dt", {}, k), el("dd", {}, v == null || v === "" ? "-" : String(v)));
+    add("Last report", isNaN(age) ? "-" : `${fmtDur(age * 60000)} ago`);
+    add("Offers", m.offers);
+    add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
+    if (m.comfy !== "-") add("ComfyUI", m.comfy);
+    if (m.llm !== "-") add("Local LLM", m.llm);
+    add("Running job", m.running_job || "none");
+    add("Queued for it", m.queued);
+    mach.append(el("div", {class: "mcard"}, el("div", {class: "mh"}, el("span", {class: "mn"}, m.machine), stateEl(st)), dl));
+  }
+  host.append(el("h2", {}, "Machines"), mach);
+  // testing and release
+  const done = Number(fact("Done")), total = Number(fact("Total"));
+  const dl = el("dl", {class: "meta"});
+  for (const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
+    const v = fact(l); if (v) dl.append(el("dt", {}, k), el("dd", {}, v));
+  }
+  const upd = fact("Development state written");
+  if (upd) dl.append(el("dt", {}, "Written"), el("dd", {}, fmtTime(upd)));
+  const tcard = el("div", {class: "mcard"}, dl);
+  if (total > 0){
+    const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
+    tcard.prepend(el("div", {}, `${done} of ${total} finished`), el("div", {class: "meter"}, bar));
+  }
+  host.append(el("h2", {}, "Testing and release"), tcard);
+  // jobs
+  const jobs = hubStatus.jobs || [];
+  const tb = el("tbody");
+  for (const j of jobs) tb.append(el("tr", {}, el("td", {}, stateEl(j.state)), el("td", {}, j.machine || j.target || "-"), el("td", {}, j.kind || "-"),
+    el("td", {}, j.build || "-"), el("td", {}, j.tests || "-"), el("td", {}, j.result || "-")));
+  host.append(el("h2", {}, "Hub jobs"), jobs.length ? el("div", {class: "tblwrap"}, el("table", {class: "st"},
+    el("thead", {}, el("tr", {}, ...["State", "Machine", "Kind", "Build", "Tests", "Result"].map(h => el("th", {}, h)))), tb)) : el("p", {class: "note"}, "No hub jobs yet."));
+  // hub facts
+  const hb = el("tbody");
+  for (const f of hubStatus.facts.filter(f => f.group === "hub")) hb.append(el("tr", {}, el("td", {}, f.label), el("td", {}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
+  host.append(el("h2", {}, "Hub"), el("div", {class: "tblwrap"}, el("table", {class: "st"}, hb)));
 }
 function face(c){
   const oq = openList(c), tasks = Array.isArray(c.tasks) ? c.tasks : [], td = tasks.filter(x => x && x.done).length;
@@ -455,7 +527,7 @@ document.addEventListener("keydown", ev => {
 });
 
 // ---------- filters
-for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"]]){
+for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"], ["showStatus", "status"]]){
   const cb = document.getElementById(id); cb.checked = !!filt[key];
   cb.addEventListener("change", () => { filt[key] = cb.checked; saveFilters(); render(); });
 }
@@ -466,6 +538,7 @@ qIn.addEventListener("input", () => { filt.q = qIn.value; saveFilters(); render(
 const BRANCH = "board";
 const API = "https://api.github.com";
 const cfgKey = "cb.conn";
+let hubStatus = null;
 let conn = null, refEtag = null, tip = null, lastCheck = null, timer = null, seenRefused = null;
 function loadConn(){ try { return JSON.parse(localStorage.getItem(cfgKey)) || null; } catch { return null; } }
 function saveConn(c){ try { c ? localStorage.setItem(cfgKey, JSON.stringify(c)) : localStorage.removeItem(cfgKey); } catch {} }
@@ -506,6 +579,7 @@ async function load(){
   const ids = new Set(Object.keys(data.cards || {}));
   for (const id of [...cards.keys()]) if (!ids.has(id)) cards.delete(id);
   for (const [id, doc] of Object.entries(data.cards || {})) cards.set(id, Object.assign({id}, doc));
+  try { hubStatus = await (await gh(`contents/export/status.json?ref=${tip}`, {raw: true})).json(); } catch { hubStatus = null; }
   // a change is done once the export is newer than it (the node applies, then exports, in one pass)
   for (const [k, v] of changes) if (meta.exported_at && meta.exported_at > v.ts) changes.delete(k);
   try {
