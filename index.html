@@ -1430,17 +1430,97 @@ function openQuestions(c){
   if(!out.length && openQ(c) && c.q) out.push(c.q);
   return out;
 }
-function renderDecisions(){
-  const list = [...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej")
+// a Claude session's decisions (export/board.json `sessions`: {id: "S-<name>", session, t, opts, qs, ans, upd}): not
+// cards, so they are answered right here; an answer is a change file like a card's and reaches the session's inbox
+const sessDocs = new Map();
+function sessAns(doc){     // the exported answers with this page's changes that are still on the way
+  const a = Object.assign({}, doc.ans && typeof doc.ans === "object" ? doc.ans : {});
+  for(const ch of [...changes.values()].sort((x,y)=>(x.ts||"").localeCompare(y.ts||"")))
+    if(ch.card === doc.id && String(ch.field).startsWith("ans.")) a[ch.field.slice(4)] = ch.value;
+  return a;
+}
+function sessOpen(doc){
+  const a = sessAns(doc);
+  return {a, opts: (Array.isArray(doc.opts) ? doc.opts : []).filter(o => o && o.id && !a[o.id]),
+          qs: (Array.isArray(doc.qs) ? doc.qs : []).filter(x => x && x.id && x.q && !String(a[x.id]||"").trim())};
+}
+function sessAnswer(doc, id, value){ change(doc, "ans." + id, value); render(); renderDecisions(); }
+function sessEl(doc){
+  const {a, opts, qs} = sessOpen(doc);
+  const box = el("div",{class:"decs"});
+  for(const o of opts){
+    const row = el("div",{class:"ch"});
+    for(const ch of o.choices || []) row.append(el("button",{type:"button", class:ch.rec?"rec":"", title:ch.rec?"Recommended":"",
+      onclick:()=>sessAnswer(doc, o.id, ch.v)}, (ch.t || String(ch.v)) + (ch.rec ? " ★" : "")));
+    const other = el("textarea",{class:"other", placeholder:"Something else? Write it here (saved when you leave the field)", "aria-label":"Other answer: "+o.q});
+    other.value = a[o.id+OTHER] || "";
+    other.addEventListener("blur", ()=>{ const v = other.value.trim(); if(!v || v === String(a[o.id+OTHER]||"")) return;
+      change(doc, "ans." + o.id + OTHER, v); sessAnswer(doc, o.id, "__other"); });
+    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ "+o.q), row, other, o.hint ? el("div",{class:"hint"}, o.hint) : null));
+  }
+  for(const x of qs){
+    const ta = el("textarea",{placeholder:"Your answer (saved when you leave the field)", "aria-label":"Answer: "+x.q});
+    ta.addEventListener("blur", ()=>{ const v = ta.value.trim(); if(v) sessAnswer(doc, x.id, v); });
+    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ "+x.q), ta));
+  }
+  return box;
+}
+function renderDecisions(){   // a fault in this tab must never stop the board from drawing
+  try { drawDecisions(); }
+  catch(e){ const h = document.getElementById("decisions"); if(h && !h.hidden) h.replaceChildren(el("p",{}, "The decisions could not be shown: " + (e && e.message || e))); }
+}
+function drawDecisions(){
+  const list =[...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej")
     .sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
-  const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0);
+  const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return o.opts.length + o.qs.length; });
+  const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0)
+          + sess.reduce((s,d) => { const o = sessOpen(d); return s + o.opts.length + o.qs.length; }, 0);
   const tab = document.getElementById("tab-decisions");
   if(tab) tab.textContent = n ? "Decisions ("+n+")" : "Decisions";
   const host = document.getElementById("decisions");
   if(!host || host.hidden) return;
   host.replaceChildren(el("h2",{}, n ? n+(n===1?" decision is":" decisions are")+" waiting for you" : "No decisions are waiting for you"));
-  if(!list.length) return;
-  host.append(el("div",{class:"tblwrap"}, el("table",{class:"st"},
+  for(const d of sess) host.append(el("h2",{}, "Claude session " + (d.session || d.id)),
+    el("p",{}, readOnly ? "This view is read-only: answer on the desktop." : "Your answer is sent to this session."), sessEl(d));
+  if(list.length){
+    if(sess.length) host.append(el("h2",{}, "Cards"));
+    host.append(cardDecisionsEl(list));
+  }
+  host.append(pastDecisionsEl());
+}
+// the decisions already made: the sessions' and the live cards' (an archived card keeps its own on the desktop)
+function answerText(o, a){
+  const ch = (o.choices||[]).find(x => x.v === a[o.id]);
+  const note = String(a[o.id+OTHER]||"").trim();
+  return ch ? (ch.t || String(ch.v)) + (note ? " — " + note : "") : (note || String(a[o.id] ?? ""));
+}
+function pastDecisionsEl(){
+  const rows = [];
+  for(const d of sessDocs.values()){
+    const a = sessAns(d);
+    const again = id => readOnly ? null : el("button",{type:"button", title:"Ask this again: clears the answer", onclick:()=>{ if(a[id+OTHER]) change(d, "ans."+id+OTHER, null); sessAnswer(d, id, null); }}, "Reopen");
+    for(const o of Array.isArray(d.opts) ? d.opts : []) if(o && o.id && a[o.id])
+      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)), " ", again(o.id))));
+    for(const x of Array.isArray(d.qs) ? d.qs : []) if(x && x.id && String(a[x.id]||"").trim())
+      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", again(x.id))));
+  }
+  for(const c of [...cards.values()].sort((x,y) => x.id.localeCompare(y.id))){
+    const a = c.ans || {};
+    const open = () => el("button",{type:"button", title:"Open "+c.id+" (change the answer there)", onclick:()=>openCard(c.id)}, c.id);
+    for(const o of Array.isArray(c.opts) ? c.opts : []) if(o && o.id && a[o.id])
+      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)))));
+    for(const x of qList(c)) if(String(a[x.id]||"").trim())
+      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])))));
+  }
+  const d = el("details",{id:"pastdec"}, el("summary",{}, "Past decisions (" + rows.length + ")"));
+  if(filt.pastOpen) d.open = true;
+  d.addEventListener("toggle", () => { filt.pastOpen = d.open; ls("kb.filters", filt); });
+  d.append(rows.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("tr",{}, el("th",{},"From"), el("th",{},"Decision"), el("th",{},"Your answer")), ...rows)) : el("p",{}, "None yet."));
+  return d;
+}
+function cardDecisionsEl(list){
+  return (el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("tr",{}, el("th",{},"Card"), el("th",{},"Decision"), el("th",{},"Column")),
     ...list.map(c => el("tr",{},
       el("td",{}, el("button",{type:"button", title:"Open "+c.id+" to answer", onclick:()=>openCard(c.id)}, c.id+(c.pri?" · "+PRI[c.pri]:"")), el("br"), el("small",{}, c.t||"")),
@@ -1518,6 +1598,8 @@ async function load(sha){
   meta = {exported_at: data.exported_at};
   raw.clear();
   for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
+  sessDocs.clear();
+  for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
   epics.clear(); themes.clear();
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
