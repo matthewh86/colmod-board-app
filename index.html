@@ -52,10 +52,10 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tally span{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
 .tally b{font-weight:600}
 .tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg)}
 .tab{font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
-.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.bar{position:sticky; top:calc(env(safe-area-inset-top,0px) + 41px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 .bar input:not([type=checkbox]),.bar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
 .bar input:not([type=checkbox]){flex:1 1 180px; min-width:0}
 .fwrap{position:relative}
@@ -951,10 +951,6 @@ function render(){
   // tally
   const t = $("#tally"); t.textContent = "";
   if(loaded){
-    const must = allA.filter(c=>c.tri==="Must" && c.col!=="rej");
-    const doneMust = must.filter(c=>c.col==="done").length;
-    t.append(el("span",{}, el("b",{}, doneMust+" / "+must.length), " Must items done"));
-    for(const p of [1,2,3,4]){ const open = all.filter(c=>c.pri===p && c.col!=="done" && c.col!=="park" && c.col!=="rej").length; t.append(el("span",{}, el("b",{},String(open)), " open "+PRI[p])); }
     const qs = all.filter(openQ).length;
     if(qs) t.append(el("span",{}, el("b",{},String(qs)), " open questions"));
     if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change on the way to the desktop" : " changes on the way to the desktop"));
