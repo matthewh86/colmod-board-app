@@ -1329,6 +1329,7 @@ function renderStatus(){
     if(m.llm !== "-") add("Local LLM", m.llm);
     add("Running job", m.running_job || "none");
     add("Queued for it", m.queued);
+    if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
     mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
       st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl));
   }
