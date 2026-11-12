@@ -128,6 +128,12 @@ select{padding:6px 8px; border:1px solid var(--line); border-radius:6px; backgro
 .setup input{padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
 .setup p{margin:0; font-size:.84rem; color:var(--muted)}
 .setup .row{display:flex; gap:8px; flex-wrap:wrap}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:10px 0 0}
+.tab{border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
+.tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
+.board{cursor:grab}
+.board .card{cursor:pointer}
+body.panning, body.panning *{cursor:grabbing!important; user-select:none!important}
 .status{display:grid; gap:14px; margin:0 0 16px}
 .status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
@@ -158,12 +164,16 @@ table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertica
     <div class="sync" id="sync">Connecting to the board data…</div>
     <div class="tally" id="tally"></div>
   </header>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
+    <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
+  </nav>
+  <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
   <div class="bar">
     <input type="search" id="q" placeholder="Search ids, titles, status, questions" aria-label="Search cards">
     <label><input type="checkbox" id="openOnly"> Open questions only</label>
     <label><input type="checkbox" id="showPark"> Parked</label>
     <label><input type="checkbox" id="showDone"> Done &amp; Rejected</label>
-    <label><input type="checkbox" id="showStatus"> Machines &amp; jobs</label>
   </div>
   <form class="setup" id="setup" hidden>
     <h2>Connect to the board</h2>
@@ -177,8 +187,9 @@ table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertica
   </form>
   <p class="note" id="note">Answers, notes, priorities and column moves are saved to the board straight away and reach
     Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
-  <section class="status" id="status" hidden aria-label="Machines, jobs and hub state"></section>
   <div class="board" id="board"></div>
+  </div>
+  <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
 </div>
 <div id="win" hidden></div>
 <div class="viewer" id="viewer" hidden><img id="viewerImg" alt=""></div>
@@ -193,7 +204,7 @@ const COL_BY_NAME = Object.fromEntries(COLS.map(c => [c.name, c.k]));
 const PRI = {1:"P1 Critical", 2:"P2 High", 3:"P3 Normal", 4:"P4 Big feature"};
 const MEDIA_RX = /^media\/[\w./-]+\.(png|gif|jpg)$/i;
 
-let canWrite = false, meta = {}, loaded = false;
+let canWrite = false, meta = {}, loaded = false, hubStatus = null;
 const cards = new Map();      // id -> card doc (from the desktop vault, written by the sync)
 const changes = new Map();    // change doc id -> change (made here, not yet synced)
 let openId = null;
@@ -326,7 +337,6 @@ const TONE = {online: "ok", idle: "ok", up: "ok", done: "ok", busy: "warn", runn
 function stateEl(text){ return el("span", {class: "state " + (TONE[text] || "")}, text); }
 function renderStatus(){
   const host = document.getElementById("status");
-  host.hidden = !filt.status;
   if (host.hidden) return;
   host.replaceChildren();
   if (!hubStatus){ host.append(el("p", {class: "note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
@@ -528,8 +538,75 @@ document.addEventListener("keydown", ev => {
   if (!v.hidden) v.hidden = true; else if (openId) closeWin();
 });
 
+// ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
+function showTab(name, fromHash){
+  const tab = name === "status" ? "status" : "board";
+  filt.tab = tab; saveFilters();
+  document.getElementById("view-board").hidden = tab !== "board";
+  document.getElementById("status").hidden = tab !== "status";
+  for (const b of document.querySelectorAll(".tab")){
+    const on = b.dataset.tab === tab;
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+  }
+  if (!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
+  renderStatus();
+}
+for (const b of document.querySelectorAll(".tab")){
+  b.addEventListener("click", () => showTab(b.dataset.tab));
+  b.addEventListener("keydown", ev => {
+    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    const next = b.dataset.tab === "board" ? "status" : "board";
+    showTab(next); document.getElementById("tab-" + next).focus();
+  });
+}
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1), true));
+showTab(["board", "status"].includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
+
+// ---------- drag to move around the board: the left button on empty board space, the middle button anywhere on it.
+// Sideways moves the board's own scroll, up and down the page's. Cards keep their click.
+(() => {
+  const board = document.getElementById("board");
+  let drag = null;
+  const scroller = () => document.scrollingElement || document.documentElement;
+  board.addEventListener("mousedown", ev => { if (ev.button === 1) ev.preventDefault(); });   // no browser autoscroll
+  board.addEventListener("pointerdown", ev => {
+    if (ev.pointerType !== "mouse" || (ev.button !== 0 && ev.button !== 1)) return;
+    if (ev.button === 0 && ev.target.closest(".card, button, input, select, textarea, a")) return;
+    drag = {id: ev.pointerId, x: ev.clientX, y: ev.clientY, left: board.scrollLeft, top: scroller().scrollTop, moved: false};
+  });
+  window.addEventListener("pointermove", ev => {
+    if (!drag || ev.pointerId !== drag.id) return;
+    const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    if (!drag.moved){
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      drag.moved = true; document.body.classList.add("panning");
+      try { board.setPointerCapture(ev.pointerId); } catch {}
+    }
+    board.scrollLeft = drag.left - dx;
+    scroller().scrollTop = drag.top - dy;
+    ev.preventDefault();
+  });
+  const end = ev => {
+    if (!drag || (ev && ev.pointerId !== drag.id)) return;
+    if (drag.moved){
+      // the press ended a drag, not a click: swallow the click (and the middle button's auxclick) that follows
+      const swallow = c => { c.preventDefault(); c.stopPropagation(); };
+      for (const t of ["click", "auxclick"]){
+        window.addEventListener(t, swallow, {capture: true, once: true});
+        setTimeout(() => window.removeEventListener(t, swallow, true), 60);
+      }
+    }
+    try { board.releasePointerCapture(drag.id); } catch {}
+    drag = null; document.body.classList.remove("panning");
+  };
+  window.addEventListener("pointerup", end);
+  window.addEventListener("pointercancel", end);
+  window.addEventListener("blur", () => end());
+})();
+
 // ---------- filters
-for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"], ["showStatus", "status"]]){
+for (const [id, key] of [["openOnly", "open"], ["showPark", "park"], ["showDone", "done"]]){
   const cb = document.getElementById(id); cb.checked = !!filt[key];
   cb.addEventListener("change", () => { filt[key] = cb.checked; saveFilters(); render(); });
 }
@@ -540,7 +617,6 @@ qIn.addEventListener("input", () => { filt.q = qIn.value; saveFilters(); render(
 const BRANCH = "board";
 const API = "https://api.github.com";
 const cfgKey = "cb.conn";
-let hubStatus = null;
 let conn = null, refEtag = null, tip = null, lastCheck = null, timer = null, seenRefused = null;
 function loadConn(){ try { return JSON.parse(localStorage.getItem(cfgKey)) || null; } catch { return null; } }
 function saveConn(c){ try { c ? localStorage.setItem(cfgKey, JSON.stringify(c)) : localStorage.removeItem(cfgKey); } catch {} }
@@ -604,6 +680,7 @@ function startPolling(){
 document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
 
 function showSetup(msg){
+  showTab("board");          // the connect form lives on the board tab
   clearInterval(timer);
   const f = document.getElementById("setup");
   f.hidden = false;
