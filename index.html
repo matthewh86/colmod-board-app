@@ -161,7 +161,13 @@ body.ro #selbtn{display:none}
 .chipedit select{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; font:inherit}   /* covers the whole pill */
 .chip::before{content:""; width:6px; height:6px; border-radius:50%; background:hsl(var(--h) 60% 45%); flex:none}
 .epics{display:flex; flex-direction:column; gap:6px; padding-bottom:4px}
-.epics h2{margin:0; padding:8px 2px 2px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
+.epics h2{margin:0; padding:8px 2px 2px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; align-items:center; gap:6px}
+.ecbtn{font:inherit; border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:6px; cursor:pointer; min-width:26px; min-height:26px; padding:0 4px; line-height:1}
+.ecbtn:hover{color:var(--ink); border-color:var(--accent)}
+.main.ecol{grid-template-columns:30px minmax(0,1fr)}
+.main.ecol .epics h2{flex-direction:column; padding:8px 0 2px}
+.main.ecol .epics h2 span{writing-mode:vertical-rl}
+@media (max-width:720px){ .main.ecol{grid-template-columns:1fr} .main.ecol .epics h2{flex-direction:row} .main.ecol .epics h2 span{writing-mode:horizontal-tb} }
 .epic{flex:none; display:grid; gap:3px; min-width:0; text-align:left; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-top:3px solid hsl(var(--h) 55% 50%); border-radius:6px; padding:6px 9px; cursor:pointer}
 .epic[aria-pressed="true"]{outline:2px solid var(--accent); outline-offset:-1px}
 .epic .en{font-size:.78rem; font-weight:600}
@@ -978,7 +984,12 @@ function syncFilters(){ fillThemes(); fillEpics(); ls("kb.filters",filt); render
 function renderEpics(all){
   const box = $("#epics"); const x = box.scrollTop, xl = box.scrollLeft; box.textContent = "";
   box.hidden = !epics.size;
-  box.append(el("h2",{},"Epics"));
+  const folded = !!filt.ecol;
+  box.closest(".main").classList.toggle("ecol", folded);
+  box.append(el("h2",{}, el("button",{type:"button", class:"ecbtn", "aria-expanded":String(!folded),
+      title: folded ? "Show the epics" : "Fold the epics to the side", "aria-label": folded ? "Show the epics" : "Fold the epics to the side",
+      onclick:()=>{ filt.ecol = !folded; saveFilters(); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Epics")));
+  if(folded){ box.scrollTop = 0; return; }
   const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
       el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
@@ -1266,8 +1277,11 @@ document.addEventListener("contextmenu", ev=>{ if(drag) ev.preventDefault(); });
   const board = $("#board"); let pan = null, moved = false;
   board.addEventListener("pointerdown", ev=>{
     moved = false;
-    if(ev.pointerType !== "mouse" || ev.button !== 0 || ev.target.closest(".card, button, select, input, textarea, a")) return;
-    pan = {x:ev.clientX, y:ev.clientY, left:board.scrollLeft, top:window.scrollY, id:ev.pointerId};
+    if(ev.pointerType !== "mouse") return;
+    // left button: empty board space only (cards keep their own drag); right button: anywhere, cards included
+    if(ev.button === 0 ? ev.target.closest(".card, button, select, input, textarea, a") : ev.button !== 2) return;
+    if(ev.button === 2 && ev.target.closest("input, textarea")) return;        // the text fields keep their menu
+    pan = {x:ev.clientX, y:ev.clientY, left:board.scrollLeft, top:window.scrollY, id:ev.pointerId, right:ev.button === 2};
   });
   board.addEventListener("pointermove", ev=>{
     if(!pan) return;
@@ -1275,8 +1289,10 @@ document.addEventListener("contextmenu", ev=>{ if(drag) ev.preventDefault(); });
     if(!moved && Math.max(Math.abs(dx), Math.abs(dy)) > 4){ moved = true; document.body.classList.add("panning"); try{ board.setPointerCapture(pan.id); }catch(_){} try{ getSelection().removeAllRanges(); }catch(_){} }
     if(moved){ board.scrollLeft = pan.left - dx; window.scrollTo(window.scrollX, pan.top - dy); ev.preventDefault(); }
   });
-  const end = ()=>{ if(pan){ pan = null; document.body.classList.remove("panning"); } };
+  let noMenu = 0;                                    // a right-button drag must not end in the context menu
+  const end = ()=>{ if(pan){ if(pan.right && moved) noMenu = Date.now(); pan = null; document.body.classList.remove("panning"); } };
   board.addEventListener("pointerup", end); board.addEventListener("pointercancel", end);
+  document.addEventListener("contextmenu", ev=>{ if((pan && pan.right && moved) || Date.now() - noMenu < 500){ ev.preventDefault(); ev.stopPropagation(); noMenu = 0; } }, true);
   board.addEventListener("click", ev=>{ if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; } }, true);   // a pan isn't a click (column headers collapse on click)
 })();
 // middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways): the further the
@@ -1349,6 +1365,17 @@ function renderStatus(){
   }
   host.append(el("h2",{}, "Testing and release"), tcard);
   // local work (what each machine is doing outside the hub's job queue): running and lost first, then the latest finished
+  if(Array.isArray(hubStatus.sessions)){
+    const sb = el("tbody");
+    for(const s of hubStatus.sessions){
+      const age = (Date.now() - Date.parse(s.seen)) / 60000;
+      sb.append(el("tr",{}, el("td",{}, s.name || "-"), el("td",{}, s.role || "-"), el("td",{}, s.machine || "-"),
+        el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
+        el("td",{}, isNaN(age) ? "-" : fmtDur(age * 60000) + " ago")));
+    }
+    host.append(el("h2",{}, "Sessions and agents"), hubStatus.sessions.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
+      el("thead",{}, el("tr",{}, ...["Name", "Role", "Machine", "Working on", "Note", "Last seen"].map(h => el("th",{}, h)))), sb)) : el("p",{class:"note"}, "No session or agent is registered right now."));
+  }
   if(Array.isArray(hubStatus.work)){
     const when = w => String(w.ended || w.started || "");
     const live = hubStatus.work.filter(w => w && (w.state === "running" || w.state === "lost")).sort((a, b) => String(b.started || "").localeCompare(String(a.started || "")));
