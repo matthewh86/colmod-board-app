@@ -313,8 +313,10 @@ table.st td small{color:var(--muted)}
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
+    <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
   </nav>
+  <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
       <span class="qwrap"><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
@@ -525,6 +527,16 @@ function matches(c){
 // a card waiting on an answer: an unanswered decision, or a free-text question on a card without decisions (not on Done cards)
 // qs = [{id, q}]: free-text questions, answered in a text field each (the answer is stored in ans[id])
 function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q) : []; }
+// why a card's latest text is not synced: the card's own flag (a clashing edit kept as a copy), or a machine's report
+// that the privacy rule keeps the card's newest version there (that version never reaches this page)
+function syncIssue(c){
+  if(c.sync_issue) return String(c.sync_issue);
+  for(const m of (hubStatus && hubStatus.machines) || []){
+    const s = m.sync_issues && m.sync_issues[c.id];
+    if(s) return "On the "+m.machine+": "+s;
+  }
+  return "";
+}
 function openQ(c){
   const a = c.ans || {}, qs = qList(c);
   if(c.col !== "done" && qs.some(x=>!String(a[x.id]||"").trim())) return true;
@@ -626,10 +638,12 @@ function cardEl(c, full=false){
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
   e.append(el("div",{class:"top"}, el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
+    syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     c._pending ? el("span",{class:"lab pend", title:"Your change is on its way to the desktop"}, full ? c._pending+(c._pending===1?" change":" changes")+" on the way" : "On the way") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null));
   if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
+  if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
   e.append(el("div",{class:"t"}, c.t||""));
   const ep = epics.get(c.epic);
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
@@ -918,7 +932,7 @@ function render(){
   if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
   if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
   render.later = false;
-  renderSync(); saveState(); renderStatus();
+  renderSync(); saveState(); renderStatus(); renderDecisions();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
@@ -1406,29 +1420,57 @@ function renderStatus(){
 }
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
+const TABS = ["board", "decisions", "status"];
+// every decision waiting on the user, in one place: the open questions of all cards (a decision that comes up in a
+// Claude session is put on a card as a question, so it is here too). Opening a row opens the card, where it is answered.
+function openQuestions(c){
+  const a = c.ans || {}, out = [];
+  for(const o of Array.isArray(c.opts) ? c.opts : []) if(o && o.id && !a[o.id]) out.push(o.q || o.id);
+  if(c.col !== "done") for(const x of qList(c)) if(!String(a[x.id]||"").trim()) out.push(x.q);
+  if(!out.length && openQ(c) && c.q) out.push(c.q);
+  return out;
+}
+function renderDecisions(){
+  const list = [...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej")
+    .sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0);
+  const tab = document.getElementById("tab-decisions");
+  if(tab) tab.textContent = n ? "Decisions ("+n+")" : "Decisions";
+  const host = document.getElementById("decisions");
+  if(!host || host.hidden) return;
+  host.replaceChildren(el("h2",{}, n ? n+(n===1?" decision is":" decisions are")+" waiting for you" : "No decisions are waiting for you"));
+  if(!list.length) return;
+  host.append(el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("tr",{}, el("th",{},"Card"), el("th",{},"Decision"), el("th",{},"Column")),
+    ...list.map(c => el("tr",{},
+      el("td",{}, el("button",{type:"button", title:"Open "+c.id+" to answer", onclick:()=>openCard(c.id)}, c.id+(c.pri?" · "+PRI[c.pri]:"")), el("br"), el("small",{}, c.t||"")),
+      el("td",{}, ...(openQuestions(c).length ? openQuestions(c) : ["(open the card)"]).map(q => el("div",{}, "❓ "+q))),
+      el("td",{}, COL_NAME[c.col] || c.col || ""))))));
+}
 function showTab(name, fromHash){
-  const tab = name === "status" ? "status" : "board";
+  const tab = TABS.includes(name) ? name : "board";
   filt.tab = tab; ls("kb.filters", filt);
   document.getElementById("view-board").hidden = tab !== "board";
   document.getElementById("status").hidden = tab !== "status";
-  for(const b of document.querySelectorAll(".tab")){
+  document.getElementById("decisions").hidden = tab !== "decisions";
+  for(const b of document.querySelectorAll("nav.tabs .tab")){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
     b.tabIndex = on ? 0 : -1;
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
-  renderStatus();
+  renderStatus(); renderDecisions();
 }
-for(const b of document.querySelectorAll(".tab")){
+for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
   b.addEventListener("keydown", ev => {
     if(ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
-    const next = b.dataset.tab === "board" ? "status" : "board";
+    const next = TABS[(TABS.indexOf(b.dataset.tab) + (ev.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
     showTab(next); document.getElementById("tab-" + next).focus();
   });
 }
 window.addEventListener("hashchange", () => showTab(location.hash.slice(1), true));
-showTab(["board", "status"].includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
+showTab(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
 
 // ---------- data (GitHub's API from this browser; NODE_SPEC section 7)
 const BRANCH = "board";
