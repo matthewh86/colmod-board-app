@@ -322,6 +322,27 @@ table.st{border-collapse:collapse; width:100%; font-size:.82rem}
 table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
 table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
 table.st td small{color:var(--muted)}
+/* the usage graph on each machine: processor and memory lines on one 0-100 % axis, the test games below on their own */
+:root{--u-cpu:#2a78d6; --u-mem:#eb6834; --u-games:#1baf7a}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70} }
+:root[data-theme="dark"]{--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70}
+.ubox{min-width:0}
+.usage{min-width:0; display:grid; gap:4px}
+.usage .uleg{display:flex; flex-wrap:wrap; gap:2px 12px; font-size:.76rem; color:var(--muted)}
+.usage .uleg b{color:var(--ink); font-weight:600}
+.usage .ukey{display:inline-block; width:12px; height:2px; border-radius:1px; vertical-align:middle; margin-right:5px}
+.usage .ukey.box{height:8px; opacity:.55}
+.usage .ukey.thin{height:1px}
+.usage .uplot{position:relative; line-height:0; border-radius:4px}
+.usage .uplot:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.usage svg{display:block; touch-action:pan-y; max-width:100%}
+.usage svg text{font:10px var(--f-body); fill:var(--muted); font-variant-numeric:tabular-nums}
+.usage .utip{position:absolute; top:2px; z-index:2; pointer-events:none; line-height:1.35; white-space:nowrap; font-size:.75rem;
+  background:var(--surface); color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:5px 8px; box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.usage .utip b{color:var(--ink); font-weight:600}
+.usage .utip .ut{color:var(--ink)}
+.usage .note{margin:0}
+.usage details{font-size:.8rem} .usage summary{cursor:pointer; color:var(--muted)}
 </style>
 
 <div class="wrap" id="app">
@@ -1367,6 +1388,164 @@ document.addEventListener("contextmenu", ev=>{ if(drag) ev.preventDefault(); });
 })();
 document.addEventListener("focusout", ev=>{ if(ev.target.tagName==="TEXTAREA") setTimeout(()=>{ if(render.later) render(); }, 0); });
 
+// ---------- processor and memory use over time (status/load-<machine>.json, one per machine, written by its node)
+const usage = new Map(), usageEls = new Map();   // machine -> its history / {sig, node}: nothing is redrawn without a change
+let usageAt = 0, usageWidth = 0;
+async function loadUsage(sha){
+  if(filt.tab !== "status" || !sha || !hubStatus || Date.now() - usageAt < 300000) return false;   // the files change every 10 minutes
+  usageAt = Date.now();
+  for(const m of hubStatus.machines || []){
+    const name = String(m.machine || "");
+    if(!/^[a-z0-9-]{1,40}$/.test(name)) continue;
+    try {
+      const d = await (await gh(`contents/status/load-${name}.json?ref=${sha}`, {raw: true})).json();
+      if(d && Array.isArray(d.cpu) && Array.isArray(d.mem)) usage.set(name, d);
+    } catch { /* no history from this machine yet */ }
+  }
+  return true;
+}
+function usageSoon(){   // the Machines tab was opened: fetch the histories if they are not fresh
+  try { loadUsage(tip).then(got => { if(got) renderStatus(); }, () => {}); } catch { /* not connected yet */ }
+}
+function sv(tag, attrs={}, ...kids){
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for(const [k, v] of Object.entries(attrs)) if(v !== undefined && v !== null) e.setAttribute(k, v);
+  for(const k of kids.flat()) if(k != null && k !== false) e.append(k);
+  return e;
+}
+function usageStats(d){
+  const nums = a => (Array.isArray(a) ? a : []).filter(v => typeof v === "number");
+  const avg = a => { const x = nums(a); return x.length ? Math.round(x.reduce((s, v) => s + v, 0) / x.length) : null; };
+  const top = a => { const x = nums(a); return x.length ? Math.max(...x) : null; };
+  const last = a => { const x = nums(a); return x.length ? x[x.length - 1] : null; };
+  return {cpuAvg: avg(d.cpu), cpuMax: top(d.cpu), memAvg: avg(d.mem), memMax: top(d.mem), gamesMax: top(d.games), slotsMax: top(d.slots),
+          cpuNow: last(d.cpu), memNow: last(d.mem), gamesNow: last(d.games), slotsNow: last(d.slots)};
+}
+function usageSummary(d, machine){   // the graph in words: for screen readers and under the graph
+  const s = usageStats(d), hours = Math.round(d.cpu.length * (d.step || 300) / 360) / 10;
+  const pc = v => v == null ? "unknown" : v + "%";
+  return `${machine}, last ${hours} h: processor average ${pc(s.cpuAvg)}, peak ${pc(s.cpuMax)}; memory average ${pc(s.memAvg)}, peak ${pc(s.memMax)}; `
+    + `at most ${s.gamesMax == null ? 0 : s.gamesMax} test games at once. Latest: processor ${pc(s.cpuNow)}, memory ${pc(s.memNow)}, `
+    + `${s.gamesNow == null ? 0 : s.gamesNow} games running` + (s.slotsNow == null ? "." : `, ${s.slotsNow} slots offered.`);
+}
+function renderUsage(box, machine){   // a fault in the graph must never stop the rest of the page from drawing
+  try { drawUsage(box, machine); }
+  catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The usage graph could not be shown: " + (e && e.message || e))); }
+}
+function drawUsage(box, machine){
+  const d = usage.get(machine);
+  if(!d || !d.end || !Array.isArray(d.cpu) || !d.cpu.length){ box.hidden = true; return; }
+  box.hidden = false;
+  const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
+  const sig = [d.end, d.cpu.length, w].join("|"), had = usageEls.get(machine);
+  if(had && had.sig === sig){ if(box.firstChild !== had.node) box.replaceChildren(had.node); return; }   // same data, same width: the same picture
+  const node = buildUsage(d, machine, w);
+  usageEls.set(machine, {sig, node});
+  box.replaceChildren(node);
+}
+function buildUsage(d, machine, w){
+  const n = d.cpu.length, step = (d.step || 300) * 1000, end = d.end * 1000, t0 = end - n * step;
+  const mem = Array.isArray(d.mem) ? d.mem : [], games = Array.isArray(d.games) ? d.games : [], slots = Array.isArray(d.slots) ? d.slots : [];
+  const s = usageStats(d);
+  // two plots on one time axis, each with its own single scale: per cent above, a count of games below
+  const L = 34, R = 8, pw = w - L - R, T1 = 6, H1 = 96, T2 = T1 + H1 + 14, H2 = 34, H = T2 + H2 + 16, bw = pw / n;
+  const xi = i => L + bw * (i + .5), xt = t => L + pw * (t - t0) / (end - t0);
+  const y1 = v => T1 + H1 * (1 - Math.min(100, Math.max(0, v)) / 100);
+  const most = Math.max(1, s.slotsMax || 0, s.gamesMax || 0), y2 = v => T2 + H2 * (1 - Math.min(most, Math.max(0, v)) / most);
+  const f = v => v.toFixed(1);
+  const line = a => { let p = "", open = false;
+    a.forEach((v, i) => { if(typeof v !== "number"){ open = false; return; } p += (open ? "L" : "M") + f(xi(i)) + " " + f(y1(v)) + (open ? "" : "h.01"); open = true; });
+    return p; };
+  const steps = (a, fill) => { let p = "", open = false;
+    a.forEach((v, i) => { const xl = L + bw * i;
+      if(typeof v !== "number"){ if(open && fill) p += `L${f(xl)} ${f(y2(0))}Z`; open = false; return; }
+      p += open ? `L${f(xl)} ${f(y2(v))}` : (fill ? `M${f(xl)} ${f(y2(0))}L${f(xl)} ${f(y2(v))}` : `M${f(xl)} ${f(y2(v))}`);
+      p += `L${f(xl + bw)} ${f(y2(v))}`; open = true; });
+    if(open && fill) p += `L${f(L + pw)} ${f(y2(0))}Z`;
+    return p; };
+  const grid = (y, label) => [sv("line",{x1:L, x2:L + pw, y1:f(y), y2:f(y), stroke:"var(--line)", "stroke-width":1}),
+                              sv("text",{x:L - 5, y:f(y + 3.5), "text-anchor":"end"}, label)];
+  const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":usageSummary(d, machine)});
+  svg.append(...grid(y1(100), "100%"), ...grid(y1(50), "50"), ...grid(y1(0), "0"), ...grid(y2(most), String(most)), ...grid(y2(0), "0"));
+  const hours = (end - t0) / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
+  tick.setMinutes(0, 0, 0);
+  for(let k = 0; k < 30; k++){
+    tick.setHours(tick.getHours() + 1);
+    if(tick.getTime() > end) break;
+    if(tick.getTime() < t0 || tick.getHours() % every) continue;
+    const x = xt(tick.getTime());
+    if(x < L + 14 || x > L + pw - 14) continue;
+    svg.append(sv("line",{x1:f(x), x2:f(x), y1:T1, y2:T2 + H2, stroke:"var(--line)", "stroke-width":1}),
+               sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
+  }
+  svg.append(sv("path",{d:steps(games, true), fill:"var(--u-games)", "fill-opacity":.2}),
+             sv("path",{d:steps(games, false), fill:"none", stroke:"var(--u-games)", "stroke-width":1.5, "stroke-linejoin":"round"}),
+             sv("path",{d:steps(slots, false), fill:"none", stroke:"var(--muted)", "stroke-width":1}),
+             sv("path",{d:line(mem), fill:"none", stroke:"var(--u-mem)", "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round"}),
+             sv("path",{d:line(d.cpu), fill:"none", stroke:"var(--u-cpu)", "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round"}));
+  // the hover layer: a crosshair that snaps to the nearest point, one readout for every series; the arrow keys do the same
+  const cross = sv("line",{x1:0, x2:0, y1:T1, y2:T2 + H2, stroke:"var(--muted)", "stroke-width":1, visibility:"hidden"});
+  const dot = c => sv("circle",{r:4, fill:`var(${c})`, stroke:"var(--surface)", "stroke-width":2, visibility:"hidden"});
+  const dc = dot("--u-cpu"), dm = dot("--u-mem");
+  svg.append(cross, dm, dc);
+  const tipEl = el("div",{class:"utip", hidden:true});
+  const key = (c, kind) => { const k = el("i",{class:"ukey" + (kind ? " " + kind : "")}); k.style.background = `var(${c})`; return k; };
+  const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
+  const val = (v, unit) => typeof v === "number" ? v + unit : "-";
+  let at = -1;
+  const hide = () => { at = -1; tipEl.hidden = true; for(const e of [cross, dc, dm]) e.setAttribute("visibility", "hidden"); };
+  const show = i => {
+    at = Math.min(n - 1, Math.max(0, i));
+    const x = xi(at), t = t0 + at * step;
+    cross.setAttribute("x1", f(x)); cross.setAttribute("x2", f(x)); cross.setAttribute("visibility", "visible");
+    for(const [e, v] of [[dc, d.cpu[at]], [dm, mem[at]]]){
+      if(typeof v === "number"){ e.setAttribute("cx", f(x)); e.setAttribute("cy", f(y1(v))); e.setAttribute("visibility", "visible"); }
+      else e.setAttribute("visibility", "hidden");
+    }
+    const row = (k, v, label) => el("div",{}, k, el("b",{}, v), " " + label);
+    tipEl.replaceChildren(el("div",{class:"ut"}, `${day(t)} ${hm(t)} to ${hm(t + step)}`),
+      row(key("--u-cpu"), val(d.cpu[at], "%"), "processor"), row(key("--u-mem"), val(mem[at], "%"), "memory"),
+      row(key("--u-games", "box"), val(games[at], ""), "games running"), row(key("--muted", "thin"), val(slots[at], ""), "slots offered"));
+    tipEl.hidden = false;
+    tipEl.style.left = x < w / 2 ? (x + 10) + "px" : "auto";
+    tipEl.style.right = x < w / 2 ? "auto" : (w - x + 10) + "px";
+  };
+  const point = ev => { const r = svg.getBoundingClientRect(); show(Math.floor((ev.clientX - r.left - L) / bw)); };
+  svg.addEventListener("pointermove", point);
+  svg.addEventListener("pointerdown", point);
+  svg.addEventListener("pointerleave", hide);
+  const plot = el("div",{class:"uplot", tabindex:"0", role:"group", "aria-label":"Usage graph of " + machine + ": the left and right arrow keys read each point"}, svg, tipEl);
+  plot.style.width = w + "px";
+  plot.addEventListener("keydown", ev => {
+    const to = {ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: n - 1}[ev.key];
+    if(ev.key === "Escape") hide();
+    else if(to !== undefined){ ev.preventDefault(); show(at < 0 ? n - 1 : to); }
+  });
+  plot.addEventListener("blur", hide);
+  const leg = (k, name, v) => el("span",{}, k, name + " ", el("b",{}, v));
+  const legend = el("div",{class:"uleg"}, leg(key("--u-cpu"), "Processor", val(s.cpuNow, "%")), leg(key("--u-mem"), "Memory", val(s.memNow, "%")),
+    leg(key("--u-games", "box"), "Games running", val(s.gamesNow, "")), leg(key("--muted", "thin"), "Slots offered", val(s.slotsNow, "")));
+  // the same numbers as a table, hour by hour, newest first
+  const byHour = new Map();
+  for(let i = 0; i < n; i++){
+    const h = new Date(t0 + i * step); h.setMinutes(0, 0, 0);
+    const g = byHour.get(h.getTime()) || {cpu: [], mem: [], games: [], slots: []};
+    g.cpu.push(d.cpu[i]); g.mem.push(mem[i]); g.games.push(games[i]); g.slots.push(slots[i]);
+    byHour.set(h.getTime(), g);
+  }
+  const rows = [...byHour.entries()].sort((a, b) => b[0] - a[0]).map(([t, g]) => { const q = usageStats(g);
+    return el("tr",{}, el("td",{}, `${day(t)} ${hm(t)}`), el("td",{}, val(q.cpuAvg, "%")), el("td",{}, val(q.memAvg, "%")),
+              el("td",{}, val(q.gamesMax, "")), el("td",{}, val(q.slotsNow, ""))); });
+  const table = el("details",{}, el("summary",{}, "Table"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("thead",{}, el("tr",{}, ...["Hour", "Processor", "Memory", "Most games", "Slots"].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+  return el("div",{class:"usage"}, legend, plot,
+    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per point. Processor average ${val(s.cpuAvg, "%")}, peak ${val(s.cpuMax, "%")}; `
+      + `memory average ${val(s.memAvg, "%")}, peak ${val(s.memMax, "%")}; at most ${s.gamesMax || 0} games at once.`), table);
+}
+addEventListener("resize", () => { clearTimeout(usageSoon.t); usageSoon.t = setTimeout(() => {   // a new width: the graphs are drawn to fit
+  if(innerWidth !== usageWidth && filt.tab === "status"){ usageWidth = innerWidth; renderStatus(); } }, 250); });
+
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
 const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
               stale:"bad", down:"bad", failed:"bad", lost:"bad"};
@@ -1388,16 +1567,20 @@ function renderStatus(){
     add("Last report", isNaN(age) ? "-" : `${fmtDur(age * 60000)} ago`);
     if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
     add("Offers", m.offers);
-    add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
+    if(m.slots_max != null){   // the count follows the machine's load: "4 of 10 slots, lowered: ..." and how many are free now
+      add("Test slots", (m.slots_note || `${m.slots} of ${m.slots_max} slots`) + `; ${m.slots_free} free (${m.tests})`);
+    } else add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
     if(m.comfy !== "-") add("ComfyUI", m.comfy);
     if(m.llm !== "-") add("Local LLM", m.llm);
     add("Running job", m.running_job || "none");
     add("Queued for it", m.queued);
     if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
     mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
-      st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl));
+      st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
+      el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true})));
   }
   host.append(el("h2",{}, "Machines"), mach);
+  for(const box of mach.querySelectorAll(".ubox")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
   // testing and release
   const done = Number(fact("Done")), total = Number(fact("Total"));
   const dl = el("dl",{class:"facts"});
@@ -1591,6 +1774,7 @@ function showTab(name, fromHash){
     b.tabIndex = on ? 0 : -1;
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
+  if(tab === "status") usageSoon();
   renderStatus(); renderDecisions();
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
@@ -1660,6 +1844,7 @@ async function load(sha){
   if (filt.t && themes.size && !themes.has(filt.t)){ filt.t = ""; ls("kb.filters", filt); }   // a remembered theme that is gone
   if (filt.e && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
   try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); } catch { hubStatus = null; }
+  try { await loadUsage(sha); } catch { /* the graphs are an extra: the board still loads */ }
   // a change is done once an export is newer than it (the node applies, then exports, in one pass); one whose file
   // has not reached GitHub yet stays on screen
   for (const [k, v] of changes) if (sentAt.has(k) && meta.exported_at && meta.exported_at > v.ts
@@ -1716,7 +1901,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
 });
 document.getElementById("signout").addEventListener("click", () => {
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); epics.clear(); themes.clear(); ARCH.items = [];
-  tip = refEtag = null; loaded = false; hubStatus = null; openId = null; rank = null; renderRank();
+  tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
