@@ -14,7 +14,7 @@
   --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
   --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
   --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
-  --pri-ink:#ffffff; --sheen:rgba(31,78,140,.16); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6;
+  --pri-ink:#ffffff; --sheen:rgba(255,255,255,.85); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
   --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
   --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
@@ -27,7 +27,7 @@
     --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
     --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
     --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
-  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
+  --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
     --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
     --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
   }
@@ -37,7 +37,7 @@
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
   --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
   --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
-  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
+  --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
   --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
   --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
 }
@@ -127,20 +127,21 @@ body.ro #selbtn{display:none}
 .card.t-bug{--tbg:var(--t-bug-bg); --tc:var(--t-bug)} .card.t-feature{--tbg:var(--t-feature-bg); --tc:var(--t-feature)}
 .card.t-technical{--tbg:var(--t-technical-bg); --tc:var(--t-technical)} .card.t-administration{--tbg:var(--t-admin-bg); --tc:var(--t-admin)}
 .card.t-artwork{--tbg:var(--t-art-bg); --tc:var(--t-art)} .card.t-documentation{--tc:var(--t-doc)}
-.card .kind{font-size:.8rem; line-height:1; filter:grayscale(1) contrast(1.1); opacity:.85}   /* the kind's sign, in one colour */
+.card .kind{font-size:.8rem; line-height:1; color:transparent; text-shadow:0 0 0 var(--tc,var(--muted))}   /* the kind's sign, in the kind's colour */
 .card[class*=" t-"]{border-left-color:var(--tc,var(--line))}   /* the side only: the card itself keeps its plain surface */
 .card .top{display:flex; gap:6px; align-items:baseline}
-.card .id{font-family:var(--f-mono); font-size:.72rem; color:var(--muted)}
+.card .id{font-family:var(--f-mono); font-size:.72rem; font-weight:600; color:var(--tc,var(--muted))}   /* the id in the kind's colour too */
 .card .qmark{font-size:.8rem; line-height:1; margin-left:2px}
 .card .pri{font-family:var(--f-mono); font-size:.7rem; font-weight:600; color:var(--pri-ink); background:var(--pc,transparent); border-radius:999px; padding:0 7px; margin-left:auto}
 .card .pri:empty{display:none}
-/* a card whose change is still on its way to the desktop: a soft sheen sweeps across it until the change is applied */
-.card.pending{overflow:hidden}
-.card.pending::before{content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
-  background:linear-gradient(100deg, transparent 30%, var(--sheen) 50%, transparent 70%); background-size:250% 100%;
-  animation:sheen 1.6s linear infinite}
-@keyframes sheen{from{background-position:120% 0} to{background-position:-130% 0}}
-@media (prefers-reduced-motion: reduce){ .card.pending::before{animation:none; background:none; box-shadow:inset 0 0 0 2px var(--pend-fg)} }
+/* a card whose change is still on its way to the desktop: the card takes the "on the way" tint and a bright band
+   of light slides across it, left to right, once a second, until the change is applied */
+.card.pending{overflow:hidden; background:var(--pend-bg)}
+.card.pending::before{content:""; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;
+  background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%);
+  transform:translateX(-100%); animation:sheen 1s infinite}
+@keyframes sheen{0%{transform:translateX(-100%)} 100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion: reduce){ .card.pending::before{animation:none; background:none; transform:none; box-shadow:inset 0 0 0 2px var(--pend-fg)} }
 .card .t{font-weight:600; font-size:.86rem; text-wrap:pretty}
 .card .st{font-size:.78rem; color:var(--muted)}
 .card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
@@ -327,6 +328,14 @@ table.st td small{color:var(--muted)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70} }
 :root[data-theme="dark"]{--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70}
 .ubox{min-width:0}
+.tbox{margin-top:10px}
+table.arts tr.doomed td:first-child a, table.arts tr.doomed td:first-child span{text-decoration:line-through; color:var(--muted)}
+table.arts td:last-child{white-space:nowrap; text-align:right}
+.artbtn{font:inherit; font-size:.78rem; padding:2px 10px; margin-left:8px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
+.artbtn:hover{border-color:var(--accent)} .artbtn.on{background:var(--accent-soft)} .artbtn:disabled{opacity:.5; cursor:default}
+.tbox table td:nth-child(n+3){white-space:nowrap; font-variant-numeric:tabular-nums}
+.usage .tmode{font:inherit; font-size:.74rem; padding:1px 8px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted); cursor:pointer}
+.usage .tmode.on{background:var(--accent-soft); color:var(--ink); border-color:var(--accent)}
 .usage{min-width:0; display:grid; gap:4px}
 .usage .uleg{display:flex; flex-wrap:wrap; gap:2px 12px; font-size:.76rem; color:var(--muted)}
 .usage .uleg b{color:var(--ink); font-weight:600}
@@ -354,6 +363,7 @@ table.st td small{color:var(--muted)}
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
+    <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
   </nav>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
@@ -392,6 +402,7 @@ table.st td small{color:var(--muted)}
       Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
   </div>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
+  <section class="status" id="artifacts" role="tabpanel" aria-labelledby="tab-artifacts" hidden></section>
 </div>
 <div class="modal" id="modal" hidden></div>
 <div class="modal" id="rankm" hidden></div>
@@ -987,7 +998,7 @@ function render(){
   if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
   if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
   render.later = false;
-  renderSync(); saveState(); renderStatus(); renderDecisions();
+  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
@@ -1401,6 +1412,10 @@ async function loadUsage(sha){
       const d = await (await gh(`contents/status/load-${name}.json?ref=${sha}`, {raw: true})).json();
       if(d && Array.isArray(d.cpu) && Array.isArray(d.mem)) usage.set(name, d);
     } catch { /* no history from this machine yet */ }
+    try {
+      const d = await (await gh(`contents/status/tokens-${name}.json?ref=${sha}`, {raw: true})).json();
+      if(d && Array.isArray(d.series)) tokens.set(name, d);
+    } catch { /* no Claude session ran on this machine, or its node does not count tokens yet */ }
   }
   return true;
 }
@@ -1546,6 +1561,122 @@ function buildUsage(d, machine, w){
 addEventListener("resize", () => { clearTimeout(usageSoon.t); usageSoon.t = setTimeout(() => {   // a new width: the graphs are drawn to fit
   if(innerWidth !== usageWidth && filt.tab === "status"){ usageWidth = innerWidth; renderStatus(); } }, 250); });
 
+// ---------- Claude token use over time, per session and agent (status/tokens-<machine>.json, written by the machine's node)
+const tokens = new Map(), tokEls = new Map();   // machine -> its history / {sig, node}
+let tokMode = "all";                            // "all" | "new" (without what was read back from the cache)
+const TOK_COL = ["--c-prog", "--c-decide", "--c-done", "--c-test", "--c-built", "--c-next"];
+function fmtTok(v){
+  return v >= 1e9 ? (v / 1e9).toFixed(2) + " bn" : v >= 1e6 ? (v / 1e6).toFixed(v >= 1e8 ? 0 : 1) + " M" : v >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v));
+}
+function tokSeries(d){   // the file's series, checked, with one value per point for the chosen view; largest first
+  const n = Math.max(0, ...d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0));
+  const arr = a => Array.from({length: n}, (_, i) => Array.isArray(a) && typeof a[i] === "number" && a[i] > 0 ? a[i] : 0);
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const rows = d.series.filter(s => s && typeof s === "object").map(s => {
+    const inn = arr(s.in), wr = arr(s.write), rd = arr(s.read), out = arr(s.out), fresh = inn.map((v, i) => v + wr[i]);
+    const val = fresh.map((v, i) => v + out[i] + (tokMode === "all" ? rd[i] : 0));
+    const of = s.of ? String(s.of).slice(0, 40) : "";
+    const what = s.kind === "session" ? "session" : s.kind === "agent" ? "agent of " + (of || "a session")
+      : s.kind === "agents" ? "agents without a name of their own" : "the rest";
+    return {name: String(s.name || "unnamed").slice(0, 48), what, val, fresh: sum(fresh), read: sum(rd), out: sum(out), total: sum(val)};
+  }).sort((a, b) => b.total - a.total);
+  return {n, rows};
+}
+function renderTokens(box, machine){   // a fault in the graph must never stop the rest of the page from drawing
+  try { drawTokens(box, machine); }
+  catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The token graph could not be shown: " + (e && e.message || e))); }
+}
+function drawTokens(box, machine){
+  const d = tokens.get(machine);
+  if(!d || !d.end || !Array.isArray(d.series) || !d.series.length){ box.hidden = true; return; }
+  box.hidden = false;
+  const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
+  const sig = [d.end, d.series.length, w, tokMode].join("|"), had = tokEls.get(machine);
+  if(had && had.sig === sig){ if(box.firstChild !== had.node) box.replaceChildren(had.node); return; }
+  const node = buildTokens(d, machine, w);
+  tokEls.set(machine, {sig, node});
+  box.replaceChildren(node);
+}
+function buildTokens(d, machine, w){
+  const {n, rows} = tokSeries(d);
+  const step = (d.step || 1800) * 1000, end = d.end * 1000, t0 = end - n * step;
+  const shown = rows.slice(0, TOK_COL.length), rest = rows.slice(TOK_COL.length);
+  const stack = shown.map((r, i) => ({name: r.name, col: TOK_COL[i], val: r.val}));
+  if(rest.length) stack.push({name: rest.length + " more", col: "--c-park", val: Array.from({length: n}, (_, i) => rest.reduce((s, r) => s + r.val[i], 0))});
+  const tot = Array.from({length: n}, (_, i) => stack.reduce((s, r) => s + r.val[i], 0)), most = Math.max(1, ...tot);
+  const all = rows.reduce((s, r) => s + r.total, 0);
+  const L = 44, R = 8, pw = w - L - R, T = 6, Hh = 110, H = T + Hh + 16, bw = pw / Math.max(1, n);
+  const f = v => v.toFixed(1), y = v => T + Hh * (1 - v / most);
+  const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
+  const hours = Math.round(n * step / 360000) / 10;
+  const view = tokMode === "all" ? "all tokens" : "tokens without cache reads";
+  const words = `${machine}, Claude ${view} in the last ${hours} h: ${fmtTok(all)} in all. ` + rows.slice(0, 8).map(r => `${r.name} ${fmtTok(r.total)}`).join(", ") + ".";
+  const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":words});
+  for(const [v, label] of [[most, fmtTok(most)], [most / 2, fmtTok(most / 2)], [0, "0"]])
+    svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, label));
+  const every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
+  tick.setMinutes(0, 0, 0);
+  for(let k = 0; k < 30; k++){
+    tick.setHours(tick.getHours() + 1);
+    if(tick.getTime() > end) break;
+    if(tick.getTime() < t0 || tick.getHours() % every) continue;
+    const x = L + pw * (tick.getTime() - t0) / (end - t0);
+    if(x < L + 14 || x > L + pw - 14) continue;
+    svg.append(sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
+  }
+  for(let i = 0; i < n; i++){   // one stacked bar per point, the largest series at the bottom, a gap between bars
+    let base = 0;
+    for(const s of stack){
+      const v = s.val[i];
+      if(!v) continue;
+      const top = y(base + v), h = y(base) - top;
+      svg.append(sv("rect",{x:f(L + bw * i + .5), y:f(top), width:f(Math.max(1, bw - 1)), height:f(Math.max(.5, h)), fill:`var(${s.col})`}));
+      base += v;
+    }
+  }
+  const mark = sv("rect",{x:0, y:T, width:f(bw), height:Hh, fill:"var(--ink)", "fill-opacity":.08, visibility:"hidden"});
+  svg.append(mark);
+  const key = c => { const k = el("i",{class:"ukey box"}); k.style.background = `var(${c})`; k.style.opacity = 1; return k; };
+  const tipEl = el("div",{class:"utip", hidden:true});
+  let at = -1;
+  const hide = () => { at = -1; tipEl.hidden = true; mark.setAttribute("visibility", "hidden"); };
+  const show = i => {
+    at = Math.min(n - 1, Math.max(0, i));
+    const x = L + bw * at, t = t0 + at * step;
+    mark.setAttribute("x", f(x)); mark.setAttribute("visibility", "visible");
+    tipEl.replaceChildren(el("div",{class:"ut"}, `${day(t)} ${hm(t)} to ${hm(t + step)}: `, el("b",{}, fmtTok(tot[at]))),
+      ...stack.filter(s => s.val[at]).map(s => el("div",{}, key(s.col), el("b",{}, fmtTok(s.val[at])), " " + s.name)));
+    tipEl.hidden = false;
+    tipEl.style.left = x < w / 2 ? (x + bw + 8) + "px" : "auto";
+    tipEl.style.right = x < w / 2 ? "auto" : (w - x + 8) + "px";
+  };
+  const point = ev => { const r = svg.getBoundingClientRect(); show(Math.floor((ev.clientX - r.left - L) / bw)); };
+  svg.addEventListener("pointermove", point);
+  svg.addEventListener("pointerdown", point);
+  svg.addEventListener("pointerleave", hide);
+  const plot = el("div",{class:"uplot", tabindex:"0", role:"group", "aria-label":"Token graph of " + machine + ": the left and right arrow keys read each point"}, svg, tipEl);
+  plot.style.width = w + "px";
+  plot.addEventListener("keydown", ev => {
+    const to = {ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: n - 1}[ev.key];
+    if(ev.key === "Escape") hide();
+    else if(to !== undefined){ ev.preventDefault(); show(at < 0 ? n - 1 : to); }
+  });
+  plot.addEventListener("blur", hide);
+  const mode = (id, label) => { const b = el("button",{type:"button", class:"tmode" + (tokMode === id ? " on" : ""), "aria-pressed":String(tokMode === id)}, label);
+    b.addEventListener("click", () => { if(tokMode !== id){ tokMode = id; renderStatus(); } }); return b; };
+  const head = el("div",{class:"uleg"}, el("span",{}, "Claude tokens ", el("b",{}, fmtTok(all))), mode("all", "All"), mode("new", "Without cache reads"));
+  const legend = el("div",{class:"uleg"}, ...stack.map(s => el("span",{}, key(s.col), s.name)));
+  const sums = rows.reduce((a, r) => ({fresh: a.fresh + r.fresh, read: a.read + r.read, out: a.out + r.out}), {fresh: 0, read: 0, out: 0});
+  const tr = (name, what, r, strong) => el("tr",{}, el("td",{}, strong ? el("b",{}, name) : name), el("td",{}, what), el("td",{}, fmtTok(r.fresh)),
+    el("td",{}, fmtTok(r.read)), el("td",{}, fmtTok(r.out)), el("td",{}, fmtTok(r.fresh + r.read + r.out)));
+  const table = el("details",{open:true}, el("summary",{}, "Per session and agent"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("thead",{}, el("tr",{}, ...["Name", "What", "New input", "Read from cache", "Output", "All"].map(h => el("th",{}, h)))),
+    el("tbody",{}, rows.map(r => tr(r.name, r.what, r)), tr(machine, "the whole machine", sums, true)))));
+  return el("div",{class:"usage"}, head, legend, plot,
+    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per bar, ${view}. Sessions that ran on this machine; an agent is counted on its own line, not in its session's.`), table);
+}
+
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
 const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
               stale:"bad", down:"bad", failed:"bad", lost:"bad"};
@@ -1577,10 +1708,12 @@ function renderStatus(){
     if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
     mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
       st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
-      el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true})));
+      el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
+      el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true})));
   }
   host.append(el("h2",{}, "Machines"), mach);
-  for(const box of mach.querySelectorAll(".ubox")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
+  for(const box of mach.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
+  for(const box of mach.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
   // testing and release
   const done = Number(fact("Done")), total = Number(fact("Total"));
   const dl = el("dl",{class:"facts"});
@@ -1637,7 +1770,54 @@ function renderStatus(){
 }
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "decisions", "status"];
+const TABS = ["board", "decisions", "status", "artifacts"];
+// ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
+// del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
+const artDocs = new Map();
+function artDel(doc){     // the exported mark with this page's change that is still on the way
+  let v = doc.del === true;
+  for(const ch of [...changes.values()].sort((x,y)=>(x.ts||"").localeCompare(y.ts||"")))
+    if(ch.card === doc.id && ch.field === "delete") v = ch.value === true;
+  return v;
+}
+function artLink(doc){    // only a claude.ai artifact link is ever made clickable
+  const url = String(doc.url || "");
+  return /^https:\/\/claude\.ai\/(code\/)?artifact\/[A-Za-z0-9_-]{8,80}$/.test(url) ? url : "";
+}
+function renderArtifacts(){   // a fault in this tab must never stop the board from drawing
+  const host = document.getElementById("artifacts");
+  if(!host || host.hidden) return;
+  try { drawArtifacts(host); }
+  catch(e){ host.replaceChildren(el("p",{class:"note"}, "The artifacts could not be shown: " + (e && e.message || e))); }
+}
+function drawArtifacts(host){
+  const docs = [...artDocs.values()].sort((a, b) => String(b.pub || "").localeCompare(String(a.pub || "")) || String(a.id).localeCompare(String(b.id)));
+  const sig = JSON.stringify([readOnly, loaded, docs.map(d => [d.id, d.t, d.url, d.kind, d.card, d.session, d.pub, artDel(d)])]);
+  if(host.dataset.sig === sig && host.childElementCount) return;
+  host.dataset.sig = sig;
+  host.replaceChildren(el("h2",{}, "Published artifacts"));
+  if(!docs.length){
+    host.append(el("p",{class:"note"}, loaded ? "No published artifacts are recorded yet. A session that publishes a page records it here." : "Loading…"));
+    return;
+  }
+  const doomed = docs.filter(artDel).length;
+  host.append(el("p",{class:"note"}, `${docs.length} published page${docs.length === 1 ? "" : "s"} from this work`
+    + (doomed ? `; ${doomed} marked for deletion: the coordinator session deletes ${doomed === 1 ? "it" : "them"} and the row then leaves this list.` : ". Mark one for deletion and the coordinator session deletes it.")));
+  const rows = docs.map(d => {
+    const url = artLink(d), del = artDel(d);
+    const name = url ? el("a",{href:url, target:"_blank", rel:"noopener"}, d.t || d.id) : el("span",{}, d.t || d.id);
+    const btn = el("button",{type:"button", class:"artbtn" + (del ? " on" : ""), "aria-pressed":String(del)}, del ? "Keep after all" : "Mark for deletion");
+    btn.disabled = readOnly;
+    btn.addEventListener("click", () => { change(d, "delete", !del); renderArtifacts(); });
+    const when = d.pub ? new Date(d.pub) : null;
+    return el("tr",{class: del ? "doomed" : ""}, el("td",{}, name, el("div",{class:"note"}, String(d.id))), el("td",{}, String(d.kind || "")),
+      el("td",{}, String(d.card || "")), el("td",{}, String(d.session || "")),
+      el("td",{}, when && !isNaN(when) ? when.toLocaleDateString([], {day:"numeric", month:"short"}) : ""),
+      el("td",{}, del ? el("span",{class:"state bad"}, "to delete") : null, btn));
+  });
+  host.append(el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+    el("thead",{}, el("tr",{}, ...["Page", "Kind", "Card", "Published by", "When", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+}
 // every decision waiting on the user, in one place: the open questions of all cards (a decision that comes up in a
 // Claude session is put on a card as a question, so it is here too). Opening a row opens the card, where it is answered.
 function openQuestions(c){
@@ -1768,6 +1948,7 @@ function showTab(name, fromHash){
   document.getElementById("view-board").hidden = tab !== "board";
   document.getElementById("status").hidden = tab !== "status";
   document.getElementById("decisions").hidden = tab !== "decisions";
+  document.getElementById("artifacts").hidden = tab !== "artifacts";
   for(const b of document.querySelectorAll("nav.tabs .tab")){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
@@ -1775,7 +1956,7 @@ function showTab(name, fromHash){
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
-  renderStatus(); renderDecisions();
+  renderStatus(); renderDecisions(); renderArtifacts();
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
@@ -1835,6 +2016,8 @@ async function load(sha){
   raw.clear();
   for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
   sessDocs.clear();
+  artDocs.clear();
+  for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
   epics.clear(); themes.clear();
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
