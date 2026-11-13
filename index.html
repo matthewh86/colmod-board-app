@@ -14,7 +14,7 @@
   --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
   --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
   --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
-  --pri-ink:#ffffff; --sheen:rgba(31,78,140,.16); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-art-bg:#e6f5e6;
+  --pri-ink:#ffffff; --sheen:rgba(31,78,140,.16); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
   --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
   --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
@@ -27,7 +27,7 @@
     --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
     --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
     --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
-  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-art-bg:#17331c;
+  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
     --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
     --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
   }
@@ -37,7 +37,7 @@
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
   --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
   --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
-  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-art-bg:#17331c;
+  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c;
   --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
   --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
 }
@@ -126,7 +126,8 @@ body.ro #selbtn{display:none}
    Artwork green; the priority is a chip in its own colour */
 .card.t-bug{--tbg:var(--t-bug-bg); --tc:var(--t-bug)} .card.t-feature{--tbg:var(--t-feature-bg); --tc:var(--t-feature)}
 .card.t-technical{--tbg:var(--t-technical-bg); --tc:var(--t-technical)} .card.t-administration{--tbg:var(--t-admin-bg); --tc:var(--t-admin)}
-.card.t-artwork{--tbg:var(--t-art-bg); --tc:var(--t-art)}
+.card.t-artwork{--tbg:var(--t-art-bg); --tc:var(--t-art)} .card.t-documentation{--tc:var(--t-doc)}
+.card .kind{font-size:.8rem; line-height:1; filter:grayscale(1) contrast(1.1); opacity:.85}   /* the kind's sign, in one colour */
 .card[class*=" t-"]{border-left-color:var(--tc,var(--line))}   /* the side only: the card itself keeps its plain surface */
 .card .top{display:flex; gap:6px; align-items:baseline}
 .card .id{font-family:var(--f-mono); font-size:.72rem; color:var(--muted)}
@@ -651,7 +652,8 @@ function descEl(d){
 }
 
 // a card's kind (the colour of its left edge): the card's `type` property, nothing else (the id says nothing about it)
-const KINDS = ["Bug", "Feature", "Technical", "Administration", "Artwork"];
+const KINDS = ["Bug", "Feature", "Technical", "Administration", "Documentation", "Artwork"];
+const KIND_ICON = {Bug:"\u{1FAB2}", Feature:"\u{1F4D7}", Technical:"\u{1F527}", Administration:"\u{1F4CA}", Documentation:"\u{1F4DD}", Artwork:"\u{1F3A8}"};   // shown in one colour (CSS)
 function cardKind(c){
   const t = String(c.type || "");
   return KINDS.includes(t) ? t : "";
@@ -661,7 +663,9 @@ function cardEl(c, full=false){
   const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(kind?" t-"+kind.toLowerCase():"")+(c._pending&&!full?" pending":"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
   if(kind && !full && !e.title) e.title = kind;
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
-  e.append(el("div",{class:"top"}, el("span",{class:"id"},c.id),
+  e.append(el("div",{class:"top"},
+    kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind}, KIND_ICON[kind]) : null,
+    el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     c._pending ? el("span",{class:"lab pend", title:"Your change is on its way to the desktop"}, full ? c._pending+(c._pending===1?" change":" changes")+" on the way" : "On the way") : null,
@@ -764,7 +768,12 @@ function cardEl(c, full=false){
   const acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
   const actN = Math.max(acts.length, Number(c.log_n) || 0);
   if(actN){
-    if(!full) e.append(el("div",{class:"labs"}, el("span",{class:"lab ok"}, actN+(actN===1?" update":" updates"))));
+    if(!full){   // the state line, the same on the Obsidian board: tasks done, then the number of updates
+      const ts = Array.isArray(c.tasks) ? c.tasks.filter(t => t && typeof t === "object") : [];
+      e.append(el("div",{class:"labs"},
+        ts.length ? el("span",{class:"lab", title:"Tasks done"}, "☑ "+ts.filter(t => t.done).length+"/"+ts.length) : null,
+        el("span",{class:"lab ok"}, actN+(actN===1?" update":" updates"))));
+    }
     else {
       const box = el("div",{class:"acts", onclick:ev=>ev.stopPropagation()}, el("div",{class:"ah"}, "Activity",
         el("span",{}, actN > acts.length ? "the latest "+acts.length+" of "+actN+" updates" : actN+(actN===1?" update":" updates"))));
@@ -1504,6 +1513,24 @@ function drawDecisions(){
   if(tab) tab.textContent = n ? "Decisions ("+n+")" : "Decisions";
   const host = document.getElementById("decisions");
   if(!host || host.hidden) return;
+  // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
+  // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
+  const sig = JSON.stringify([readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
+    list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]),
+    [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans])]);
+  if(host.dataset.sig === sig && host.childElementCount) return;
+  const ae = document.activeElement;
+  if(ae && host.contains(ae) && (ae.tagName === "TEXTAREA" || ae.tagName === "INPUT")){
+    if(!drawDecisions.waiting){
+      drawDecisions.waiting = true;
+      ae.addEventListener("blur", () => { drawDecisions.waiting = false; window.setTimeout(renderDecisions, 0); }, {once: true});
+    }
+    return;
+  }
+  const keepY = window.scrollY, keepX = window.scrollX;
+  host.dataset.sig = sig;
+  if(host.offsetHeight) host.style.minHeight = host.offsetHeight + "px";      // the page keeps its height while the tab is rebuilt
+  window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
   host.replaceChildren(el("h2",{}, n ? n+(n===1?" decision is":" decisions are")+" waiting for you" : "No decisions are waiting for you"));
   for(const d of sess) host.append(el("h2",{}, "Claude session " + (d.session || d.id)),
     el("p",{}, readOnly ? "This view is read-only: answer on the desktop." : "Your answer is sent to this session."), sessEl(d));
