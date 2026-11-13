@@ -14,6 +14,7 @@
   --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
   --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
   --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
+  --pri-ink:#ffffff; --sheen:rgba(31,78,140,.16); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-art-bg:#e6f5e6;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
   --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
   --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
@@ -26,6 +27,7 @@
     --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
     --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
     --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
+  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-art-bg:#17331c;
     --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
     --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
   }
@@ -35,6 +37,7 @@
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
   --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
   --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
+  --pri-ink:#0e131b; --sheen:rgba(127,169,230,.22); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-art-bg:#17331c;
   --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
   --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
 }
@@ -119,10 +122,24 @@ body.ro #selbtn{display:none}
 .card .hov button:hover{background:var(--accent-soft); color:var(--accent)}
 @media (hover:none){ .card .hov{display:none !important} }
 .card.p1{--pc:var(--p1)} .card.p2{--pc:var(--p2)} .card.p3{--pc:var(--p3)} .card.p4{--pc:var(--p4)}
+/* a card's left edge is coloured by its kind: Bug red, Feature blue, Technical yellow, Administration grey,
+   Artwork green; the priority is a chip in its own colour */
+.card.t-bug{--tbg:var(--t-bug-bg); --tc:var(--t-bug)} .card.t-feature{--tbg:var(--t-feature-bg); --tc:var(--t-feature)}
+.card.t-technical{--tbg:var(--t-technical-bg); --tc:var(--t-technical)} .card.t-administration{--tbg:var(--t-admin-bg); --tc:var(--t-admin)}
+.card.t-artwork{--tbg:var(--t-art-bg); --tc:var(--t-art)}
+.card[class*=" t-"]{border-left-color:var(--tc,var(--line))}   /* the side only: the card itself keeps its plain surface */
 .card .top{display:flex; gap:6px; align-items:baseline}
 .card .id{font-family:var(--f-mono); font-size:.72rem; color:var(--muted)}
 .card .qmark{font-size:.8rem; line-height:1; margin-left:2px}
-.card .pri{font-family:var(--f-mono); font-size:.7rem; font-weight:500; color:var(--pc,var(--muted)); margin-left:auto}
+.card .pri{font-family:var(--f-mono); font-size:.7rem; font-weight:600; color:var(--pri-ink); background:var(--pc,transparent); border-radius:999px; padding:0 7px; margin-left:auto}
+.card .pri:empty{display:none}
+/* a card whose change is still on its way to the desktop: a soft sheen sweeps across it until the change is applied */
+.card.pending{overflow:hidden}
+.card.pending::before{content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  background:linear-gradient(100deg, transparent 30%, var(--sheen) 50%, transparent 70%); background-size:250% 100%;
+  animation:sheen 1.6s linear infinite}
+@keyframes sheen{from{background-position:120% 0} to{background-position:-130% 0}}
+@media (prefers-reduced-motion: reduce){ .card.pending::before{animation:none; background:none; box-shadow:inset 0 0 0 2px var(--pend-fg)} }
 .card .t{font-weight:600; font-size:.86rem; text-wrap:pretty}
 .card .st{font-size:.78rem; color:var(--muted)}
 .card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
@@ -633,8 +650,16 @@ function descEl(d){
   return p;
 }
 
+// a card's kind (the colour of its left edge): the card's `type` property, nothing else (the id says nothing about it)
+const KINDS = ["Bug", "Feature", "Technical", "Administration", "Artwork"];
+function cardKind(c){
+  const t = String(c.type || "");
+  return KINDS.includes(t) ? t : "";
+}
 function cardEl(c, full=false){
-  const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
+  const kind = cardKind(c);
+  const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(kind?" t-"+kind.toLowerCase():"")+(c._pending&&!full?" pending":"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
+  if(kind && !full && !e.title) e.title = kind;
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
   e.append(el("div",{class:"top"}, el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
