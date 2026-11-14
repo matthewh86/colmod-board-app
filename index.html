@@ -505,37 +505,113 @@ function rebuild(){
 
 // ---------- writes: every change is one new file in inbox/phone/ on the board branch; the desktop applies it through
 // the board's rules (and refuses anything else). Files go up one at a time, in the order the changes were made.
+//
+// A change made here is kept (in this browser's storage, so through a refresh, a reload and a closed tab) from the
+// click until the board's own data holds it: `changeSettled` below is the only thing that lets one go. Until then it
+// is drawn over whatever an export says, and its file is sent again on every check until it has reached GitHub.
 let lastStamp = 0, sending = 0, sendq = Promise.resolve();
+const PEND_KEY = "cb.changes", queued = new Set();
+function pendSave(){
+  try{ localStorage.setItem(PEND_KEY, JSON.stringify([...changes].map(([id, doc]) => [id, doc, sentAt.get(id) || null]))); }catch(e){}
+}
+function pendLoad(){
+  let rows = null;
+  try{ rows = JSON.parse(localStorage.getItem(PEND_KEY)); }catch(e){}
+  changes.clear(); sentAt.clear();
+  for(const r of Array.isArray(rows) ? rows : []){
+    if(!Array.isArray(r) || typeof r[0] !== "string" || !r[1] || typeof r[1] !== "object" || !r[1].card || !r[1].field) continue;
+    changes.set(r[0], r[1]);
+    if(r[2]) sentAt.set(r[0], r[2]);
+  }
+}
+// >>> pending-rules (tests/test_app.py runs this block)
+function sameValue(a, b){ return (a == null || a === "" ? null : a) === (b == null || b === "" ? null : b); }
+// Why a change made here needs no longer be kept, or "" while it must stay on screen. `sent`: when its file reached
+// GitHub (falsy: not yet). `exp`: {applied: the change files the export names as applied (null: an export that names
+// none), exported_at, doc: the exported card / session / artifact the change is for, or null}.
+// The export's time alone never settles a change: the node pulls, then exports, so an export can be newer than a
+// change's file and still not hold it. That rule made answered decisions come back as open (HUB16).
+const PEND_GIVE_UP_MS = 30 * 60 * 1000;
+function changeSettled(id, ch, sent, exp){
+  if(!sent) return "";
+  if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
+  const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
+  if(at > String(ch.ts || "")){                     // an export made after the click that shows the same thing
+    if(!doc) return "gone";
+    if(f.startsWith("ans.")){
+      const q = f.slice(4), base = q.endsWith(OTHER) ? q.slice(0, -OTHER.length) : q;
+      const asked = [...(Array.isArray(doc.opts) ? doc.opts : []), ...(Array.isArray(doc.qs) ? doc.qs : [])].some(x => x && x.id === base);
+      if(!asked) return "gone";
+      if(sameValue((doc.ans || {})[q], ch.value)) return "shown";
+    }
+    else if(f === "delete"){ if((doc.del === true) === (ch.value === true)) return "shown"; }
+    else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
+    else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
+    else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
+    else if(f === "rank"){ if(doc.rank === ch.value) return "shown"; }
+    else if(f === "column"){
+      if((COL_BY_NAME[doc.column] || doc.col) === (COL_BY_NAME[ch.value] || ch.value) && (ch.rank == null || doc.rank === ch.rank)) return "shown";
+    }
+  }
+  // the board went on exporting for half an hour after the file arrived and never took it nor refused it
+  if(at && Date.parse(at) - Date.parse(sent) > PEND_GIVE_UP_MS) return "expired";
+  return "";
+}
+// <<< pending-rules
+function settleChanges(data){
+  const applied = Array.isArray(data.applied) ? data.applied : null;
+  for(const [k, v] of [...changes]){
+    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at,
+      doc: raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || null});
+    if(!why) continue;
+    changes.delete(k); sentAt.delete(k);
+    if(why === "expired") toast(`The board did not take your change to ${v.card} (${v.field}). It shows what the board has.`);
+  }
+}
 function change(card, field, value, extra){
   if(readOnly){ toast("This view is read-only."); return; }
   lastStamp = Math.max(Date.now(), lastStamp + 1);   // one per millisecond: the stamp is in the file's name
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
   const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
-  for(const [k, v] of changes) if(v.card === card.id && v.field === field) changes.delete(k);   // the later edit wins on screen
+  for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }   // the later edit wins on screen
   changes.set(id, doc);
-  sending++; saveState();
-  sendq = sendq.then(()=>send(id, doc)).then(()=>{ sending--; saveState(); });
+  pendSave();
+  queueSend(id);
 }
-async function send(id, doc){
+function queueSend(id){
+  if(queued.has(id)) return;
+  queued.add(id); sending++; saveState();
+  sendq = sendq.then(()=>send(id)).catch(()=>{}).then(()=>{ queued.delete(id); sending--; saveState(); });
+}
+function sendPending(){     // every change whose file is not on GitHub yet, oldest first (a failed send, a reload)
+  if(!conn || readOnly) return;
+  for(const [id] of [...changes].sort((a, b)=>String(a[1].ts||"").localeCompare(String(b[1].ts||"")))) if(!sentAt.has(id)) queueSend(id);
+}
+async function send(id){
+  const doc = changes.get(id);
+  if(!doc || sentAt.has(id) || !conn || readOnly) return;       // replaced by a later edit, or already there
   const body = {message: `phone: ${doc.card} ${doc.field}\n\nHub-Source: user\nHub-Machine: phone`,
                 content: b64(JSON.stringify(doc) + "\n"), branch: BRANCH};
+  const there = () => { if(changes.has(id)){ sentAt.set(id, new Date().toISOString()); pendSave(); renderDecisions(); } wake(); };
   for(let attempt = 0; attempt < 4; attempt++){
     if(!conn) return;
-    try{ await gh(`contents/inbox/phone/${id}.json`, {method:"PUT", body}); sentAt.set(id, new Date().toISOString()); wake(); return; }
+    try{ await gh(`contents/inbox/phone/${id}.json`, {method:"PUT", body}); there(); return; }
     catch(e){
-      if(e.status === 401 || e.status === 403){ setRO(true); toast("The token can't write to the board (expired, or read-only).");
-        changes.delete(id); rebuild(); render(); return; }
+      if(e.status === 422){ there(); return; }      // the file is there already: an earlier try got through unseen
+      if(e.status === 401 || e.status === 403){ setRO(true);
+        toast("The token can't write to the board (expired, or read-only). Your change is kept and is sent once it can."); return; }
       await new Promise(r=>setTimeout(r, 800 * (attempt + 1)));
     }
   }
-  changes.delete(id); rebuild(); render();
-  toast(`Could not save the change to ${doc.card}. Try again.`);
+  toast(`The change to ${doc.card} is not sent yet. It is kept and sent again.`);    // the next check tries again
 }
 function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
 function saveState(){
-  const n = changes.size;
-  $("#savest").textContent = readOnly ? (conn ? "Read-only" : "") : sending ? "Saving…" : n ? n + (n===1?" change":" changes") + " on the way" : loaded ? "Saved" : "";
+  const n = changes.size, unsent = [...changes.keys()].filter(k => !sentAt.has(k)).length;
+  $("#savest").textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : sending ? "Saving…"
+    : unsent ? unsent + (unsent===1?" change":" changes") + " not sent yet"
+    : n ? n + (n===1?" change":" changes") + " sent, waiting for the board" : loaded ? "Saved" : "";
 }
 // how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
 function openCount(c, col){
@@ -700,7 +776,7 @@ function cardEl(c, full=false){
     el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
-    c._pending ? el("span",{class:"lab pend", title:"Your change is on its way to the desktop"}, full ? c._pending+(c._pending===1?" change":" changes")+" on the way" : "On the way") : null,
+    c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "On the way") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null));
   if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
@@ -1841,6 +1917,12 @@ function sessOpen(doc){
   return {a, opts: (Array.isArray(doc.opts) ? doc.opts : []).filter(o => o && o.id && !a[o.id]),
           qs: (Array.isArray(doc.qs) ? doc.qs : []).filter(x => x && x.id && x.q && !String(a[x.id]||"").trim())};
 }
+// an answer given here that the board does not show yet: said beside it, so it is never taken for an open question
+function pendNote(cardId, qid){
+  for(const [k, ch] of changes) if(ch.card === cardId && ch.field === "ans." + qid)
+    return el("span",{class:"lab pend"}, sentAt.has(k) ? "sent, waiting for the board" : "not sent yet: it is sent again");
+  return null;
+}
 function sessAnswer(doc, id, value){ change(doc, "ans." + id, value); render(); renderDecisions(); }
 function sessEl(doc){
   const {a, opts, qs} = sessOpen(doc);
@@ -1880,7 +1962,7 @@ function drawDecisions(){
   // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
   const sig = JSON.stringify([readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
     list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]),
-    [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans])]);
+    [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans]), [...changes.keys()].map(k => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   const ae = document.activeElement;
   if(ae && host.contains(ae) && (ae.tagName === "TEXTAREA" || ae.tagName === "INPUT")){
@@ -1915,17 +1997,17 @@ function pastDecisionsEl(){
     const a = sessAns(d);
     const again = id => readOnly ? null : el("button",{type:"button", title:"Ask this again: clears the answer", onclick:()=>{ if(a[id+OTHER]) change(d, "ans."+id+OTHER, null); sessAnswer(d, id, null); }}, "Reopen");
     for(const o of Array.isArray(d.opts) ? d.opts : []) if(o && o.id && a[o.id])
-      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)), " ", again(o.id))));
+      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)), " ", pendNote(d.id, o.id), " ", again(o.id))));
     for(const x of Array.isArray(d.qs) ? d.qs : []) if(x && x.id && String(a[x.id]||"").trim())
-      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", again(x.id))));
+      rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", pendNote(d.id, x.id), " ", again(x.id))));
   }
   for(const c of [...cards.values()].sort((x,y) => x.id.localeCompare(y.id))){
     const a = c.ans || {};
     const open = () => el("button",{type:"button", title:"Open "+c.id+" (change the answer there)", onclick:()=>openCard(c.id)}, c.id);
     for(const o of Array.isArray(c.opts) ? c.opts : []) if(o && o.id && a[o.id])
-      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)))));
+      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)), " ", pendNote(c.id, o.id))));
     for(const x of qList(c)) if(String(a[x.id]||"").trim())
-      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])))));
+      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", pendNote(c.id, x.id))));
   }
   const d = el("details",{id:"pastdec"}, el("summary",{}, "Past decisions (" + rows.length + ")"));
   if(filt.pastOpen) d.open = true;
@@ -1992,6 +2074,7 @@ async function gh(path, {method = "GET", body = null, raw = false, etag = null} 
 // A poll that finds no new commit redraws nothing (only the "checked" time in the header changes).
 async function check(){
   if (!conn || document.hidden) return;
+  sendPending();                                                         // a change whose file did not get through goes again
   try {
     const r = await gh(`git/ref/heads/${BRANCH}`, {etag: refEtag});      // a 304 costs no API quota
     lastCheck = new Date().toISOString();
@@ -2028,13 +2111,12 @@ async function load(sha){
   if (filt.e && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
   try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); } catch { hubStatus = null; }
   try { await loadUsage(sha); } catch { /* the graphs are an extra: the board still loads */ }
-  // a change is done once an export is newer than it (the node applies, then exports, in one pass); one whose file
-  // has not reached GitHub yet stays on screen
-  for (const [k, v] of changes) if (sentAt.has(k) && meta.exported_at && meta.exported_at > v.ts
-      && (meta.exported_at > sentAt.get(k) || Date.now() - Date.parse(sentAt.get(k)) > 180000)){ changes.delete(k); sentAt.delete(k); }
+  // a change made here is done once this export names its file as applied, or shows what it asked for (see
+  // changeSettled); until then it stays on screen whatever the export says
+  settleChanges(data);
   try {
     const refused = await (await gh(`contents/export/phone-refused.json?ref=${sha}`, {raw: true})).json();
-    const fresh = refused.filter(x => seenRefused !== null && x.time > seenRefused);
+    const fresh = refused.filter(x => changes.has(x.change) || (seenRefused !== null && x.time > seenRefused));
     seenRefused = refused.length ? refused[refused.length - 1].time : (seenRefused || "");
     for (const x of fresh){
       const name = String(x.change).split("__");
@@ -2042,6 +2124,7 @@ async function load(sha){
       toast(`Not applied (${name[0]} ${name[1] || ""}): ${x.why}`);
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
+  pendSave();
   rebuild(); fillThemes(); fillEpics();
 }
 function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); }
@@ -2083,7 +2166,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
   }
 });
 document.getElementById("signout").addEventListener("click", () => {
-  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); epics.clear(); themes.clear(); ARCH.items = [];
+  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); ARCH.items = [];
   tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
@@ -2094,6 +2177,9 @@ document.getElementById("signout").addEventListener("click", () => {
 fillEpics(); render();
 setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
 conn = loadConn();
+if (conn) pendLoad();                 // the changes of an earlier visit that the board has not shown yet
+// another tab of the App in this browser made or settled a change: both show the same
+window.addEventListener("storage", ev => { if (ev.key === PEND_KEY && conn){ pendLoad(); rebuild(); render(); saveState(); } });
 if (conn){ setRO(false); startPolling(); } else showSetup("");
 </script>
 </html>
