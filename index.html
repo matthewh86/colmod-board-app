@@ -823,7 +823,7 @@ function cardEl(c, full=false){
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
-    c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "On the way") : null,
+    c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "Syncing") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null,
     openSteps(c).length ? el("span",{class:"qmark", title:"Waits on a step of yours: "+openSteps(c).map(s=>s.step).join("; "), "aria-label":"Waits on your step"}, "🧑") : null));
@@ -1166,7 +1166,7 @@ function render(){
   if(loaded){
     const qs = all.filter(openQ).length;
     if(qs) t.append(el("span",{}, el("b",{},String(qs)), " open questions"));
-    if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change on the way to the desktop" : " changes on the way to the desktop"));
+    if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change syncing to the desktop" : " changes syncing to the desktop"));
   }
   if(focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
   renderSelBar();
