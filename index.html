@@ -362,7 +362,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
-    <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
+    <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Waiting on me</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
   </nav>
@@ -482,6 +482,7 @@ function rebuild(){
     const e = structuredClone(c);
     e.id = id; e.col = COL_BY_NAME[c.column] || c.col || "back"; if(e.col === "decide") e.col = "back";
     e.ans = Object.assign({}, c.ans && typeof c.ans === "object" ? c.ans : {}); e._pending = 0;
+    e.steps_done = Object.assign({}, c.steps_done && typeof c.steps_done === "object" ? c.steps_done : {});
     cards.set(id, e);
   }
   const list = [...changes.values()].sort((a,b)=>(a.ts||"").localeCompare(b.ts||""));
@@ -489,6 +490,7 @@ function rebuild(){
     const c = cards.get(ch.card); if(!c) continue;
     const f = ch.field;
     if(f.startsWith("ans.")) c.ans[f.slice(4)] = ch.value;
+    else if(f.startsWith("step.")) c.steps_done[f.slice(5)] = ch.value === true;   // the user's step marked done
     else if(f === "column"){
       const k = COL_BY_NAME[ch.value] || ch.value;
       if(c.col !== k){
@@ -544,6 +546,11 @@ function changeSettled(id, ch, sent, exp){
       const asked = [...(Array.isArray(doc.opts) ? doc.opts : []), ...(Array.isArray(doc.qs) ? doc.qs : [])].some(x => x && x.id === base);
       if(!asked) return "gone";
       if(sameValue((doc.ans || {})[q], ch.value)) return "shown";
+    }
+    else if(f.startsWith("step.")){
+      const sid = f.slice(5), steps = Array.isArray(doc.user_steps) ? doc.user_steps : [];
+      if(!steps.some(s => s && s.id === sid)) return "gone";
+      if((((doc.steps_done || {})[sid]) === true) === (ch.value === true)) return "shown";
     }
     else if(f === "delete"){ if((doc.del === true) === (ch.value === true)) return "shown"; }
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
@@ -818,8 +825,11 @@ function cardEl(c, full=false){
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
     c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "On the way") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
-    openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null));
+    openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null,
+    openSteps(c).length ? el("span",{class:"qmark", title:"Waits on a step of yours: "+openSteps(c).map(s=>s.step).join("; "), "aria-label":"Waits on your step"}, "🧑") : null));
   if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
+  if(full) for(const s of openSteps(c)) e.append(el("div",{class:"blkb", onclick:ev=>ev.stopPropagation()}, el("b",{},"🧑 Your step: "), s.step, " ",
+    readOnly ? null : el("button",{type:"button", class:"rec", title:"Mark this step done", onclick:()=>markStep(c, s.id, true)}, "Done"), " ", pendNote(c.id, s.id, "step.")));
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
@@ -1962,9 +1972,28 @@ function sessOpen(doc){
   return {a, opts: (Array.isArray(doc.opts) ? doc.opts : []).filter(o => o && o.id && !a[o.id]),
           qs: (Array.isArray(doc.qs) ? doc.qs : []).filter(x => x && x.id && x.q && !String(a[x.id]||"").trim())};
 }
+// the user's steps (HUB27): something only the user can do that a card waits on (the card's user_steps [{id, step}]
+// and steps_done {id: true}). Marked done here with a change file `step.<id>`, like an answer; a done step leaves
+// Waiting on me and is listed with the past decisions, where it can be reopened.
+function cardSteps(c){ return (Array.isArray(c.user_steps) ? c.user_steps : []).filter(s => s && s.id && s.step); }
+function stepDone(c, sid){ return (c.steps_done || {})[sid] === true; }
+function openSteps(c){ return c.col === "done" || c.col === "rej" ? [] : cardSteps(c).filter(s => !stepDone(c, s.id)); }
+function markStep(c, sid, done){
+  const base = raw.get(c.id); if(!base) return;
+  change(base, "step." + sid, done); rebuild(); render(); renderDecisions();
+}
+function stepsEl(list){
+  return el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("tr",{}, el("th",{},"Card"), el("th",{},"Your step"), el("th",{},"")),
+    ...list.flatMap(c => openSteps(c).map(s => el("tr",{},
+      el("td",{}, el("button",{type:"button", title:"Open "+c.id, onclick:()=>openCard(c.id)}, c.id), el("br"), el("small",{}, c.t||"")),
+      el("td",{}, "🧑 " + s.step),
+      el("td",{}, readOnly ? null : el("button",{type:"button", class:"rec", title:"Mark this step done", onclick:()=>markStep(c, s.id, true)}, "Done"),
+        " ", pendNote(c.id, s.id, "step.")))))));
+}
 // an answer given here that the board does not show yet: said beside it, so it is never taken for an open question
-function pendNote(cardId, qid){
-  for(const [k, ch] of changes) if(ch.card === cardId && ch.field === "ans." + qid)
+function pendNote(cardId, qid, prefix){
+  for(const [k, ch] of changes) if(ch.card === cardId && ch.field === (prefix || "ans.") + qid)
     return el("span",{class:"lab pend"}, sentAt.has(k) ? "sent, waiting for the board" : "not sent yet: it is sent again");
   return null;
 }
@@ -1999,14 +2028,17 @@ function drawDecisions(){
   const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return o.opts.length + o.qs.length; });
   const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0)
           + sess.reduce((s,d) => { const o = sessOpen(d); return s + o.opts.length + o.qs.length; }, 0);
+  // Waiting on me: the user's steps count too, so the tab never says nothing waits while a step is open (HUB27)
+  const stepCards = [...cards.values()].filter(c => openSteps(c).length).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), total = n + nSteps;
   const tab = document.getElementById("tab-decisions");
-  if(tab) tab.textContent = n ? "Decisions ("+n+")" : "Decisions";
+  if(tab) tab.textContent = total ? "Waiting on me ("+total+")" : "Waiting on me";
   const host = document.getElementById("decisions");
   if(!host || host.hidden) return;
   // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
   // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
   const sig = JSON.stringify([readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
-    list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]),
+    list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]), [...cards.values()].filter(c => cardSteps(c).length).map(c => [c.id, c.t, cardSteps(c), c.steps_done]),
     [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans]), [...changes.keys()].map(k => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   const ae = document.activeElement;
@@ -2021,11 +2053,14 @@ function drawDecisions(){
   host.dataset.sig = sig;
   if(host.offsetHeight) host.style.minHeight = host.offsetHeight + "px";      // the page keeps its height while the tab is rebuilt
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
-  host.replaceChildren(el("h2",{}, n ? n+(n===1?" decision is":" decisions are")+" waiting for you" : "No decisions are waiting for you"));
+  host.replaceChildren(el("h2",{}, total ? "Waiting on me: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : ""].filter(Boolean).join(" and ")
+    : "Nothing is waiting for you"));
+  if(nSteps) host.append(el("h2",{}, "Your steps"),
+    el("p",{}, readOnly ? "This view is read-only: mark a step done on the desktop." : "Something only you can do; a card waits on it. Press Done when it is done."), stepsEl(stepCards));
   for(const d of sess) host.append(el("h2",{}, "Claude session " + (d.session || d.id)),
     el("p",{}, readOnly ? "This view is read-only: answer on the desktop." : "Your answer is sent to this session."), sessEl(d));
   if(list.length){
-    if(sess.length) host.append(el("h2",{}, "Cards"));
+    if(sess.length || nSteps) host.append(el("h2",{}, "Questions on cards"));
     host.append(cardDecisionsEl(list));
   }
   host.append(pastDecisionsEl());
@@ -2053,6 +2088,9 @@ function pastDecisionsEl(){
       rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, o.q || o.id), el("td",{}, el("b",{}, answerText(o, a)), " ", pendNote(c.id, o.id))));
     for(const x of qList(c)) if(String(a[x.id]||"").trim())
       rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", pendNote(c.id, x.id))));
+    for(const s of cardSteps(c)) if(stepDone(c, s.id))         // a step marked done: it can be reopened (HUB27)
+      rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, "🧑 " + s.step), el("td",{}, el("b",{}, "Done"), " ", pendNote(c.id, s.id, "step."), " ",
+        readOnly ? null : el("button",{type:"button", title:"Not done after all: back to Waiting on me", onclick:()=>markStep(c, s.id, false)}, "Reopen"))));
   }
   const d = el("details",{id:"pastdec"}, el("summary",{}, "Past decisions (" + rows.length + ")"));
   if(filt.pastOpen) d.open = true;
