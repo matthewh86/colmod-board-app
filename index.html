@@ -152,6 +152,7 @@ body.ro #selbtn{display:none}
 .lab{font-size:.68rem; font-weight:600; letter-spacing:.03em; padding:1px 7px; border-radius:999px; background:var(--q-soft); color:var(--q); border:1px solid var(--q)}
 .lab.ok{background:transparent; color:var(--c-done); border-color:var(--c-done)}
 .lab.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.lab.idle{background:transparent; color:var(--q); border-style:dashed; white-space:nowrap}
 .card .qb::before{content:"Question: "; font-weight:600; color:var(--q)}
 .decs{display:grid; gap:8px; background:var(--q-soft); border-left:3px solid var(--q); border-radius:3px; padding:6px 8px; cursor:auto}
 .decs .dh{font-size:.72rem; font-weight:600; color:var(--q); text-transform:uppercase; letter-spacing:.06em; display:flex; gap:6px}
@@ -663,6 +664,44 @@ function syncIssue(c){
   }
   return "";
 }
+// idle: a card in a working column with no activity for more than an hour (the board's rule, hub/pm/stages.py):
+// activity = an activity entry, a column move, an edit, or a job for the card (one queued or running = busy).
+// Worked out here from the data already read, so it is current without waiting for the board.
+const IDLE_MIN = 60, WORKING = ["prog", "built", "test"], JOB_BUSY = ["queued", "claimed", "running"];
+function idleMin(c){
+  if(!WORKING.includes(c.col) || c.blk) return 0;      // a blocked card says why it waits: not idle
+  let last = 0;
+  const seen = t => { const v = Date.parse(t || ""); if(v > last) last = v; };
+  for(const j of (hubStatus && hubStatus.jobs) || []){
+    // a release's merge or gate covers every Ready to merge card of the batch, not only the card it was posted on
+    if(j && c.col === "built" && ["integrate", "gate"].includes(j.kind) && JOB_BUSY.includes(j.state)) return 0;
+    if(!j || j.card !== c.id) continue;
+    if(JOB_BUSY.includes(j.state)) return 0;
+    seen(j.heartbeat); seen(j.claimed_at);
+  }
+  seen(c.colSince); seen(c.upd);
+  for(const a of Array.isArray(c.log) ? c.log : []) if(a) seen(a.ts);
+  if(!last) return 0;
+  const ms = Date.now() - last;
+  return ms > IDLE_MIN*60000 ? Math.floor(ms/60000) : 0;
+}
+function idleText(m){
+  if(m >= 1440) return "💤 Idle " + Math.floor(m/1440) + "d";
+  return "💤 Idle " + ([12, 6, 3, 2, 1].find(h => m >= h*60) || 1) + "h";
+}
+// time in each column: the finished stays (the card's `stages`, minutes by column name) + the current stay
+function stageText(c){
+  const s = (c.stages && typeof c.stages === "object") ? c.stages : {};
+  const cur = (COLS.find(x=>x.k===c.col) || {}).name;
+  const since = c.colSince ? Date.parse(c.colSince) : NaN;
+  const out = [];
+  for(const col of COLS){
+    let ms = (Number(s[col.name]) || 0) * 60000;
+    if(col.name === cur && !isNaN(since)) ms += Math.max(0, Date.now() - since);
+    if(ms >= 60000) out.push(col.name + " " + fmtDur(ms));
+  }
+  return out.join(" · ");
+}
 function openQ(c){
   const a = c.ans || {}, qs = qList(c);
   if(c.col !== "done" && qs.some(x=>!String(a[x.id]||"").trim())) return true;
@@ -776,11 +815,13 @@ function cardEl(c, full=false){
     el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
+    idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
     c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "On the way") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null));
   if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
+  if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
   const ep = epics.get(c.epic);
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
@@ -1755,7 +1796,7 @@ function buildTokens(d, machine, w){
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
 const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
-              stale:"bad", down:"bad", failed:"bad", lost:"bad"};
+              stale:"bad", down:"bad", failed:"bad", lost:"bad", behind:"bad"};
 function stateEl(text){ return el("span",{class:"state " + (TONE[text] || "")}, text); }
 function renderStatus(){
   const host = document.getElementById("status");
@@ -1787,6 +1828,10 @@ function renderStatus(){
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true})));
   }
+  // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
+  // what stops it (T50)
+  const appPub = String(fact("Published App") || "");
+  if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This App is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
   host.append(el("h2",{}, "Machines"), mach);
   for(const box of mach.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
   for(const box of mach.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
