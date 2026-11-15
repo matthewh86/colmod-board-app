@@ -337,6 +337,10 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .tbox table td:nth-child(n+3){white-space:nowrap; font-variant-numeric:tabular-nums}
 .usage .tmode{font:inherit; font-size:.74rem; padding:1px 8px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted); cursor:pointer}
 .usage .tmode.on{background:var(--accent-soft); color:var(--ink); border-color:var(--accent)}
+.usage .tmode .ukey{margin-right:4px}
+.usage .tname{font:inherit; padding:0; border:0; background:none; color:var(--ink); cursor:pointer; text-align:left}
+.usage .tname.on{font-weight:600; text-decoration:underline}
+.longctx{font:inherit; font-size:.7rem; padding:0 7px; border:1px solid var(--q); border-radius:999px; background:none; color:var(--q); cursor:help; white-space:normal; text-align:left}
 .usage{min-width:0; display:grid; gap:4px}
 .usage .uleg{display:flex; flex-wrap:wrap; gap:2px 12px; font-size:.76rem; color:var(--muted)}
 .usage .uleg b{color:var(--ink); font-weight:600}
@@ -1691,34 +1695,90 @@ addEventListener("resize", () => { clearTimeout(usageSoon.t); usageSoon.t = setT
 // ---------- Claude token use over time, per session and agent (status/tokens-<machine>.json, written by the machine's node)
 const tokens = new Map(), tokEls = new Map();   // machine -> its history / {sig, node}
 let tokMode = "all";                            // "all" | "new" (without what was read back from the cache)
+let tokHours = 24;                              // the span shown: the last day by default (the node keeps a day)
+let tokPick = "";                               // one session or agent shown alone; "" = all of them, stacked
 const TOK_COL = ["--c-prog", "--c-decide", "--c-done", "--c-test", "--c-built", "--c-next"];
+const TOK_ALL = "all machines";                 // the total graph's key: a machine's name never has a space
+// The long-context marker (HUB40): a session or agent whose context is long, because it has run a long time, re-reads
+// all of it with every reply. Measured by the context its latest reply read (new input + cache write + cache read,
+// recorded by the node) where there is one: long from 150 k tokens, three quarters of the usual 200 k window, where
+// Claude Code is close to compacting. Without a recorded figure, by how long the session has run: long from 8 hours.
+const CTX_LONG = 150000, AGE_LONG = 8 * 3600000;
 function fmtTok(v){
   return v >= 1e9 ? (v / 1e9).toFixed(2) + " bn" : v >= 1e6 ? (v / 1e6).toFixed(v >= 1e8 ? 0 : 1) + " M" : v >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v));
 }
-function tokSeries(d){   // the file's series, checked, with one value per point for the chosen view; largest first
-  const n = Math.max(0, ...d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0));
-  const arr = a => Array.from({length: n}, (_, i) => Array.isArray(a) && typeof a[i] === "number" && a[i] > 0 ? a[i] : 0);
+function tokSeries(d){   // the file's series, checked, with one value per point of the span shown for the chosen view; largest first
+  const full = Math.max(0, ...d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0));
+  const n = Math.max(1, Math.min(full, Math.round(tokHours * 3600 / (d.step || 1800)))), skip = full - n;
+  const arr = a => Array.from({length: n}, (_, i) => Array.isArray(a) && typeof a[skip + i] === "number" && a[skip + i] > 0 ? a[skip + i] : 0);
   const sum = a => a.reduce((x, y) => x + y, 0);
+  const num = v => typeof v === "number" && v > 0 ? v : 0;
   const rows = d.series.filter(s => s && typeof s === "object").map(s => {
     const inn = arr(s.in), wr = arr(s.write), rd = arr(s.read), out = arr(s.out), fresh = inn.map((v, i) => v + wr[i]);
     const val = fresh.map((v, i) => v + out[i] + (tokMode === "all" ? rd[i] : 0));
     const of = s.of ? String(s.of).slice(0, 40) : "";
     const what = s.kind === "session" ? "session" : s.kind === "agent" ? "agent of " + (of || "a session")
       : s.kind === "agents" ? "agents without a name of their own" : "the rest";
-    return {name: String(s.name || "unnamed").slice(0, 48), what, val, fresh: sum(fresh), read: sum(rd), out: sum(out), total: sum(val)};
+    return {name: String(s.name || "unnamed").slice(0, 48), kind: String(s.kind || ""), what, val, fresh: sum(fresh), read: sum(rd), out: sum(out), total: sum(val),
+            ctx: num(s.ctx), ctxAt: num(s.ctx_at) * 1000, since: num(s.since) * 1000};
   }).sort((a, b) => b.total - a.total);
   return {n, rows};
+}
+function tokMerged(){   // every machine's file summed into one, aligned on the half hours: the total graph
+  const docs = [...tokens.values()].filter(d => d && d.end && Array.isArray(d.series) && d.series.length);
+  if(docs.length < 2) return null;
+  const step = docs[0].step || 1800;
+  if(docs.some(d => (d.step || 1800) !== step)) return null;
+  const end = Math.max(...docs.map(d => d.end)), n = Math.max(...docs.flatMap(d => d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0)));
+  const by = new Map();
+  for(const d of docs){
+    const off = Math.round((end - d.end) / step);
+    for(const s of d.series){
+      if(!s || typeof s !== "object") continue;
+      const k = s.kind + "|" + s.name;
+      const m = by.get(k) || {name: s.name, kind: s.kind, of: s.of, in: Array(n).fill(0), write: Array(n).fill(0), read: Array(n).fill(0), out: Array(n).fill(0)};
+      for(const part of ["in", "write", "read", "out"]){
+        const a = Array.isArray(s[part]) ? s[part] : [], len = a.length;
+        a.forEach((v, i) => { const j = n - len + i - off; if(j >= 0 && j < n && typeof v === "number") m[part][j] += v; });
+      }
+      if(typeof s.ctx_at === "number" && s.ctx_at >= (m.ctx_at || 0)) Object.assign(m, {ctx: s.ctx, ctx_at: s.ctx_at, since: s.since});
+      by.set(k, m);
+    }
+  }
+  return {v: 1, name: TOK_ALL, step, end, series: [...by.values()]};
+}
+function ctxOf(name){   // the newest recorded context of a session or agent by its hub name, on any machine
+  let best = null;
+  for(const d of tokens.values()) for(const s of (d && Array.isArray(d.series) ? d.series : [])){
+    if(!s || s.name !== name || (s.kind !== "session" && s.kind !== "agent") || typeof s.ctx_at !== "number") continue;
+    if(!best || s.ctx_at > best.ctxAt / 1000) best = {ctx: s.ctx || 0, ctxAt: s.ctx_at * 1000, since: (s.since || 0) * 1000};
+  }
+  return best;
+}
+function longCtx(info, started){   // {long, text}: is the context long, and the figure that says so
+  const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const since = info && info.since ? info.since : Date.parse(started || ""), age = Date.now() - since;
+  const ran = since > 0 && age >= 0 ? "; running " + fmtDur(age) : "";
+  if(info && info.ctx) return {long: info.ctx >= CTX_LONG, text: `Context ${fmtTok(info.ctx)} tokens at its last reply (${hm(info.ctxAt)})${ran}. Long from ${fmtTok(CTX_LONG)}.`};
+  if(since > 0 && age >= 0) return {long: age >= AGE_LONG, text: `No context size recorded; running ${fmtDur(age)}. Long from ${AGE_LONG / 3600000} h.`};
+  return {long: false, text: ""};
+}
+function longCtxEl(lc){   // the marker: the figure on hover, and on a tap for a phone
+  if(!lc.long) return null;
+  const b = el("button",{type:"button", class:"longctx", title:lc.text, "aria-label":"Long context. " + lc.text}, "long context");
+  b.addEventListener("click", ev => { ev.stopPropagation(); b.textContent = b.textContent === "long context" ? lc.text : "long context"; });
+  return b;
 }
 function renderTokens(box, machine){   // a fault in the graph must never stop the rest of the page from drawing
   try { drawTokens(box, machine); }
   catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The token graph could not be shown: " + (e && e.message || e))); }
 }
 function drawTokens(box, machine){
-  const d = tokens.get(machine);
+  const d = machine === TOK_ALL ? tokMerged() : tokens.get(machine);
   if(!d || !d.end || !Array.isArray(d.series) || !d.series.length){ box.hidden = true; return; }
   box.hidden = false;
   const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
-  const sig = [d.end, d.series.length, w, tokMode].join("|"), had = tokEls.get(machine);
+  const sig = [d.end, d.series.length, w, tokMode, tokHours, tokPick, Math.floor(Date.now() / 600000)].join("|"), had = tokEls.get(machine);
   if(had && had.sig === sig){ if(box.firstChild !== had.node) box.replaceChildren(had.node); return; }
   const node = buildTokens(d, machine, w);
   tokEls.set(machine, {sig, node});
@@ -1728,17 +1788,20 @@ function buildTokens(d, machine, w){
   const {n, rows} = tokSeries(d);
   const step = (d.step || 1800) * 1000, end = d.end * 1000, t0 = end - n * step;
   const shown = rows.slice(0, TOK_COL.length), rest = rows.slice(TOK_COL.length);
-  const stack = shown.map((r, i) => ({name: r.name, col: TOK_COL[i], val: r.val}));
+  const colOf = r => { const i = shown.indexOf(r); return i >= 0 ? TOK_COL[i] : "--c-park"; };
+  const picked = rows.find(r => r.name === tokPick);
+  let stack = shown.map(r => ({name: r.name, col: colOf(r), val: r.val}));
   if(rest.length) stack.push({name: rest.length + " more", col: "--c-park", val: Array.from({length: n}, (_, i) => rest.reduce((s, r) => s + r.val[i], 0))});
+  if(picked) stack = [{name: picked.name, col: colOf(picked), val: picked.val}];   // one session or agent alone, on its own scale
   const tot = Array.from({length: n}, (_, i) => stack.reduce((s, r) => s + r.val[i], 0)), most = Math.max(1, ...tot);
-  const all = rows.reduce((s, r) => s + r.total, 0);
+  const all = picked ? picked.total : rows.reduce((s, r) => s + r.total, 0);
   const L = 44, R = 8, pw = w - L - R, T = 6, Hh = 110, H = T + Hh + 16, bw = pw / Math.max(1, n);
   const f = v => v.toFixed(1), y = v => T + Hh * (1 - v / most);
   const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
   const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
   const hours = Math.round(n * step / 360000) / 10;
   const view = tokMode === "all" ? "all tokens" : "tokens without cache reads";
-  const words = `${machine}, Claude ${view} in the last ${hours} h: ${fmtTok(all)} in all. ` + rows.slice(0, 8).map(r => `${r.name} ${fmtTok(r.total)}`).join(", ") + ".";
+  const words = `${machine}, Claude ${view} in the last ${hours} h: ${fmtTok(all)} in all` + (picked ? ` for ${picked.name}.` : ". " + rows.slice(0, 8).map(r => `${r.name} ${fmtTok(r.total)}`).join(", ") + ".");
   const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":words});
   for(const [v, label] of [[most, fmtTok(most)], [most / 2, fmtTok(most / 2)], [0, "0"]])
     svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, label));
@@ -1790,27 +1853,61 @@ function buildTokens(d, machine, w){
     else if(to !== undefined){ ev.preventDefault(); show(at < 0 ? n - 1 : to); }
   });
   plot.addEventListener("blur", hide);
-  const mode = (id, label) => { const b = el("button",{type:"button", class:"tmode" + (tokMode === id ? " on" : ""), "aria-pressed":String(tokMode === id)}, label);
-    b.addEventListener("click", () => { if(tokMode !== id){ tokMode = id; renderStatus(); } }); return b; };
-  const head = el("div",{class:"uleg"}, el("span",{}, "Claude tokens ", el("b",{}, fmtTok(all))), mode("all", "All"), mode("new", "Without cache reads"));
-  const legend = el("div",{class:"uleg"}, ...stack.map(s => el("span",{}, key(s.col), s.name)));
+  const btn = (on, label, go) => { const b = el("button",{type:"button", class:"tmode" + (on ? " on" : ""), "aria-pressed":String(on)}, label);
+    b.addEventListener("click", () => { if(!on){ go(); renderStatus(); } }); return b; };
+  const mode = (id, label) => btn(tokMode === id, label, () => { tokMode = id; });
+  const span = (h, label) => btn(tokHours === h, label, () => { tokHours = h; });
+  const pick = (name, label, col) => { const b = btn(tokPick === name, "", () => { tokPick = name; });
+    if(col) b.append(key(col)); b.append(label); return b; };
+  const head = el("div",{class:"uleg"}, el("span",{}, (picked ? picked.name + " " : "Claude tokens ") , el("b",{}, fmtTok(all))),
+    mode("all", "All"), mode("new", "Without cache reads"), span(6, "6 h"), span(12, "12 h"), span(24, "Day"));
+  // the legend picks one session or agent to show alone; "Every one" stacks them all again
+  const legend = el("div",{class:"uleg"}, pick("", "Every one"), ...shown.map(r => pick(r.name, r.name, colOf(r))));
   const sums = rows.reduce((a, r) => ({fresh: a.fresh + r.fresh, read: a.read + r.read, out: a.out + r.out}), {fresh: 0, read: 0, out: 0});
-  const tr = (name, what, r, strong) => el("tr",{}, el("td",{}, strong ? el("b",{}, name) : name), el("td",{}, what), el("td",{}, fmtTok(r.fresh)),
+  const nameCell = r => { const lc = r.kind === "session" || r.kind === "agent" ? longCtx(r.ctx ? r : null, null) : {long: false};
+    const b = el("button",{type:"button", class:"tname" + (tokPick === r.name ? " on" : ""), title:"Show " + r.name + " alone"}, r.name);
+    b.addEventListener("click", () => { tokPick = tokPick === r.name ? "" : r.name; renderStatus(); });
+    return el("td",{}, b, lc.long ? " " : null, longCtxEl(lc)); };
+  const tr = (first, what, r) => el("tr",{}, first, el("td",{}, what), el("td",{}, fmtTok(r.fresh)),
     el("td",{}, fmtTok(r.read)), el("td",{}, fmtTok(r.out)), el("td",{}, fmtTok(r.fresh + r.read + r.out)));
+  const whole = machine === TOK_ALL ? "every machine" : "the whole machine";
   const table = el("details",{open:true}, el("summary",{}, "Per session and agent"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, ...["Name", "What", "New input", "Read from cache", "Output", "All"].map(h => el("th",{}, h)))),
-    el("tbody",{}, rows.map(r => tr(r.name, r.what, r)), tr(machine, "the whole machine", sums, true)))));
+    el("tbody",{}, rows.map(r => tr(nameCell(r), r.what, r)), tr(el("td",{}, el("b",{}, machine)), whole, sums)))));
   return el("div",{class:"usage"}, head, legend, plot,
-    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per bar, ${view}. Sessions that ran on this machine; an agent is counted on its own line, not in its session's.`), table);
+    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per bar, ${view}` + (picked ? `, ${picked.name} alone` : "") + ". "
+      + (machine === TOK_ALL ? "Every machine's sessions and agents together." : "Sessions that ran on this machine;") + " an agent is counted on its own line, not in its session's."), table);
 }
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
 const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
               stale:"bad", down:"bad", failed:"bad", lost:"bad", behind:"bad"};
 function stateEl(text){ return el("span",{class:"state " + (TONE[text] || "")}, text); }
+function agoEl(t, after){   // a time that counts on by itself (tickAgo), so the tab need not be rebuilt for it
+  return el("span",{class:"ago", "data-t":String(t), "data-after":after}, fmtDur(Math.max(0, Date.now() - t)) + after);
+}
+function tickAgo(host){
+  for(const e of host.querySelectorAll(".ago")) e.textContent = fmtDur(Math.max(0, Date.now() - Number(e.dataset.t))) + e.dataset.after;
+}
 function renderStatus(){
   const host = document.getElementById("status");
   if(host.hidden) return;
+  // The page checks for changes in the background: like the Decisions tab, this tab is only rebuilt when what it
+  // shows has changed, and then keeps its place on the page (it used to jump to the top on every refresh, HUB40).
+  // The ages count on in place; what flips with time alone (a machine going stale, a long-context marker) is in the sig.
+  const now = Date.now();
+  const sig = JSON.stringify([loaded, hubStatus, innerWidth, tokMode, tokHours, tokPick,
+    [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
+    hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
+    hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
+    Math.floor(now / 600000)]);
+  if(host.dataset.sig === sig && host.childElementCount){ tickAgo(host); return; }
+  const ae = document.activeElement;
+  if(ae && host.contains(ae) && ae.classList.contains("uplot") && host.childElementCount) return;   // a graph is being read point by point
+  const keepY = window.scrollY, keepX = window.scrollX;
+  host.dataset.sig = sig;
+  if(host.offsetHeight) host.style.minHeight = host.offsetHeight + "px";      // the page keeps its height while the tab is rebuilt
+  window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
   host.replaceChildren();
   if(!hubStatus){ host.append(el("p",{class:"note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
   const facts = Array.isArray(hubStatus.facts) ? hubStatus.facts : [];
@@ -1822,7 +1919,7 @@ function renderStatus(){
     const local = Array.isArray(m.working_on) ? m.working_on.filter(Boolean).map(String) : [];
     const dl = el("dl",{class:"facts"});
     const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
-    add("Last report", isNaN(age) ? "-" : `${fmtDur(age * 60000)} ago`);
+    dl.append(el("dt",{}, "Last report"), el("dd",{}, isNaN(age) ? "-" : agoEl(new Date(m.seen).getTime(), " ago")));
     if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
     add("Offers", m.offers);
     if(m.slots_max != null){   // the count follows the machine's load: "4 of 10 slots, lowered: ..." and how many are free now
@@ -1846,6 +1943,11 @@ function renderStatus(){
   host.append(el("h2",{}, "Machines"), mach);
   for(const box of mach.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
   for(const box of mach.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
+  if(tokMerged()){   // more than one machine counts tokens: every session and agent together, the total
+    const box = el("div",{class:"ubox tbox", hidden:true});
+    host.append(el("h2",{}, "Claude tokens, all machines"), el("div",{class:"mcard"}, box));
+    renderTokens(box, TOK_ALL);
+  }
   // testing and release
   const done = Number(fact("Done")), total = Number(fact("Total"));
   const dl = el("dl",{class:"facts"});
@@ -1864,10 +1966,10 @@ function renderStatus(){
   if(Array.isArray(hubStatus.sessions)){
     const sb = el("tbody");
     for(const s of hubStatus.sessions){
-      const age = (Date.now() - Date.parse(s.seen)) / 60000;
-      sb.append(el("tr",{}, el("td",{}, s.name || "-"), el("td",{}, s.role || "-"), el("td",{}, s.machine || "-"),
+      const seen = Date.parse(s.seen), lc = longCtx(ctxOf(s.name), s.started);
+      sb.append(el("tr",{}, el("td",{}, s.name || "-", lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || "-"), el("td",{}, s.machine || "-"),
         el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
-        el("td",{}, isNaN(age) ? "-" : fmtDur(age * 60000) + " ago")));
+        el("td",{}, isNaN(seen) ? "-" : agoEl(seen, " ago"))));
     }
     host.append(el("h2",{}, "Sessions and agents"), hubStatus.sessions.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
       el("thead",{}, el("tr",{}, ...["Name", "Role", "Machine", "Working on", "Note", "Last seen"].map(h => el("th",{}, h)))), sb)) : el("p",{class:"note"}, "No session or agent is registered right now."));
@@ -1882,7 +1984,7 @@ function renderStatus(){
       wb.append(el("tr",{}, el("td",{}, stateEl(w.state || "-")), el("td",{}, w.machine || "-"),
         el("td",{}, w.title || w.id || "-", w.kind ? el("small",{}, " · " + w.kind) : null),
         el("td",{}, w.started ? fmtTime(w.started) : "-"),
-        el("td",{}, isNaN(t0) || isNaN(t1) ? "-" : fmtDur(Math.max(0, t1 - t0)) + (w.state === "running" ? " so far" : "")),
+        el("td",{}, isNaN(t0) || isNaN(t1) ? "-" : w.state === "running" && !w.ended ? agoEl(t0, " so far") : fmtDur(Math.max(0, t1 - t0))),
         el("td",{}, w.note || "")));
     }
     host.append(el("h2",{}, "Local work"), live.length + fin.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
