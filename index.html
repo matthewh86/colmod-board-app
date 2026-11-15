@@ -1842,6 +1842,7 @@ function renderStatus(){
   // what stops it (T50)
   const appPub = String(fact("Published App") || "");
   if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This App is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
+  else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this App is the hub's is " + appPub));
   host.append(el("h2",{}, "Machines"), mach);
   for(const box of mach.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
   for(const box of mach.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
