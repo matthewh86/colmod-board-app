@@ -152,6 +152,7 @@ body.ro #selbtn{display:none}
 .lab{font-size:.68rem; font-weight:600; letter-spacing:.03em; padding:1px 7px; border-radius:999px; background:var(--q-soft); color:var(--q); border:1px solid var(--q)}
 .lab.ok{background:transparent; color:var(--c-done); border-color:var(--c-done)}
 .lab.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.lab.pend.corner{justify-self:end; position:relative; z-index:2}
 .lab.idle{background:transparent; color:var(--q); border-style:dashed; white-space:nowrap}
 .card .qb::before{content:"Question: "; font-weight:600; color:var(--q)}
 .decs{display:grid; gap:8px; background:var(--q-soft); border-left:3px solid var(--q); border-radius:3px; padding:6px 8px; cursor:auto}
@@ -827,7 +828,7 @@ function cardEl(c, full=false){
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
-    c._pending ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, full ? c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board" : "Syncing") : null,
+    c._pending && full ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null,
     openSteps(c).length ? el("span",{class:"qmark", title:"Waits on a step of yours: "+openSteps(c).map(s=>s.step).join("; "), "aria-label":"Waits on your step"}, "🧑") : null));
@@ -1003,6 +1004,8 @@ function cardEl(c, full=false){
   e.addEventListener("click", ev=>{ if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); });
   e.addEventListener("keydown", ev=>{ if(ev.target===e && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); } });
   if(!readOnly) e.addEventListener("pointerdown", ev=>cardPress(ev, c.id, e));   // drag to move (see "card drag" below)
+  // a board card's "Syncing" label sits in the bottom-right corner, so it never pushes the priority out of the top row (HUB46)
+  if(c._pending && !full) e.append(el("span",{class:"lab pend corner", title:"Your change is kept here until the board shows it"}, "Syncing"));
   return e;
 }
 
