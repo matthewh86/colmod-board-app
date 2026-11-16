@@ -55,6 +55,7 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tally span{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
 .tally b{font-weight:600}
 .tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+.projsel{margin-left:auto; align-self:center; max-width:46vw; font-size:.82rem}
 .tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg)}
 .tab{font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
@@ -370,6 +371,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Waiting on me</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
+    <select id="fj" class="projsel" aria-label="Project" title="Show one project or all of them (the board and Waiting on me)" hidden><option value="">All projects</option></select>
   </nav>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
@@ -441,6 +443,7 @@ const changes = new Map();      // change id -> {card, field, value, ts, base_up
 const sentAt = new Map();       // change id -> when its file reached GitHub
 const epics = new Map();        // key -> {name,hue,order,blurb,theme}
 const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
+const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
 let dragId = null, openId = null;
 let selMode = false, dragGroup = null, selAnchor = null;
@@ -449,7 +452,7 @@ const picked = new Set();          // ids selected in select mode
 
 function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null; } }
 const collapsed = new Set(ls("kb.collapsed") || ["done","park","rej"]);
-const filt = Object.assign({q:"",p:"",t:"",e:"",qo:false,hide:{}}, ls("kb.filters") || {});
+const filt = Object.assign({q:"",p:"",t:"",e:"",j:"",qo:false,hide:{}}, ls("kb.filters") || {});
 if(!filt.hide || typeof filt.hide !== "object") filt.hide = {};
 const tcollapsed = new Set(ls("kb.tcollapsed") || []);   // themes whose epics are folded away in the epics column
 
@@ -654,7 +657,21 @@ function write(id, patch, quiet){
   if(!quiet) render();
 }
 
+// >>> project-rules (tests/test_app.py runs this block)
+// a card's project (HUB47): its own `project`, else its epic's, else the project that holds its id's letters
+function cardProject(c){
+  if(c && c.project) return String(c.project);
+  const ep = c && epics.get(c.epic);
+  if(ep && ep.project) return String(ep.project);
+  const m = /^[A-Z]+/.exec(String(c && c.id || ""));
+  if(m) for(const [k, v] of projects) if(Array.isArray(v.id_prefixes) && v.id_prefixes.includes(m[0])) return k;
+  return "";
+}
+function inProject(c){ return !filt.j || cardProject(c) === filt.j; }
+function epicInProject(k){ const p = epics.get(k)?.project; return !filt.j || !p || p === filt.j; }   // an epic not given one yet shows everywhere
+// <<< project-rules
 function matches(c){
+  if(!inProject(c)) return false;
   if(filt.p!=="" && String(c.pri||0)!==filt.p) return false;
   if(filt.e && (c.epic||"")!==filt.e) return false;
   if(filt.t && epicTheme(c.epic)!==filt.t) return false;
@@ -1138,8 +1155,8 @@ function render(){
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
   const hold = board.offsetHeight; if(hold) board.style.minHeight = hold + "px";   // the page keeps its height while the board is rebuilt
   board.textContent = "";
-  const all = [...cards.values()];
-  const allA = [...all, ...ARCH.items];   // stats count archived Done / Rejected cards too
+  const all = [...cards.values()].filter(inProject);   // the project switcher: one project's cards, or all
+  const allA = [...all, ...ARCH.items.filter(inProject)];   // stats count archived Done / Rejected cards too
   $("#empty").hidden = all.length>0;
   if(!all.length) $("#empty").textContent = loaded ? "The board has no live cards." : "Loading…";
   const shown = COLS.filter(col => !(filt.hide && filt.hide[col.k]));
@@ -1182,7 +1199,7 @@ function render(){
   if(window.scrollX !== px || window.scrollY !== py) window.scrollTo(px, py);
 }
 
-function sortedEpics(){ return [...epics.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99) || a[1].name.localeCompare(b[1].name)); }
+function sortedEpics(){ return [...epics.entries()].filter(([k])=>epicInProject(k)).sort((a,b)=>(a[1].order??99)-(b[1].order??99) || a[1].name.localeCompare(b[1].name)); }
 function sortedThemes(){ return [...themes.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)); }
 function epicTheme(k){ const t = epics.get(k)?.theme; return t && themes.has(t) ? t : ""; }   // "" = no or an unknown theme
 const ARCH = {items:[]};   // the archived Done / Rejected cards, for the counts: {id, col, epic, tri, pri}
@@ -1208,7 +1225,8 @@ function renderEpics(all){
       onclick:()=>setEpic(filt.e===k ? "" : k)},
       el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
   // epics grouped under their theme; epics with no or an unknown theme last, under "(no theme)"
-  const groups = sortedThemes().map(([k,v])=>({k, v, eps: sortedEpics().filter(([ek])=>epicTheme(ek)===k)}));
+  const groups = sortedThemes().map(([k,v])=>({k, v, eps: sortedEpics().filter(([ek])=>epicTheme(ek)===k)}))
+    .filter(g => !filt.j || g.eps.length);   // with one project chosen: only the themes that hold its epics
   const loose = sortedEpics().filter(([ek])=>!epicTheme(ek));
   if(loose.length && themes.size) groups.push({k:"", v:null, eps:loose});
   for(const g of groups){
@@ -1252,9 +1270,23 @@ function fillEpics(){   // with a theme chosen: only its epics
   for(const [k,v] of sortedEpics()) if(!filt.t || epicTheme(k)===filt.t) sel.append(el("option",{value:k, selected:k===filt.e}, v.name));
   sel.hidden = !epics.size;
 }
+function setProject(j){   // the project switcher; an epic or a theme of another project is dropped
+  filt.j = j;
+  if(filt.e && !epicInProject(filt.e)) filt.e = "";
+  if(filt.t && j && !sortedEpics().some(([k])=>epicTheme(k)===filt.t)) filt.t = "";
+  fillProjects(); syncFilters();
+}
+function fillProjects(){
+  const sel = $("#fj"); sel.textContent=""; sel.append(el("option",{value:""},"All projects"));
+  for(const [k,v] of [...projects.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)))
+    sel.append(el("option",{value:k, selected:k===filt.j}, v.name || k));
+  sel.hidden = !projects.size;
+}
+$("#fj").addEventListener("change", e=>setProject(e.target.value));
 function fillThemes(){
   const sel = $("#ft"); sel.textContent=""; sel.append(el("option",{value:""},"All themes"));
-  for(const [k,v] of sortedThemes()) sel.append(el("option",{value:k, selected:k===filt.t}, v.name));
+  for(const [k,v] of sortedThemes()) if(!filt.j || sortedEpics().some(([ek])=>epicTheme(ek)===k))
+    sel.append(el("option",{value:k, selected:k===filt.t}, v.name));
   sel.hidden = !themes.size;
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
@@ -1899,7 +1931,7 @@ function renderStatus(){
   // shows has changed, and then keeps its place on the page (it used to jump to the top on every refresh, HUB40).
   // The ages count on in place; what flips with time alone (a machine going stale, a long-context marker) is in the sig.
   const now = Date.now();
-  const sig = JSON.stringify([loaded, hubStatus, innerWidth, tokMode, tokHours, tokPick,
+  const sig = JSON.stringify([filt.j, loaded, hubStatus, innerWidth, tokMode, tokHours, tokPick,
     [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
@@ -1965,6 +1997,17 @@ function renderStatus(){
     tcard.prepend(el("div",{}, `${done} of ${total} finished`), el("div",{class:"meter"}, bar));
   }
   host.append(el("h2",{}, "Testing and release"), tcard);
+  // the release line of each project (HUB47): all of them, or the one the project switcher shows
+  const rel = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
+  const relShown = rel.filter(([k]) => !filt.j || k === filt.j);
+  if(rel.length > 1 || (filt.j && relShown.length)){
+    const rb = el("tbody");
+    for(const [k, r] of relShown) if(r && typeof r === "object")
+      rb.append(el("tr",{}, el("td",{}, String(r.name || k)), el("td",{}, String(r.release_promoted || "-")),
+        el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))));
+    host.append(el("h2",{}, "Release per project"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
+      el("thead",{}, el("tr",{}, el("th",{},"Project"), el("th",{},"Promoted"), el("th",{},"Next"), el("th",{},"State"))), rb)));
+  }
   // local work (what each machine is doing outside the hub's job queue): running and lost first, then the latest finished
   if(Array.isArray(hubStatus.sessions)){
     const sb = el("tbody");
@@ -2129,13 +2172,13 @@ function renderDecisions(){   // a fault in this tab must never stop the board f
   catch(e){ const h = document.getElementById("decisions"); if(h && !h.hidden) h.replaceChildren(el("p",{}, "The decisions could not be shown: " + (e && e.message || e))); }
 }
 function drawDecisions(){
-  const list =[...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej")
+  const list =[...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej" && inProject(c))
     .sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
-  const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return o.opts.length + o.qs.length; });
+  const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return (!filt.j || !d.project || d.project === filt.j) && o.opts.length + o.qs.length; });
   const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0)
           + sess.reduce((s,d) => { const o = sessOpen(d); return s + o.opts.length + o.qs.length; }, 0);
   // Waiting on me: the user's steps count too, so the tab never says nothing waits while a step is open (HUB27)
-  const stepCards = [...cards.values()].filter(c => openSteps(c).length).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const stepCards = [...cards.values()].filter(c => openSteps(c).length && inProject(c)).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
   const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), total = n + nSteps;
   const tab = document.getElementById("tab-decisions");
   if(tab) tab.textContent = total ? "Waiting on me ("+total+")" : "Waiting on me";
@@ -2143,7 +2186,7 @@ function drawDecisions(){
   if(!host || host.hidden) return;
   // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
   // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
-  const sig = JSON.stringify([readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
+  const sig = JSON.stringify([filt.j, readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
     list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]), [...cards.values()].filter(c => cardSteps(c).length).map(c => [c.id, c.t, cardSteps(c), c.steps_done]),
     [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans]), [...changes.keys()].map(k => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -2187,7 +2230,7 @@ function pastDecisionsEl(){
     for(const x of Array.isArray(d.qs) ? d.qs : []) if(x && x.id && String(a[x.id]||"").trim())
       rows.push(el("tr",{}, el("td",{}, "Session " + (d.session || d.id)), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", pendNote(d.id, x.id), " ", again(x.id))));
   }
-  for(const c of [...cards.values()].sort((x,y) => x.id.localeCompare(y.id))){
+  for(const c of [...cards.values()].filter(inProject).sort((x,y) => x.id.localeCompare(y.id))){
     const a = c.ans || {};
     const open = () => el("button",{type:"button", title:"Open "+c.id+" (change the answer there)", onclick:()=>openCard(c.id)}, c.id);
     for(const o of Array.isArray(c.opts) ? c.opts : []) if(o && o.id && a[o.id])
@@ -2291,7 +2334,9 @@ async function load(sha){
   artDocs.clear();
   for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
-  epics.clear(); themes.clear();
+  epics.clear(); themes.clear(); projects.clear();
+  for (const [k, v] of Object.entries(data.projects || {})) if (v && typeof v === "object") projects.set(k, Object.assign({name: k, hue: 210}, v));
+  if (filt.j && !projects.has(filt.j)){ filt.j = ""; ls("kb.filters", filt); }   // a remembered project that is gone
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
   ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
@@ -2314,7 +2359,7 @@ async function load(sha){
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
   pendSave();
-  rebuild(); fillThemes(); fillEpics();
+  rebuild(); fillProjects(); fillThemes(); fillEpics();
 }
 function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); }
 function startPolling(){
@@ -2355,12 +2400,12 @@ document.getElementById("setup").addEventListener("submit", async ev => {
   }
 });
 document.getElementById("signout").addEventListener("click", () => {
-  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); ARCH.items = [];
+  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = [];
   tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
-  fillThemes(); fillEpics(); render(); showSetup("");
+  fillProjects(); fillThemes(); fillEpics(); render(); showSetup("");
 });
 
 fillEpics(); render();
