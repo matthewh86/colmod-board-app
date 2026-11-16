@@ -141,7 +141,7 @@ body.ro #selbtn{display:none}
   background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%);
   transform:translateX(-100%); animation:sheen 1s infinite}
 @keyframes sheen{0%{transform:translateX(-100%)} 100%{transform:translateX(100%)}}
-@media (prefers-reduced-motion: reduce){ .card.pending::before{animation:none; background:none; transform:none; box-shadow:inset 0 0 0 2px var(--pend-fg)} }
+/* the sheen moves also when the system asks for reduced motion (the user, 2026-11-16) */
 .card .t{font-weight:600; font-size:.86rem; text-wrap:pretty}
 .card .st{font-size:.78rem; color:var(--muted)}
 .card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
