@@ -326,6 +326,14 @@ body.noconn .bar, body.noconn .main, body.noconn #empty, body.noconn #note{displ
 .mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0; align-content:start}
 .mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
+.mach.rows{grid-template-columns:1fr}
+.mcard h3{font-size:.9rem; margin:6px 0 0; color:var(--muted); font-weight:600}
+table.st td.num, table.st th.num{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
+table.st tr.heat td.num:first-of-type{font-weight:600}
+.qmove{display:flex; gap:4px}
+.qmove button{min-width:30px; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
+.qmove button:disabled{opacity:.35; cursor:default}
+.qbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 dl.facts{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:.86rem; margin:0}
 dl.facts dt{color:var(--muted)}
 dl.facts dd{margin:0; overflow-wrap:anywhere}
@@ -385,7 +393,10 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
-    <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
+    <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
+    <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Hub</button>
+    <button class="tab" role="tab" id="tab-queues" data-tab="queues" aria-controls="queues" type="button">Queues</button>
+    <button class="tab" role="tab" id="tab-releases" data-tab="releases" aria-controls="releases" type="button">Releases</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
   </nav>
   <div class="synconly" id="synconly" role="status" hidden></div>
@@ -427,6 +438,9 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
       Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
   </div>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
+  <section class="status" id="hub" role="tabpanel" aria-labelledby="tab-hub" hidden></section>
+  <section class="status" id="queues" role="tabpanel" aria-labelledby="tab-queues" hidden></section>
+  <section class="status" id="releases" role="tabpanel" aria-labelledby="tab-releases" hidden></section>
   <section class="status" id="artifacts" role="tabpanel" aria-labelledby="tab-artifacts" hidden></section>
   <section class="status" id="manual" role="tabpanel" aria-labelledby="tab-manual" hidden></section>
 </div>
@@ -542,6 +556,7 @@ let lastStamp = 0, sending = 0, sendq = Promise.resolve();
 // ---------- HUB68: where a change on its way belongs, the tabs that shimmer while it is, and the sync pill's view
 let syncOnly = "";   // "" or the tab that shows only the changes on their way (set by the sync pill, cleared by "Show all")
 function pendTab(ch){
+  if(ch.card === "jobs" && ch.field === "queue") return "queues";   // HUB90: the Queues tab's order
   if(manDocs.has(ch.card)) return "manual";
   if(artDocs.has(ch.card)) return "artifacts";
   const f = String(ch.field);
@@ -561,6 +576,7 @@ function changeText(ch){
   if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
   if(f === "order") return "new order";
+  if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
 }
 function gotoSyncing(){   // the sync pill: the tab of the oldest change on its way, showing only those changes
@@ -574,7 +590,7 @@ function renderSyncOnly(){
   const box = document.getElementById("synconly"); if(!box) return;
   const mine = [...changes.entries()].filter(([, ch]) => pendTab(ch) === syncOnly).sort((a, b) => (a[1].ts || "").localeCompare(b[1].ts || ""));
   if(syncOnly && (filt.tab !== syncOnly || !mine.length)) syncOnly = "";   // another tab chosen, or all of them arrived
-  for(const id of ["decisions", "manual", "artifacts"]){ const p = document.getElementById(id); if(p) p.classList.toggle("tabhide", syncOnly === id); }
+  for(const id of ["decisions", "manual", "artifacts", "queues"]){ const p = document.getElementById(id); if(p) p.classList.toggle("tabhide", syncOnly === id); }
   box.hidden = !syncOnly;
   if(!syncOnly){ box.replaceChildren(); return; }
   const rows = mine.map(([k, ch]) => {
@@ -612,7 +628,8 @@ function changeSettled(id, ch, sent, exp){
   if(!sent) return "";
   if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
-  if(at > String(ch.ts || "")){                     // an export made after the click that shows the same thing
+  if(f !== "queue" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing (a queue
+                                                    // order has no card in the export: only `applied` settles it)
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
       const q = f.slice(4), base = q.endsWith(OTHER) ? q.slice(0, -OTHER.length) : q;
@@ -1999,20 +2016,13 @@ function buildTokens(d, machine, w){
     mode("all", "All"), mode("new", "Without cache reads"), span(6, "6 h"), span(12, "12 h"), span(24, "Day"));
   // the legend picks one session or agent to show alone; "Every one" stacks them all again
   const legend = el("div",{class:"uleg"}, pick("", "Every one"), ...shown.map(r => pick(r.name, r.name, colOf(r))));
-  const sums = rows.reduce((a, r) => ({fresh: a.fresh + r.fresh, read: a.read + r.read, out: a.out + r.out}), {fresh: 0, read: 0, out: 0});
-  const nameCell = r => { const lc = r.kind === "session" || r.kind === "agent" ? longCtx(r.ctx ? r : null, null) : {long: false};
-    const b = el("button",{type:"button", class:"tname" + (tokPick === r.name ? " on" : ""), title:"Show " + r.name + " alone"}, r.name);
-    b.addEventListener("click", () => { tokPick = tokPick === r.name ? "" : r.name; renderStatus(); });
-    return el("td",{}, b, lc.long ? " " : null, longCtxEl(lc)); };
-  const tr = (first, what, r) => el("tr",{}, first, el("td",{}, what), el("td",{}, fmtTok(r.fresh)),
-    el("td",{}, fmtTok(r.read)), el("td",{}, fmtTok(r.out)), el("td",{}, fmtTok(r.fresh + r.read + r.out)));
-  const whole = machine === TOK_ALL ? "every machine" : "the whole machine";
-  const table = el("details",{open:true}, el("summary",{}, "Per session and agent"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
-    el("thead",{}, el("tr",{}, ...["Name", "What", "New input", "Read from cache", "Output", "All"].map(h => el("th",{}, h)))),
-    el("tbody",{}, rows.map(r => tr(nameCell(r), r.what, r)), tr(el("td",{}, el("b",{}, machine)), whole, sums)))));
   return el("div",{class:"usage"}, head, legend, plot,
     el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per bar, ${view}` + (picked ? `, ${picked.name} alone` : "") + ". "
-      + (machine === TOK_ALL ? "Every machine's sessions and agents together." : "Sessions that ran on this machine;") + " an agent is counted on its own line, not in its session's."), table);
+      + (machine === TOK_ALL ? "Every machine's sessions and agents together." : "Sessions that ran on this machine;") + " an agent is counted on its own line, not in its session's."));
+}
+function tokRate(r, step){   // tokens per hour over the last hour of the series (HUB90): who is using them now
+  const k = Math.max(1, Math.min(r.val.length, Math.round(3600 / (step || 1800))));
+  return r.val.slice(-k).reduce((x, y) => x + y, 0) * 3600 / (k * (step || 1800));
 }
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
@@ -2025,18 +2035,17 @@ function agoEl(t, after){   // a time that counts on by itself (tickAgo), so the
 function tickAgo(host){
   for(const e of host.querySelectorAll(".ago")) e.textContent = fmtDur(Math.max(0, Date.now() - Number(e.dataset.t))) + e.dataset.after;
 }
+// The four tabs drawn from export/status.json (HUB90): Machines (an Overview of the graphs, then one card per machine
+// with its facts, its sessions and agents with their tokens, and its local work), Hub, Queues and Releases.
 function renderStatus(){
-  const host = document.getElementById("status");
-  if(host.hidden) return;
-  // The page checks for changes in the background: like the Decisions tab, this tab is only rebuilt when what it
-  // shows has changed, and then keeps its place on the page (it used to jump to the top on every refresh, HUB40).
-  // The ages count on in place; what flips with time alone (a machine going stale, a long-context marker) is in the sig.
-  const now = Date.now();
-  const sig = JSON.stringify([filt.j, loaded, hubStatus, innerWidth, tokMode, tokHours, tokPick,
-    [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
-    hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
-    hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
-    Math.floor(now / 600000)]);
+  renderMachines(); renderHubTab(); renderQueues(); renderReleases();
+}
+// The page checks for changes in the background: a tab is only rebuilt when what it shows has changed, and then keeps
+// its place on the page (it used to jump to the top on every refresh, HUB40). The ages count on in place.
+function rebuild(id, sigParts, build){
+  const host = document.getElementById(id);
+  if(!host || host.hidden) return;
+  const sig = JSON.stringify(sigParts);
   if(host.dataset.sig === sig && host.childElementCount){ tickAgo(host); return; }
   const ae = document.activeElement;
   if(ae && host.contains(ae) && ae.classList.contains("uplot") && host.childElementCount) return;   // a graph is being read point by point
@@ -2046,113 +2055,227 @@ function renderStatus(){
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
   host.replaceChildren();
   if(!hubStatus){ host.append(el("p",{class:"note"}, loaded ? "No status export yet: the desktop's node writes it." : "Loading…")); return; }
-  const facts = Array.isArray(hubStatus.facts) ? hubStatus.facts : [];
-  const fact = l => (facts.find(f => f.label === l) || {}).value;
-  // machines: online while the last report is under 30 minutes old (worked out here, so it is always current)
-  const mach = el("div",{class:"mach"});
-  for(const m of hubStatus.machines || []){
-    const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "stale";
-    const local = Array.isArray(m.working_on) ? m.working_on.filter(Boolean).map(String) : [];
-    const dl = el("dl",{class:"facts"});
-    const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
-    dl.append(el("dt",{}, "Last report"), el("dd",{}, isNaN(age) ? "-" : agoEl(new Date(m.seen).getTime(), " ago")));
-    if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
-    add("Offers", m.offers);
-    if(m.slots_max != null){   // the count follows the machine's load: "4 of 10 slots, lowered: ..." and how many are free now
-      add("Test slots", (m.slots_note || `${m.slots} of ${m.slots_max} slots`) + `; ${m.slots_free} free (${m.tests})`);
-    } else add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
-    if(m.comfy !== "-") add("ComfyUI", m.comfy);
-    if(m.llm !== "-") add("Local LLM", m.llm);
-    if(m.app_control) add("App control", m.app_control);   // blocks freshly built test programs (HUB71)
-    add("Running job", m.running_job || "none");
-    add("Queued for it", m.queued);
-    if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
-    mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
-      st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
+  build(host);
+}
+function statusFacts(){
+  const facts = hubStatus && Array.isArray(hubStatus.facts) ? hubStatus.facts : [];
+  return {facts, fact: l => (facts.find(f => f.label === l) || {}).value};
+}
+function stTable(heads, rows, nums){   // nums: the columns that hold figures (right-aligned)
+  return el("div",{class:"tblwrap"}, el("table",{class:"st"},
+    el("thead",{}, el("tr",{}, ...heads.map((h, i) => el("th",{class:(nums || []).includes(i) ? "num" : ""}, h)))), el("tbody",{}, rows)));
+}
+function heatOf(v, most){   // the tokens/hr cell's row colour: from none to a strong orange-red as the rate nears the highest
+  if(!(v > 0) || !(most > 0)) return "";
+  return `rgba(232, 89, 12, ${(0.08 + 0.5 * Math.min(1, v / most)).toFixed(3)})`;
+}
+
+// ---------- Machines
+function machineRows(machine, sessions){   // a machine's sessions and agents: the registered ones and the token file's, merged
+  const d = tokens.get(machine), step = d && d.step || 1800;
+  const tok = d && d.end && Array.isArray(d.series) ? tokSeries(d).rows : [];
+  const by = new Map();
+  for(const r of tok) by.set(r.name, {name: r.name, what: r.what, tok: r, rate: tokRate(r, step)});
+  for(const s of sessions){
+    const row = by.get(s.name) || {name: s.name, what: "", tok: null, rate: 0};
+    row.s = s;
+    by.set(s.name, row);
+  }
+  return [...by.values()].sort((x, y) => y.rate - x.rate || (y.tok ? y.tok.total : 0) - (x.tok ? x.tok.total : 0) || x.name.localeCompare(y.name));
+}
+function sessionTable(rows, most){
+  const hours = Math.round(tokHours);
+  const out = rows.map(r => {
+    const s = r.s || {}, seen = Date.parse(s.seen), lc = longCtx(r.tok && r.tok.ctx ? r.tok : ctxOf(r.name), s.started);
+    const name = r.tok ? el("button",{type:"button", class:"tname" + (tokPick === r.name ? " on" : ""), title:"Show " + r.name + " alone in the Overview's token graph",
+      onclick:()=>{ tokPick = tokPick === r.name ? "" : r.name; renderStatus(); }}, r.name) : r.name;
+    const tot = r.tok ? el("td",{class:"num", title:`new input ${fmtTok(r.tok.fresh)}, read from cache ${fmtTok(r.tok.read)}, output ${fmtTok(r.tok.out)}`}, fmtTok(r.tok.total)) : el("td",{class:"num"}, "-");
+    const tr = el("tr",{class: r.rate > 0 ? "heat" : ""},
+      el("td",{}, name, lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || r.what || "-"),
+      el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
+      el("td",{}, isNaN(seen) ? "-" : agoEl(seen, " ago")),
+      el("td",{class:"num"}, r.tok ? fmtTok(r.rate) : "-"), tot);
+    const bg = heatOf(r.rate, most); if(bg) tr.style.background = bg;
+    return tr;
+  });
+  return stTable(["Name", "Role", "Working on", "Note", "Last seen", "Tokens/hr", `Tokens, ${hours} h`], out, [5, 6]);
+}
+function workTable(list){
+  const when = w => String(w.ended || w.started || "");
+  const live = list.filter(w => w.state === "running" || w.state === "lost").sort((a, b) => String(b.started || "").localeCompare(String(a.started || "")));
+  const fin = list.filter(w => w.state !== "running" && w.state !== "lost").sort((a, b) => when(b).localeCompare(when(a))).slice(0, 8);
+  if(!live.length && !fin.length) return null;
+  return stTable(["State", "Work", "Started", "Took", "Note"], [...live, ...fin].map(w => {
+    const t0 = Date.parse(w.started), t1 = w.ended ? Date.parse(w.ended) : (w.state === "running" ? Date.now() : NaN);
+    return el("tr",{}, el("td",{}, stateEl(w.state || "-")),
+      el("td",{}, w.title || w.id || "-", w.kind ? el("small",{}, " · " + w.kind) : null),
+      el("td",{}, w.started ? fmtTime(w.started) : "-"),
+      el("td",{}, isNaN(t0) || isNaN(t1) ? "-" : w.state === "running" && !w.ended ? agoEl(t0, " so far") : fmtDur(Math.max(0, t1 - t0))),
+      el("td",{}, w.note || ""));
+  }));
+}
+function renderMachines(){
+  const now = Date.now();
+  rebuild("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, tokPick,
+    [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
+    hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
+    hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
+    Math.floor(now / 600000)], host => {
+    const machines = Array.isArray(hubStatus.machines) ? hubStatus.machines : [];
+    const sessions = Array.isArray(hubStatus.sessions) ? hubStatus.sessions.filter(s => s && s.name) : [];
+    const work = Array.isArray(hubStatus.work) ? hubStatus.work.filter(Boolean) : [];
+    const names = new Set(machines.map(m => String(m.machine)));
+    // Overview: every graph in one place, the total of all machines first
+    const over = el("div",{class:"mach"});
+    if(tokMerged()) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "All machines")),
+      el("div",{class:"ubox tbox", "data-machine":TOK_ALL, hidden:true})));
+    for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine)),
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true})));
-  }
-  // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
-  // what stops it (T50)
-  const appPub = String(fact("Published App") || "");
-  if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This App is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
-  else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this App is the hub's is " + appPub));
-  host.append(el("h2",{}, "Machines"), mach);
-  for(const box of mach.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
-  for(const box of mach.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
-  if(tokMerged()){   // more than one machine counts tokens: every session and agent together, the total
-    const box = el("div",{class:"ubox tbox", hidden:true});
-    host.append(el("h2",{}, "Claude tokens, all machines"), el("div",{class:"mcard"}, box));
-    renderTokens(box, TOK_ALL);
-  }
-  // testing and release
-  const done = Number(fact("Done")), total = Number(fact("Total"));
-  const dl = el("dl",{class:"facts"});
-  for(const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
-    const v = fact(l); if(v) dl.append(el("dt",{}, k), el("dd",{}, v));
-  }
-  const upd = fact("Development state written");
-  if(upd) dl.append(el("dt",{}, "Written"), el("dd",{}, fmtTime(upd)));
-  const tcard = el("div",{class:"mcard"}, dl);
-  if(total > 0){
-    const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
-    tcard.prepend(el("div",{}, `${done} of ${total} finished`), el("div",{class:"meter"}, bar));
-  }
-  host.append(el("h2",{}, "Testing and release"), tcard);
-  // the release line of each project (HUB47): all of them, or the one the project switcher shows
-  const rel = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
-  const relShown = rel.filter(([k]) => !filt.j || k === filt.j);
-  if(rel.length > 1 || (filt.j && relShown.length)){
-    const rb = el("tbody");
-    for(const [k, r] of relShown) if(r && typeof r === "object")
-      rb.append(el("tr",{}, el("td",{}, String(r.name || k)), el("td",{}, String(r.release_promoted || "-")),
-        el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))));
-    host.append(el("h2",{}, "Release per project"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
-      el("thead",{}, el("tr",{}, el("th",{},"Project"), el("th",{},"Promoted"), el("th",{},"Next"), el("th",{},"State"))), rb)));
-  }
-  // local work (what each machine is doing outside the hub's job queue): running and lost first, then the latest finished
-  if(Array.isArray(hubStatus.sessions)){
-    const sb = el("tbody");
-    for(const s of hubStatus.sessions){
-      const seen = Date.parse(s.seen), lc = longCtx(ctxOf(s.name), s.started);
-      sb.append(el("tr",{}, el("td",{}, s.name || "-", lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || "-"), el("td",{}, s.machine || "-"),
-        el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
-        el("td",{}, isNaN(seen) ? "-" : agoEl(seen, " ago"))));
+    host.append(el("h2",{}, "Overview"), over);
+    for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
+    for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
+    // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
+    const per = machines.map(m => machineRows(String(m.machine), sessions.filter(s => s.machine === m.machine)));
+    const loose = sessions.filter(s => !names.has(String(s.machine)));
+    const looseRows = machineRows("", loose);
+    const most = Math.max(0, ...per.flat().map(r => r.rate));
+    const mach = el("div",{class:"mach rows"});
+    machines.forEach((m, i) => {
+      const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "stale";
+      const local = Array.isArray(m.working_on) ? m.working_on.filter(Boolean).map(String) : [];
+      const dl = el("dl",{class:"facts"});
+      const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
+      dl.append(el("dt",{}, "Last report"), el("dd",{}, isNaN(age) ? "-" : agoEl(new Date(m.seen).getTime(), " ago")));
+      if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
+      add("Offers", m.offers);
+      if(m.slots_max != null){   // the count follows the machine's load: "4 of 10 slots, lowered: ..." and how many are free now
+        add("Test slots", (m.slots_note || `${m.slots} of ${m.slots_max} slots`) + `; ${m.slots_free} free (${m.tests})`);
+      } else add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
+      if(m.comfy !== "-") add("ComfyUI", m.comfy);
+      if(m.llm !== "-") add("Local LLM", m.llm);
+      if(m.app_control) add("App control", m.app_control);   // blocks freshly built test programs (HUB71)
+      add("Running job", m.running_job || "none");
+      add("Queued for it", m.queued);
+      if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
+      const rows = per[i], wt = workTable(work.filter(w => w.machine === m.machine));
+      mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
+        st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
+        el("h3",{}, "Sessions and agents"), rows.length ? sessionTable(rows, most) : el("p",{class:"note"}, "None on this machine right now."),
+        el("h3",{}, "Local work"), wt || el("p",{class:"note"}, "No local work recorded.")));
+    });
+    host.append(el("h2",{}, "Machines"), mach);
+    if(looseRows.length) host.append(el("h3",{}, "Sessions on no machine listed"), sessionTable(looseRows, most));
+    const lw = workTable(work.filter(w => !names.has(String(w.machine))));
+    if(lw) host.append(el("h3",{}, "Local work on no machine listed"), lw);
+    host.append(el("p",{class:"note"}, "Tokens/hr: Claude tokens in the last hour (" + (tokMode === "all" ? "all tokens" : "without cache reads")
+      + "), highest first; the hotter the row, the more. Tap a name to show it alone in the Overview's token graph."));
+  });
+}
+
+// ---------- Hub: the hub's own facts, and whether this App is the hub's
+function renderHubTab(){
+  rebuild("hub", ["h", loaded, hubStatus && hubStatus.facts], host => {
+    const {facts, fact} = statusFacts();
+    // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
+    // what stops it (T50)
+    const appPub = String(fact("Published App") || "");
+    if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This App is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
+    else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this App is the hub's is " + appPub));
+    const hb = facts.filter(f => f.group === "hub").map(f => el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
+    host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
+  });
+}
+
+// ---------- Releases: testing and the release line of each project
+function renderReleases(){
+  rebuild("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j], host => {
+    const {fact} = statusFacts();
+    const done = Number(fact("Done")), total = Number(fact("Total"));
+    const dl = el("dl",{class:"facts"});
+    for(const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
+      const v = fact(l); if(v) dl.append(el("dt",{}, k), el("dd",{}, v));
     }
-    host.append(el("h2",{}, "Sessions and agents"), hubStatus.sessions.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
-      el("thead",{}, el("tr",{}, ...["Name", "Role", "Machine", "Working on", "Note", "Last seen"].map(h => el("th",{}, h)))), sb)) : el("p",{class:"note"}, "No session or agent is registered right now."));
-  }
-  if(Array.isArray(hubStatus.work)){
-    const when = w => String(w.ended || w.started || "");
-    const live = hubStatus.work.filter(w => w && (w.state === "running" || w.state === "lost")).sort((a, b) => String(b.started || "").localeCompare(String(a.started || "")));
-    const fin = hubStatus.work.filter(w => w && w.state !== "running" && w.state !== "lost").sort((a, b) => when(b).localeCompare(when(a))).slice(0, 12);
-    const wb = el("tbody");
-    for(const w of [...live, ...fin]){
-      const t0 = Date.parse(w.started), t1 = w.ended ? Date.parse(w.ended) : (w.state === "running" ? Date.now() : NaN);
-      wb.append(el("tr",{}, el("td",{}, stateEl(w.state || "-")), el("td",{}, w.machine || "-"),
-        el("td",{}, w.title || w.id || "-", w.kind ? el("small",{}, " · " + w.kind) : null),
-        el("td",{}, w.started ? fmtTime(w.started) : "-"),
-        el("td",{}, isNaN(t0) || isNaN(t1) ? "-" : w.state === "running" && !w.ended ? agoEl(t0, " so far") : fmtDur(Math.max(0, t1 - t0))),
-        el("td",{}, w.note || "")));
+    const upd = fact("Development state written");
+    if(upd) dl.append(el("dt",{}, "Written"), el("dd",{}, fmtTime(upd)));
+    const tcard = el("div",{class:"mcard"}, dl);
+    if(total > 0){
+      const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
+      tcard.prepend(el("div",{}, `${done} of ${total} finished`), el("div",{class:"meter"}, bar));
     }
-    host.append(el("h2",{}, "Local work"), live.length + fin.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
-      el("thead",{}, el("tr",{}, ...["State", "Machine", "Work", "Started", "Took", "Note"].map(h => el("th",{}, h)))), wb)) : el("p",{class:"note"}, "No local work recorded."));
-  }
-  // jobs
-  const jobs = hubStatus.jobs || [];
-  const tb = el("tbody");
-  for(const j of jobs) tb.append(el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"), el("td",{}, j.kind || "-"),
-    el("td",{}, j.build || "-"), el("td",{}, j.tests || "-"), el("td",{}, j.result || "-")));
-  host.append(el("h2",{}, "Hub jobs"), jobs.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"},
-    el("thead",{}, el("tr",{}, ...["State", "Machine", "Kind", "Build", "Tests", "Result"].map(h => el("th",{}, h)))), tb)) : el("p",{class:"note"}, "No hub jobs yet."));
-  // hub facts
-  const hb = el("tbody");
-  for(const f of facts.filter(f => f.group === "hub")) hb.append(el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
-  host.append(el("h2",{}, "Hub"), el("div",{class:"tblwrap"}, el("table",{class:"st"}, hb)));
+    host.append(el("h2",{}, "Testing and release"), tcard);
+    // the release line of each project (HUB47): all of them, or the one the project switcher shows
+    const rel = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
+    const relShown = rel.filter(([k, r]) => r && typeof r === "object" && (!filt.j || k === filt.j));
+    if(relShown.length) host.append(el("h2",{}, "Release per project"), stTable(["Project", "Promoted", "Next", "State"],
+      relShown.map(([k, r]) => el("tr",{}, el("td",{}, String(r.name || k)), el("td",{}, String(r.release_promoted || "-")),
+        el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))))));
+    else if(rel.length) host.append(el("p",{class:"note"}, "The project chosen has no release line of its own; choose all projects to see the others."));
+  });
+}
+
+// ---------- Queues (HUB90): the queued jobs in the order they start; the user moves them. The order goes to the board
+// as one change {card: "jobs", field: "queue", value: [job ids, top first]}; the node gives those jobs ranks 1, 2, ...
+// and every runner starts ranked jobs first. An empty list puts the queue back to the automatic order.
+function queuePending(){   // the order on its way to the board, or null
+  let best = null;
+  for(const ch of changes.values()) if(ch.card === "jobs" && ch.field === "queue" && (!best || String(ch.ts) > String(best.ts))) best = ch;
+  return best && Array.isArray(best.value) ? best.value : null;
+}
+function queuedJobs(){
+  const all = hubStatus && Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(j => j && j.state === "queued") : [];
+  const want = queuePending();
+  if(!want) return {list: all, ranked: new Set(all.filter(j => Number.isInteger(j.rank) && j.rank > 0).map(j => j.id))};
+  const at = new Map(want.map((id, i) => [id, i]));
+  const list = all.map((j, i) => [j, at.has(j.id) ? at.get(j.id) : want.length + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  return {list, ranked: new Set(want)};
+}
+function connected(){ try { return !!conn; } catch { return false; } }   // `conn` is declared further down the page
+function moveQueued(from, to){
+  const {list} = queuedJobs();
+  if(to < 0 || to >= list.length || from === to) return;
+  const ids = list.map(j => j.id), [id] = ids.splice(from, 1);
+  ids.splice(to, 0, id);
+  change({id: "jobs"}, "queue", ids);
+  renderQueues(); markSyncTabs();
+}
+function renderQueues(){
+  rebuild("queues", ["q", loaded, hubStatus && hubStatus.jobs, queuePending(), readOnly, connected()], host => {
+    const jobs = Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : [];
+    const {list, ranked} = queuedJobs();
+    const can = connected() && !readOnly;
+    const mv = (i, to, label, title) => el("button",{type:"button", title, "aria-label":title, disabled: !can || to < 0 || to >= list.length || to === i,
+      onclick:()=>moveQueued(i, to)}, label);
+    const rows = list.map((j, i) => el("tr",{},
+      el("td",{class:"num"}, String(i + 1)),
+      el("td",{}, el("div",{class:"qmove"}, mv(i, 0, "⤒", "Move " + j.id + " to the top"), mv(i, i - 1, "↑", "Move " + j.id + " up"), mv(i, i + 1, "↓", "Move " + j.id + " down"))),
+      el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)),
+      el("td",{}, j.target || "-"), el("td",{}, j.card || "-"),
+      el("td",{}, (j.needs || []).join(", ") || "-"),
+      el("td",{}, ranked.has(j.id) ? "placed" : "automatic")));
+    host.append(el("h2",{}, "Queued"), el("p",{class:"note"},
+      "Jobs start top first: the ones placed here go first, in this order, on whichever machine offers what each needs; "
+      + "the rest follow in the automatic order (a release's tests first, then the projects take turns). A move reaches the board within about a minute."),
+      list.length ? stTable(["#", "Move", "Job", "Target", "Card", "Needs", "Order"], rows, [0]) : el("p",{class:"note"}, "Nothing is queued."));
+    if(list.length && ranked.size) host.append(el("div",{class:"qbar"}, el("button",{type:"button", class:"linkbtn", disabled:!can,
+      onclick:()=>{ change({id: "jobs"}, "queue", []); renderQueues(); markSyncTabs(); }}, "Back to the automatic order")));
+    const live = jobs.filter(j => j.state === "claimed" || j.state === "running");
+    host.append(el("h2",{}, "Running"), live.length ? stTable(["State", "Machine", "Job", "Card", "Started", "Build", "Tests"], live.map(j => {
+      const t0 = Date.parse(j.claimed_at);
+      return el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
+        el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)), el("td",{}, j.card || "-"),
+        el("td",{}, isNaN(t0) ? "-" : agoEl(t0, " ago")), el("td",{}, j.build || "-"), el("td",{}, j.tests || "-"));
+    })) : el("p",{class:"note"}, "No job runs right now."));
+    const fin = jobs.filter(j => !["queued", "claimed", "running"].includes(j.state));
+    host.append(el("h2",{}, "Finished lately"), fin.length ? stTable(["State", "Machine", "Job", "Card", "Build", "Result"], fin.map(j =>
+      el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
+        el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)), el("td",{}, j.card || "-"),
+        el("td",{}, j.build || "-"), el("td",{}, j.result || "-")))) : el("p",{class:"note"}, "No finished jobs in the export."));
+  });
 }
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "decisions", "manual", "status", "artifacts"];   // the tab order (the user, 2026-11-17)
+const TABS = ["board", "decisions", "manual", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -2446,10 +2569,7 @@ function showTab(name, fromHash){
   const tab = TABS.includes(name) ? name : "board";
   filt.tab = tab; ls("kb.filters", filt);
   document.getElementById("view-board").hidden = tab !== "board";
-  document.getElementById("status").hidden = tab !== "status";
-  document.getElementById("decisions").hidden = tab !== "decisions";
-  document.getElementById("artifacts").hidden = tab !== "artifacts";
-  document.getElementById("manual").hidden = tab !== "manual";
+  for(const id of TABS) if(id !== "board") document.getElementById(id).hidden = tab !== id;
   for(const b of document.querySelectorAll("nav.tabs .tab")){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
