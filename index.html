@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Colonization+ Board</title>
+<title>Primarch Project Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -55,7 +55,7 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tally span{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
 .tally b{font-weight:600}
 .tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
-.projsel{margin-left:auto; align-self:center; max-width:46vw; font-size:.82rem}
+.projsel{width:100%; flex:none; margin:2px 0 4px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
 .tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg)}
 .tab{font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
@@ -209,7 +209,7 @@ body.ro #selbtn{display:none}
 .tgroup.collapsed .tepics{display:none}
 .card .tpath{font-size:.78rem; color:var(--muted); margin-right:4px}
 @media (max-width:720px){   /* the epics column becomes a strip that scrolls sideways inside itself: each theme chip, then its epic chips (after the base rules, so it wins) */
-  .epics{flex-direction:row; align-items:stretch; overflow-x:auto; overflow-y:visible; max-height:none; height:auto} .epics h2{flex:none; align-self:center; padding:0 2px}
+  .epics{flex-direction:row; align-items:stretch; overflow-x:auto; overflow-y:visible; max-height:none; height:auto} .epics h2{flex:none; align-self:center; padding:0 2px} .projsel{width:auto; max-width:46vw; align-self:center}
   .epic{min-width:150px} .epic.theme{min-width:170px}
   .tgroup,.tepics{display:flex; flex-direction:row; flex:none; align-items:stretch} .tepics{margin-left:0; padding-left:6px} .thead{flex:none} .tnone{align-self:center; padding:0 30px 0 2px}
 }
@@ -363,7 +363,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 
 <div class="wrap" id="app">
   <header class="top">
-    <div class="hrow"><h1>Colonization+ Board</h1><div class="sync" id="sync">Connecting to the board data…</div></div>
+    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -371,15 +371,14 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Waiting on me</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
-    <select id="fj" class="projsel" aria-label="Project" title="Show one project or all of them (the board and Waiting on me)" hidden><option value="">All projects</option></select>
+    <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
   </nav>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
       <span class="qwrap"><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
       <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Big feature</option><option value="0">No priority</option></select>
-      <select id="ft" aria-label="Theme filter"><option value="">All themes</option></select>
-      <select id="fe" aria-label="Epic filter"><option value="">All epics</option></select>
+      <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="fq" style="flex:none"> Open questions</label>
       <span class="fwrap">
         <button type="button" id="fcols" class="fbtn" aria-haspopup="true" aria-expanded="false" title="Show or hide columns">
@@ -402,7 +401,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
       <p id="sErr" role="alert"></p>
     </form>
     <div class="main">
-      <nav class="epics" id="epics" aria-label="Epics"></nav>
+      <nav class="epics" id="epics" aria-label="Projects, themes and epics"></nav>
       <div class="board" id="board"></div>
     </div>
     <div class="empty" id="empty" hidden></div>
@@ -411,6 +410,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   </div>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
   <section class="status" id="artifacts" role="tabpanel" aria-labelledby="tab-artifacts" hidden></section>
+  <section class="status" id="manual" role="tabpanel" aria-labelledby="tab-manual" hidden></section>
 </div>
 <div class="modal" id="modal" hidden></div>
 <div class="modal" id="rankm" hidden></div>
@@ -452,7 +452,7 @@ const picked = new Set();          // ids selected in select mode
 
 function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null; } }
 const collapsed = new Set(ls("kb.collapsed") || ["done","park","rej"]);
-const filt = Object.assign({q:"",p:"",t:"",e:"",j:"",qo:false,hide:{}}, ls("kb.filters") || {});
+const filt = Object.assign({q:"",p:"",t:"",e:"",j:"",y:"",qo:false,hide:{}}, ls("kb.filters") || {});
 if(!filt.hide || typeof filt.hide !== "object") filt.hide = {};
 const tcollapsed = new Set(ls("kb.tcollapsed") || []);   // themes whose epics are folded away in the epics column
 
@@ -561,6 +561,7 @@ function changeSettled(id, ch, sent, exp){
       if((((doc.steps_done || {})[sid]) === true) === (ch.value === true)) return "shown";
     }
     else if(f === "delete"){ if((doc.del === true) === (ch.value === true)) return "shown"; }
+    else if(f === "done"){ if((doc.done === true) === (ch.value === true)) return "shown"; }
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
     else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
     else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
@@ -578,7 +579,7 @@ function settleChanges(data){
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
     const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at,
-      doc: raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || null});
+      doc: raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null});
     if(!why) continue;
     changes.delete(k); sentAt.delete(k);
     if(why === "expired") toast(`The board did not take your change to ${v.card} (${v.field}). It shows what the board has.`);
@@ -674,6 +675,7 @@ function matches(c){
   if(!inProject(c)) return false;
   if(filt.p!=="" && String(c.pri||0)!==filt.p) return false;
   if(filt.e && (c.epic||"")!==filt.e) return false;
+  if(filt.y && cardKind(c)!==(filt.y==="-" ? "" : filt.y)) return false;   // the issue type ("-": none)
   if(filt.t && epicTheme(c.epic)!==filt.t) return false;
   if(filt.qo && !openQ(c)) return false;
   if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
@@ -1149,7 +1151,7 @@ function render(){
   if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
   if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
   render.later = false;
-  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts();
+  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
@@ -1169,7 +1171,10 @@ function render(){
     const sec = el("section",{class:"col"+(isC?" collapsed":""), style:"--cc:var("+col.cc+")", "aria-label":col.name, "data-col":col.k});
     const rankBtn = ((col.k === "back" || col.k === "park" || col.k === "refining" || col.k === "refined") && !readOnly && total > 1)
       ? el("button",{type:"button", class:"rankbtn", title:"Rank "+col.name+" by choosing between pairs of cards",
-          onclick:ev=>{ ev.stopPropagation(); startRank(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "⇅ Rank") : null;
+          onclick:ev=>{ ev.stopPropagation(); startRank(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "⇅ Rank")
+      : (col.k === "next" && !readOnly && total > 1)   // the user, 2026-11-17: Next up sorted by priority in one click
+      ? el("button",{type:"button", class:"rankbtn", title:"Sort "+col.name+" by priority (P1 first; cards of the same priority keep their order)",
+          onclick:ev=>{ ev.stopPropagation(); sortByPriority(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "↓ Priority") : null;
     const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, list.length===total?String(total):list.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"▸":"▾"));
     const tog = ()=>{ isC?collapsed.delete(col.k):collapsed.add(col.k); ls("kb.collapsed",[...collapsed]); render(); };
     h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
@@ -1211,16 +1216,17 @@ function cardStats(all, keep){   // done / all (Rejected left out); open = not D
 function statKids(st){ return [el("span",{class:"ec"}, st.done+"/"+st.n+" done · "+st.open+" open"), el("span",{class:"eb"}, el("i",{style:"width:"+st.pct+"%"}))]; }
 function setTheme(t){ filt.t = t; if(filt.e && epicTheme(filt.e)!==t) filt.e = ""; syncFilters(); }   // an epic of another theme is dropped
 function setEpic(k){ filt.e = k; if(k) filt.t = epicTheme(k); syncFilters(); }                        // an epic sets its theme
-function syncFilters(){ fillThemes(); fillEpics(); ls("kb.filters",filt); render(); }
+function syncFilters(){ ls("kb.filters",filt); render(); }
 function renderEpics(all){
   const box = $("#epics"); const x = box.scrollTop, xl = box.scrollLeft; box.textContent = "";
-  box.hidden = !epics.size;
+  box.hidden = !epics.size && projects.size < 2;
   const folded = !!filt.ecol;
   box.closest(".main").classList.toggle("ecol", folded);
   box.append(el("h2",{}, el("button",{type:"button", class:"ecbtn", "aria-expanded":String(!folded),
-      title: folded ? "Show the epics" : "Fold the epics to the side", "aria-label": folded ? "Show the epics" : "Fold the epics to the side",
-      onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Epics")));
+      title: folded ? "Show the projects and epics" : "Fold the projects and epics to the side", "aria-label": folded ? "Show the projects and epics" : "Fold the projects and epics to the side",
+      onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Projects")));
   if(folded){ box.scrollTop = 0; return; }
+  fillProjects(); if(!projSel.hidden) box.append(projSel);
   const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
       el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
@@ -1251,8 +1257,10 @@ $("#q").addEventListener("input", e=>{ filt.q=e.target.value; $("#qclr").hidden 
 $("#qclr").hidden = !filt.q;
 $("#qclr").addEventListener("click", ()=>{ const q=$("#q"); q.value=""; q.dispatchEvent(new Event("input")); q.focus(); });
 $("#fp").addEventListener("change", e=>{ filt.p=e.target.value; ls("kb.filters",filt); render(); });
-$("#ft").addEventListener("change", e=>setTheme(e.target.value));
-$("#fe").addEventListener("change", e=>setEpic(e.target.value));
+for(const k of KINDS) $("#fy").append(el("option",{value:k}, KIND_ICON[k]+" "+k));   // the issue type filter
+$("#fy").append(el("option",{value:"-"}, "No type"));
+$("#fy").value = filt.y||"";
+$("#fy").addEventListener("change", e=>{ filt.y=e.target.value; ls("kb.filters",filt); render(); });
 $("#fq").addEventListener("change", e=>{ filt.qo=e.target.checked; ls("kb.filters",filt); render(); });
 function fcount(){ const n = COLS.filter(c => filt.hide[c.k]).length; const b = $("#fcount"); b.hidden = !n; b.textContent = n ? n + " hidden" : ""; }
 $("#fpop").append(el("div",{class:"fh"}, "Show columns"));
@@ -1261,33 +1269,24 @@ for(const col of COLS){   // which columns show
   cb.addEventListener("change", ()=>{ filt.hide = {...filt.hide, [col.k]: !cb.checked}; ls("kb.filters", filt); fcount(); render(); });
   $("#fpop").append(el("label",{}, cb, " "+col.name));
 }
-fcount(); fillThemes();   // the theme select stays hidden until themes exist
+fcount();
 $("#fcols").addEventListener("click", ev=>{ ev.stopPropagation(); const p = $("#fpop"); p.hidden = !p.hidden; $("#fcols").setAttribute("aria-expanded", String(!p.hidden)); });
 document.addEventListener("click", ev=>{ const p = $("#fpop"); if(!p.hidden && !ev.target.closest(".fwrap")){ p.hidden = true; $("#fcols").setAttribute("aria-expanded","false"); } });
 document.addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#fpop").hidden){ $("#fpop").hidden = true; $("#fcols").setAttribute("aria-expanded","false"); $("#fcols").focus(); } });
-function fillEpics(){   // with a theme chosen: only its epics
-  const sel = $("#fe"); sel.textContent=""; sel.append(el("option",{value:""},"All epics"));
-  for(const [k,v] of sortedEpics()) if(!filt.t || epicTheme(k)===filt.t) sel.append(el("option",{value:k, selected:k===filt.e}, v.name));
-  sel.hidden = !epics.size;
-}
 function setProject(j){   // the project switcher; an epic or a theme of another project is dropped
   filt.j = j;
   if(filt.e && !epicInProject(filt.e)) filt.e = "";
   if(filt.t && j && !sortedEpics().some(([k])=>epicTheme(k)===filt.t)) filt.t = "";
-  fillProjects(); syncFilters();
+  syncFilters();
 }
+let projSel = null;   // the project switcher, at the top of the Projects panel (the user, 2026-11-17)
 function fillProjects(){
-  const sel = $("#fj"); sel.textContent=""; sel.append(el("option",{value:""},"All projects"));
+  const sel = projSel || (projSel = el("select",{id:"fj", class:"projsel", "aria-label":"Project", title:"Show one project or all of them (the board and Waiting on me)"}));
+  if(!sel.dataset.on){ sel.dataset.on = "1"; sel.addEventListener("change", e=>setProject(e.target.value)); }
+  sel.textContent=""; sel.append(el("option",{value:""},"All projects"));
   for(const [k,v] of [...projects.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)))
     sel.append(el("option",{value:k, selected:k===filt.j}, v.name || k));
-  sel.hidden = !projects.size;
-}
-$("#fj").addEventListener("change", e=>setProject(e.target.value));
-function fillThemes(){
-  const sel = $("#ft"); sel.textContent=""; sel.append(el("option",{value:""},"All themes"));
-  for(const [k,v] of sortedThemes()) if(!filt.j || sortedEpics().some(([ek])=>epicTheme(ek)===k))
-    sel.append(el("option",{value:k, selected:k===filt.t}, v.name));
-  sel.hidden = !themes.size;
+  sel.hidden = projects.size < 2;
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
@@ -1315,6 +1314,20 @@ function rankLeft(sim){   // comparisons still to come, about
   let n = 0, len = sim.sorted.length + 1;
   for(let i = sim.i + 1; i < rank.items.length; i++, len++) n += Math.ceil(Math.log2(len + 1));
   return n + (sim.pending ? 1 : 0);
+}
+function priOrder(list){   // P1 first, a card with no priority last; the same priority keeps its place (stable)
+  const p = c => (Number(c.pri) > 0 ? Number(c.pri) : 99);
+  return list.map((c, n) => [c, n]).sort((a, b) => p(a[0]) - p(b[0]) || a[1] - b[1]).map(x => x[0].id);
+}
+function sortByPriority(colKey){
+  if(readOnly) return;
+  const now = colCards(colKey), ids = priOrder(now);
+  const name = (COLS.find(x=>x.k===colKey)||{}).name || "Column";
+  if(ids.length > 1 && ids.some((id, n)=>id !== now[n].id)){
+    change(raw.get(ids[0]), "order", ids);
+    rebuild();
+    toast(name + " sorted by priority (" + ids.length + " cards).");
+  } else toast(name + " is already in priority order.");
 }
 function startRank(colKey){ const items = colCards(colKey).map(c=>c.id); if(items.length < 2 || readOnly) return; rank = {col: colKey, items, answers: []}; renderRank(); }
 function endRank(){ rank = null; renderRank(); }
@@ -2050,7 +2063,7 @@ function renderStatus(){
 }
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "decisions", "status", "artifacts"];
+const TABS = ["board", "decisions", "status", "artifacts", "manual"];
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -2072,7 +2085,7 @@ function renderArtifacts(){   // a fault in this tab must never stop the board f
 }
 function drawArtifacts(host){
   const docs = [...artDocs.values()].sort((a, b) => String(b.pub || "").localeCompare(String(a.pub || "")) || String(a.id).localeCompare(String(b.id)));
-  const sig = JSON.stringify([readOnly, loaded, docs.map(d => [d.id, d.t, d.url, d.kind, d.card, d.session, d.pub, artDel(d)])]);
+  const sig = JSON.stringify([readOnly, loaded, projects.size, docs.map(d => [d.id, d.t, d.url, d.kind, d.card, d.session, d.pub, artDel(d), artProject(d)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
   host.replaceChildren(el("h2",{}, "Published artifacts"));
@@ -2083,6 +2096,21 @@ function drawArtifacts(host){
   const doomed = docs.filter(artDel).length;
   host.append(el("p",{class:"note"}, `${docs.length} published page${docs.length === 1 ? "" : "s"} from this work`
     + (doomed ? `; ${doomed} marked for deletion: the coordinator session deletes ${doomed === 1 ? "it" : "them"} and the row then leaves this list.` : ". Mark one for deletion and the coordinator session deletes it.")));
+  const groups = new Map();   // by project (the user, 2026-11-17): the artifact's, else its card's, else its session's
+  for(const d of docs){ const k = artProject(d); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
+  const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
+  for(const k of keys){
+    if(keys.length > 1 || k) host.append(el("h3",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
+    host.append(artTable(groups.get(k)));
+  }
+}
+function artProject(d){
+  if(d.project) return String(d.project);
+  if(d.card){ const p = cardProject(raw.get(String(d.card)) || {id:String(d.card)}); if(p) return p; }
+  const sd = d.session && sessDocs.get(String(d.session));
+  return sd && sd.project ? String(sd.project) : "";
+}
+function artTable(docs){
   const rows = docs.map(d => {
     const url = artLink(d), del = artDel(d);
     const name = url ? el("a",{href:url, target:"_blank", rel:"noopener"}, d.t || d.id) : el("span",{}, d.t || d.id);
@@ -2095,8 +2123,68 @@ function drawArtifacts(host){
       el("td",{}, when && !isNaN(when) ? when.toLocaleDateString([], {day:"numeric", month:"short"}) : ""),
       el("td",{}, del ? el("span",{class:"state bad"}, "to delete") : null, btn));
   });
-  host.append(el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
-    el("thead",{}, el("tr",{}, ...["Page", "Kind", "Card", "Published by", "When", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+  return el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+    el("thead",{}, el("tr",{}, ...["Page", "Kind", "Card", "Published by", "When", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)));
+}
+// ---------- manual actions (export/board.json `manual`: {id: {t, d, project, card, machine, by, added, done, done_at,
+// note}}): steps only the user can do. "Done" here is a change file (card MAN-<n>, field done) like every change.
+const manDocs = new Map();
+function manDone(doc){    // the exported state with this action's change that is still on the way
+  let v = doc.done === true;
+  for(const ch of [...changes.values()].sort((x,y)=>(x.ts||"").localeCompare(y.ts||"")))
+    if(ch.card === doc.id && ch.field === "done") v = ch.value === true;
+  return v;
+}
+function renderManual(){   // a fault in this tab must never stop the board from drawing
+  const host = document.getElementById("manual");
+  if(!host || host.hidden) return;
+  try { drawManual(host); }
+  catch(e){ host.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
+}
+function manDay(iso){
+  const when = iso ? new Date(iso) : null;
+  return when && !isNaN(when) ? when.toLocaleDateString([], {day:"numeric", month:"short"}) : "";
+}
+function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
+function drawManual(host){
+  const all = [...manDocs.values()];
+  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d)])]);
+  if(host.dataset.sig === sig && host.childElementCount) return;
+  host.dataset.sig = sig;
+  host.replaceChildren(el("h2",{}, "Manual actions"));
+  const open = all.filter(d => !manDone(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
+  const done = all.filter(manDone).sort((a, b) => String(b.done_at || "").localeCompare(String(a.done_at || "")));
+  if(!all.length){
+    host.append(el("p",{class:"note"}, loaded ? "No manual actions are recorded. A session that needs a step only you can do records it here." : "Loading…"));
+    return;
+  }
+  host.append(el("p",{class:"note"}, open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done.` : "Nothing is waiting on you here."));
+  const groups = new Map();
+  for(const d of open){ const k = String(d.project || ""); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
+  const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
+  for(const k of keys){
+    host.append(el("h3",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
+    const rows = groups.get(k).map(d => {
+      const btn = el("button",{type:"button", class:"artbtn"}, "Done");
+      btn.disabled = readOnly;
+      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
+      return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id)), d.d ? el("div",{}, String(d.d)) : null),
+        el("td",{}, String(d.card || "")), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn));
+    });
+    host.append(el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+      el("thead",{}, el("tr",{}, ...["Action", "Card", "Machine", "Added", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+  }
+  if(done.length){
+    const rows = done.map(d => {
+      const btn = el("button",{type:"button", class:"artbtn"}, "Open again");
+      btn.disabled = readOnly;
+      btn.addEventListener("click", () => { change(d, "done", false); renderManual(); });
+      return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.note ? " · " + String(d.note) : ""))),
+        el("td",{}, String(d.card || "")), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
+    });
+    host.append(el("details",{}, el("summary",{}, `Done (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+      el("thead",{}, el("tr",{}, ...["Action", "Card", "Done", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
+  }
 }
 // every decision waiting on the user, in one place: the open questions of all cards (a decision that comes up in a
 // Claude session is put on a card as a question, so it is here too). Opening a row opens the card, where it is answered.
@@ -2263,6 +2351,7 @@ function showTab(name, fromHash){
   document.getElementById("status").hidden = tab !== "status";
   document.getElementById("decisions").hidden = tab !== "decisions";
   document.getElementById("artifacts").hidden = tab !== "artifacts";
+  document.getElementById("manual").hidden = tab !== "manual";
   for(const b of document.querySelectorAll("nav.tabs .tab")){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
@@ -2270,7 +2359,7 @@ function showTab(name, fromHash){
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
-  renderStatus(); renderDecisions(); renderArtifacts();
+  renderStatus(); renderDecisions(); renderArtifacts(); renderManual();
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
@@ -2331,7 +2420,8 @@ async function load(sha){
   raw.clear();
   for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
   sessDocs.clear();
-  artDocs.clear();
+  artDocs.clear(); manDocs.clear();
+  for (const [id, doc] of Object.entries(data.manual || {})) if (doc && typeof doc === "object" && /^MAN-\d{1,6}$/.test(id)) manDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
   epics.clear(); themes.clear(); projects.clear();
@@ -2359,7 +2449,7 @@ async function load(sha){
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
   pendSave();
-  rebuild(); fillProjects(); fillThemes(); fillEpics();
+  rebuild();
 }
 function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); }
 function startPolling(){
@@ -2405,10 +2495,10 @@ document.getElementById("signout").addEventListener("click", () => {
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
-  fillProjects(); fillThemes(); fillEpics(); render(); showSetup("");
+  render(); showSetup("");
 });
 
-fillEpics(); render();
+render();
 setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
 conn = loadConn();
 if (conn) pendLoad();                 // the changes of an earlier visit that the board has not shown yet
