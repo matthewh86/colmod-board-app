@@ -332,6 +332,7 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 .state{font-size:.72rem; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
 .state.ok{color:var(--c-done); border-color:var(--c-done)}
 .state.warn{color:var(--q); border-color:var(--q)}
+#sync .warn{color:var(--q)}
 .state.bad{color:var(--blk-ink); background:var(--blk-bg); border-color:transparent}
 .meter{height:8px; border-radius:999px; background:var(--line); overflow:hidden}
 .meter span{display:block; height:100%; background:var(--c-done)}
@@ -408,10 +409,11 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     </div>
     <form class="setup" id="setup" hidden>
       <h2>Connect to the board</h2>
-      <p>The board lives in a private GitHub repository. Paste a fine-grained token that can reach only that repository
-        (Contents: read and write) and has an expiry date. It is kept in this browser only.</p>
+      <p>The board data lives in a private GitHub repository of its own. Paste a fine-grained token that can reach only
+        that repository (Contents: read and write) and has an expiry date. It is kept in this browser only.</p>
       <label>Owner <input id="sOwner" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
       <label>Repository <input id="sRepo" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <label>Branch <input id="sBranch" autocomplete="off" autocapitalize="off" spellcheck="false" value="main" required></label>
       <label>Token <input id="sToken" type="password" autocomplete="off" required></label>
       <div class="row"><button class="pbtn" type="submit">Connect</button></div>
       <p id="sErr" role="alert"></p>
@@ -485,7 +487,7 @@ function el(tag, attrs={}, ...kids){
 // ---------- pictures: the vault's media are private, so they come through the API and are shown as blob URLs
 const blobs = new Map(), blobUrl = new Map(), noPic = new Set();   // media path -> Promise<object URL> / the URL / failed
 function mediaUrl(src){
-  if(!blobs.has(src)) blobs.set(src, gh(`contents/vault/${src.split("/").map(encodeURIComponent).join("/")}?ref=${BRANCH}`, {raw:true})
+  if(!blobs.has(src)) blobs.set(src, gh(`contents/vault/${src.split("/").map(encodeURIComponent).join("/")}?ref=${branch()}`, {raw:true})
     .then(r=>r.blob()).then(b=>{ const u = URL.createObjectURL(b); blobUrl.set(src, u); return u; }, e=>{ noPic.add(src); throw e; }));
   return blobs.get(src);
 }
@@ -530,7 +532,7 @@ function rebuild(){
   }
 }
 
-// ---------- writes: every change is one new file in inbox/phone/ on the board branch; the desktop applies it through
+// ---------- writes: every change is one new file in inbox/phone/ of the board data; the desktop applies it through
 // the board's rules (and refuses anything else). Files go up one at a time, in the order the changes were made.
 //
 // A change made here is kept (in this browser's storage, so through a refresh, a reload and a closed tab) from the
@@ -672,7 +674,7 @@ async function send(id){
   const doc = changes.get(id);
   if(!doc || sentAt.has(id) || !conn || readOnly) return;       // replaced by a later edit, or already there
   const body = {message: `phone: ${doc.card} ${doc.field}\n\nHub-Source: user\nHub-Machine: phone`,
-                content: b64(JSON.stringify(doc) + "\n"), branch: BRANCH};
+                content: b64(JSON.stringify(doc) + "\n"), branch: branch()};
   const there = () => { if(changes.has(id)){ sentAt.set(id, new Date().toISOString()); pendSave(); renderDecisions(); } wake(); };
   for(let attempt = 0; attempt < 4; attempt++){
     if(!conn) return;
@@ -1223,6 +1225,8 @@ function renderSync(){
     : el("span",{}, "No board export yet: the desktop's node writes it."),
     changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:gotoSyncing},   // HUB68
       el("b",{}, String(changes.size)), changes.size === 1 ? " change syncing to the desktop" : " changes syncing to the desktop") : "");
+  if(conn.branch === LEGACY_BRANCH)   // a connection saved before the board data had its own repository
+    sync.append(el("span",{class:"warn"}, " · old connection: the board data has moved to its own repository; sign out and connect to it (branch main)"));
 }
 // Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
 // column's scroll and the open card window's scroll. Not while a text box in a card has the focus, nor during a drag.
@@ -2467,11 +2471,15 @@ window.addEventListener("hashchange", () => showTab(location.hash.slice(1), true
 showTab(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : filt.tab, true);
 
 // ---------- data (GitHub's API from this browser; NODE_SPEC section 7)
-const BRANCH = "board";
+// The board data has a repository of its own (HUB65): owner, repository and branch are typed on the device (the
+// branch is "main"). A connection saved before that has no branch: it keeps reading the old "board" branch, and
+// the sync line asks for a new connection.
+const DEFAULT_BRANCH = "main", LEGACY_BRANCH = "board";
 const API = "https://api.github.com";
 const cfgKey = "cb.conn";
 let conn = null, refEtag = null, tip = null, lastCheck = null, timer = null, seenRefused = null;
-function loadConn(){ try { return JSON.parse(localStorage.getItem(cfgKey)) || null; } catch { return null; } }
+function branch(){ return (conn && conn.branch) || LEGACY_BRANCH; }
+function loadConn(){ try { const c = JSON.parse(localStorage.getItem(cfgKey)) || null; if(c && !c.branch) c.branch = LEGACY_BRANCH; return c; } catch { return null; } }
 function saveConn(c){ try { c ? localStorage.setItem(cfgKey, JSON.stringify(c)) : localStorage.removeItem(cfgKey); } catch {} }
 
 async function gh(path, {method = "GET", body = null, raw = false, etag = null} = {}){
@@ -2491,7 +2499,7 @@ async function check(){
   if (!conn || document.hidden) return;
   sendPending();                                                         // a change whose file did not get through goes again
   try {
-    const r = await gh(`git/ref/heads/${BRANCH}`, {etag: refEtag});      // a 304 costs no API quota
+    const r = await gh(`git/ref/heads/${branch()}`, {etag: refEtag});      // a 304 costs no API quota
     lastCheck = new Date().toISOString();
     let fresh = false;
     if (r.status !== 304){
@@ -2504,7 +2512,7 @@ async function check(){
     if (fresh) render(); else renderSync();
   } catch (e) {
     if (e.status === 401 || e.status === 404){ showSetup(e.status === 401 ? "The token was refused (expired or revoked?)."
-                                                         : "The repository or its board branch can't be found with this token."); return; }
+                                                         : "The repository or its branch can't be found with this token."); return; }
     document.getElementById("sync").textContent = "Can't reach GitHub right now; retrying.";
   }
 }
@@ -2560,16 +2568,18 @@ function showSetup(msg){
   document.getElementById("setup").hidden = false;
   document.body.classList.add("noconn");
   document.getElementById("sErr").textContent = msg || "";
-  if (conn){ document.getElementById("sOwner").value = conn.owner; document.getElementById("sRepo").value = conn.repo; }
+  if (conn){ document.getElementById("sOwner").value = conn.owner; document.getElementById("sRepo").value = conn.repo;
+             document.getElementById("sBranch").value = conn.branch === LEGACY_BRANCH ? DEFAULT_BRANCH : conn.branch; }
   document.getElementById("sync").textContent = "Not connected.";
 }
 document.getElementById("setup").addEventListener("submit", async ev => {
   ev.preventDefault();
   conn = {owner: document.getElementById("sOwner").value.trim(), repo: document.getElementById("sRepo").value.trim(),
+          branch: document.getElementById("sBranch").value.trim() || DEFAULT_BRANCH,
           token: document.getElementById("sToken").value.trim()};
   document.getElementById("sErr").textContent = "Checking…";
   try {
-    await gh(`git/ref/heads/${BRANCH}`);
+    await gh(`git/ref/heads/${branch()}`);
     saveConn(conn);
     document.getElementById("sToken").value = "";
     document.getElementById("sErr").textContent = "";
@@ -2580,7 +2590,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
     startPolling();
   } catch (e) {
     document.getElementById("sErr").textContent = e.status === 401 ? "GitHub refused the token." :
-      e.status === 404 ? "No board branch found: check the owner, the repository and the token's repository access." :
+      e.status === 404 ? "No such branch found: check the owner, the repository, the branch and the token's repository access." :
       "Can't reach GitHub.";
   }
 });
