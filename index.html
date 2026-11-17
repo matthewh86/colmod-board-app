@@ -2808,13 +2808,18 @@ function renderDecisions(){   // a fault in this tab must never stop the board f
   catch(e){ const h = document.getElementById("decisions"); if(h && !h.hidden) h.replaceChildren(el("p",{}, "The decisions could not be shown: " + (e && e.message || e))); }
 }
 function drawDecisions(){
-  const list =[...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej" && inProject(c))
+  // a Parked card's questions and steps wait but are not counted (the user, 2026-11-17, HUB112): they are shown
+  // folded at the end, where they can still be answered
+  const all =[...cards.values()].filter(c => openQ(c) && c.col !== "done" && c.col !== "rej" && inProject(c))
     .sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const list = all.filter(c => c.col !== "park"), parkedQs = all.filter(c => c.col === "park");
   const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return (!filt.j || !d.project || d.project === filt.j) && o.opts.length + o.qs.length; });
   const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0)
           + sess.reduce((s,d) => { const o = sessOpen(d); return s + o.opts.length + o.qs.length; }, 0);
   // Decisions: the user's steps count too, so the tab never says nothing waits while a step is open (HUB27)
-  const stepCards = [...cards.values()].filter(c => openSteps(c).length && inProject(c)).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const allSteps = [...cards.values()].filter(c => openSteps(c).length && inProject(c)).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
+  const stepCards = allSteps.filter(c => c.col !== "park"), parkedSteps = allSteps.filter(c => c.col === "park");
+  const nParked = parkedQs.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0) + parkedSteps.reduce((s,c) => s + openSteps(c).length, 0);
   const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), total = n + nSteps;
   const tab = document.getElementById("tab-decisions");
   tabBadge("tab-decisions", "Decisions", total);
@@ -2823,7 +2828,7 @@ function drawDecisions(){
   // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
   // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
   const sig = JSON.stringify([filt.j, readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
-    list.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]), [...cards.values()].filter(c => cardSteps(c).length).map(c => [c.id, c.t, cardSteps(c), c.steps_done]),
+    all.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]), [...cards.values()].filter(c => cardSteps(c).length).map(c => [c.id, c.t, cardSteps(c), c.steps_done]),
     [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans]), [...changes.keys()].map(k => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   const ae = document.activeElement;
@@ -2847,6 +2852,14 @@ function drawDecisions(){
   if(list.length){
     if(sess.length || nSteps) host.append(el("h2",{}, "Questions on cards"));
     host.append(cardDecisionsEl(list));
+  }
+  if(nParked){
+    const d = el("details",{id:"parkeddec"}, el("summary",{}, "On Parked cards (" + nParked + "), not counted"));
+    if(filt.parkedOpen) d.open = true;
+    d.addEventListener("toggle", () => { filt.parkedOpen = d.open; ls("kb.filters", filt); });
+    if(parkedSteps.length) d.append(stepsEl(parkedSteps));
+    if(parkedQs.length) d.append(cardDecisionsEl(parkedQs));
+    host.append(d);
   }
   host.append(pastDecisionsEl());
 }
