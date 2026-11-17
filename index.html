@@ -2042,7 +2042,7 @@ function renderStatus(){
 }
 // The page checks for changes in the background: a tab is only rebuilt when what it shows has changed, and then keeps
 // its place on the page (it used to jump to the top on every refresh, HUB40). The ages count on in place.
-function rebuild(id, sigParts, build){
+function rebuildPanel(id, sigParts, build){
   const host = document.getElementById(id);
   if(!host || host.hidden) return;
   const sig = JSON.stringify(sigParts);
@@ -2116,7 +2116,7 @@ function workTable(list){
 }
 function renderMachines(){
   const now = Date.now();
-  rebuild("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, tokPick,
+  rebuildPanel("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, tokPick,
     [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
@@ -2175,7 +2175,7 @@ function renderMachines(){
 
 // ---------- Hub: the hub's own facts, and whether this App is the hub's
 function renderHubTab(){
-  rebuild("hub", ["h", loaded, hubStatus && hubStatus.facts], host => {
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts], host => {
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
     // what stops it (T50)
@@ -2189,7 +2189,7 @@ function renderHubTab(){
 
 // ---------- Releases: testing and the release line of each project
 function renderReleases(){
-  rebuild("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j], host => {
+  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j], host => {
     const {fact} = statusFacts();
     const done = Number(fact("Done")), total = Number(fact("Total"));
     const dl = el("dl",{class:"facts"});
@@ -2240,7 +2240,7 @@ function moveQueued(from, to){
   renderQueues(); markSyncTabs();
 }
 function renderQueues(){
-  rebuild("queues", ["q", loaded, hubStatus && hubStatus.jobs, queuePending(), readOnly, connected()], host => {
+  rebuildPanel("queues", ["q", loaded, hubStatus && hubStatus.jobs, queuePending(), readOnly, connected()], host => {
     const jobs = Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : [];
     const {list, ranked} = queuedJobs();
     const can = connected() && !readOnly;
