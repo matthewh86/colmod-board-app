@@ -55,6 +55,18 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tally span{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
 .tally b{font-weight:600}
 .tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
+/* HUB68: the changes on their way sit beside the checked time; the button opens them. Tabs holding one shimmer. */
+.syncpill{position:relative; overflow:hidden; font:inherit; font-size:.78rem; border:0; border-radius:999px; padding:2px 10px; margin-left:8px;
+  background:var(--pend-bg); color:var(--pend-fg); cursor:pointer; font-variant-numeric:tabular-nums}
+.syncpill b{font-weight:600}
+.syncpill::before, .tab.syncing::after{content:""; position:absolute; pointer-events:none;
+  background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%); transform:translateX(-100%); animation:sheen 1s infinite}
+.syncpill::before{inset:0}
+.tab.syncing{position:relative; overflow:hidden; color:var(--pend-fg)}
+.tab.syncing::after{left:0; right:0; bottom:0; height:3px; background:linear-gradient(to right, transparent 0%, var(--pend-fg) 50%, transparent 100%)}
+.synconly{display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:.82rem; background:var(--pend-bg); color:var(--pend-fg); border-radius:8px; padding:6px 10px; margin:6px 0}
+.synconly button{font:inherit; cursor:pointer}
+.tabhide{display:none!important}   /* a tab's own list while the sync pill's view shows only the changes on their way */
 .projsel{width:100%; flex:none; margin:2px 0 4px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
 .tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a phone; the page never widens (Manual actions was off-screen, 2026-11-17) */
 .tabs::-webkit-scrollbar{display:none}
@@ -375,6 +387,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
   </nav>
+  <div class="synconly" id="synconly" role="status" hidden></div>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
@@ -382,6 +395,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
       <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Big feature</option><option value="0">No priority</option></select>
       <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="fq" style="flex:none"> Open questions</label>
+      <label style="font-size:.8rem;display:flex;gap:4px;align-items:center" title="Cards that are blocked, not synced, refused by the board, or idle"><input type="checkbox" id="fx" style="flex:none"> Blocked or issue</label>
       <span class="fwrap">
         <button type="button" id="fcols" class="fbtn" aria-haspopup="true" aria-expanded="false" title="Show or hide columns">
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M1.5 2.5h13l-5 6v4.5l-3 1.5v-6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -523,6 +537,53 @@ function rebuild(){
 // click until the board's own data holds it: `changeSettled` below is the only thing that lets one go. Until then it
 // is drawn over whatever an export says, and its file is sent again on every check until it has reached GitHub.
 let lastStamp = 0, sending = 0, sendq = Promise.resolve();
+// ---------- HUB68: where a change on its way belongs, the tabs that shimmer while it is, and the sync pill's view
+let syncOnly = "";   // "" or the tab that shows only the changes on their way (set by the sync pill, cleared by "Show all")
+function pendTab(ch){
+  if(manDocs.has(ch.card)) return "manual";
+  if(artDocs.has(ch.card)) return "artifacts";
+  const f = String(ch.field);
+  if(f.startsWith("ans.") || f.startsWith("step.") || sessDocs.has(ch.card)) return "decisions";
+  return "board";
+}
+function markSyncTabs(){
+  const on = new Set([...changes.values()].map(pendTab));
+  for(const b of document.querySelectorAll("nav.tabs .tab")) b.classList.toggle("syncing", on.has(b.dataset.tab));
+}
+function changeText(ch){
+  const f = String(ch.field), v = ch.value;
+  if(f === "done") return v ? "marked done" : "marked not done";
+  if(f === "delete") return v ? "marked for deletion" : "kept after all";
+  if(f.startsWith("ans.")) return "answer: " + (v == null || v === "" ? "cleared" : String(v)).slice(0, 80);
+  if(f.startsWith("step.")) return v ? "your step marked done" : "your step reopened";
+  if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
+  if(f === "pri") return "priority " + (v ? "P" + v : "none");
+  if(f === "order") return "new order";
+  return f + " changed";
+}
+function gotoSyncing(){   // the sync pill: the tab of the oldest change on its way, showing only those changes
+  const list = [...changes.values()].sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
+  if(!list.length) return;
+  syncOnly = pendTab(list[0]);
+  showTab(syncOnly);
+  render();
+}
+function renderSyncOnly(){
+  const box = document.getElementById("synconly"); if(!box) return;
+  const mine = [...changes.entries()].filter(([, ch]) => pendTab(ch) === syncOnly).sort((a, b) => (a[1].ts || "").localeCompare(b[1].ts || ""));
+  if(syncOnly && (filt.tab !== syncOnly || !mine.length)) syncOnly = "";   // another tab chosen, or all of them arrived
+  for(const id of ["decisions", "manual", "artifacts"]){ const p = document.getElementById(id); if(p) p.classList.toggle("tabhide", syncOnly === id); }
+  box.hidden = !syncOnly;
+  if(!syncOnly){ box.replaceChildren(); return; }
+  const rows = mine.map(([k, ch]) => {
+    const ms = Math.max(0, Date.now() - Date.parse(ch.ts || "")), sent = sentAt.get(k), age = ms < 60000 ? "under a minute" : fmtDur(ms);
+    const name = syncOnly === "board" || cards.has(ch.card)
+      ? el("button",{type:"button", title:"Open " + ch.card, onclick:()=>openCard(ch.card)}, ch.card) : el("b",{}, ch.card);
+    return el("li",{}, name, " ", changeText(ch), " · ", sent ? "sent, waiting " + age + " for the desktop" : "not sent yet (" + age + ")");
+  });
+  box.replaceChildren(el("span",{}, `Showing only the ${mine.length} change${mine.length === 1 ? "" : "s"} on the way to the desktop`),
+    el("button",{type:"button", onclick:()=>{ syncOnly = ""; render(); }}, "Show all"), el("ul",{style:"margin:0; padding-left:18px; flex-basis:100%"}, rows));
+}
 const PEND_KEY = "cb.changes", queued = new Set();
 function pendSave(){
   try{ localStorage.setItem(PEND_KEY, JSON.stringify([...changes].map(([id, doc]) => [id, doc, sentAt.get(id) || null]))); }catch(e){}
@@ -674,12 +735,14 @@ function inProject(c){ return !filt.j || cardProject(c) === filt.j; }
 function epicInProject(k){ const p = epics.get(k)?.project; return !filt.j || !p || p === filt.j; }   // an epic not given one yet shows everywhere
 // <<< project-rules
 function matches(c){
+  if(syncOnly === "board" && changes.size) return !!c._pending;   // the sync pill's view: the cards on their way, whatever the filters (HUB68)
   if(!inProject(c)) return false;
   if(filt.p!=="" && String(c.pri||0)!==filt.p) return false;
   if(filt.e && (c.epic||"")!==filt.e) return false;
   if(filt.y && cardKind(c)!==(filt.y==="-" ? "" : filt.y)) return false;   // the issue type ("-": none)
   if(filt.t && epicTheme(c.epic)!==filt.t) return false;
   if(filt.qo && !openQ(c)) return false;
+  if(filt.x && !cardIssue(c)) return false;            // HUB68: blocked, not synced, refused, idle
   if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
     ...(Array.isArray(c.opts)?c.opts:[]).map(o=>o&&o.q), ...qList(c).map(x=>x.q)].some(x=>x&&String(x).toLowerCase().includes(s))) return false; }
   return true;
@@ -689,6 +752,20 @@ function matches(c){
 function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q) : []; }
 // why a card's latest text is not synced: the card's own flag (a clashing edit kept as a copy), or a machine's report
 // that the privacy rule keeps the card's newest version there (that version never reaches this page)
+// HUB68: a card with a problem to look at: a blocker, a sync issue, a change the board refused, idle
+function cardIssue(c){ return !!(c.blk || syncIssue(c) || refusedNote(c.id) || idleMin(c)); }
+// the board's refusals of changes made here (export/phone-refused.json), kept a day so the card can show it
+const REFUSED_KEY = "cb.refused", REFUSED_KEEP_MS = 24 * 3600 * 1000;
+function refusedRows(){
+  let rows = [];
+  try{ rows = JSON.parse(localStorage.getItem(REFUSED_KEY)) || []; }catch(e){ rows = []; }
+  return Array.isArray(rows) ? rows.filter(r => r && r.card && Date.now() - Date.parse(r.seen || "") < REFUSED_KEEP_MS) : [];
+}
+function refusedAdd(card, field, why){
+  const rows = refusedRows(); rows.push({card, field, why: String(why || ""), seen: new Date().toISOString()});
+  try{ localStorage.setItem(REFUSED_KEY, JSON.stringify(rows.slice(-50))); }catch(e){}
+}
+function refusedNote(id){ const r = refusedRows().filter(x => x.card === id).pop(); return r ? `The board refused your change (${r.field}): ${r.why}` : ""; }
 function syncIssue(c){
   if(c.sync_issue) return String(c.sync_issue);
   for(const m of (hubStatus && hubStatus.machines) || []){
@@ -848,6 +925,7 @@ function cardEl(c, full=false){
     el("span",{class:"id"},c.id),
     c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
+    refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
     c._pending && full ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
@@ -1142,7 +1220,9 @@ function renderSync(){
   const sync = $("#sync"); if(!conn || !loaded) return;
   sync.replaceChildren(meta.exported_at ? el("span",{}, "Board as of ", el("b",{}, fmtTime(meta.exported_at)),
     lastCheck ? " · checked " + new Date(lastCheck).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", second:"2-digit"}) : "")
-    : el("span",{}, "No board export yet: the desktop's node writes it."));
+    : el("span",{}, "No board export yet: the desktop's node writes it."),
+    changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:gotoSyncing},   // HUB68
+      el("b",{}, String(changes.size)), changes.size === 1 ? " change syncing to the desktop" : " changes syncing to the desktop") : "");
 }
 // Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
 // column's scroll and the open card window's scroll. Not while a text box in a card has the focus, nor during a drag.
@@ -1197,8 +1277,8 @@ function render(){
   if(loaded){
     const qs = all.filter(openQ).length;
     tabBadge("tab-board", "Board", qs);   // the cards with open questions: a red circle on the Board tab (the user, 2026-11-17)
-    if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change syncing to the desktop" : " changes syncing to the desktop"));
   }
+  markSyncTabs(); renderSyncOnly();   // HUB68: the count itself is the sync pill beside the checked time
   if(focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
   renderSelBar();
   renderModal();
@@ -1264,6 +1344,8 @@ $("#fy").append(el("option",{value:"-"}, "No type"));
 $("#fy").value = filt.y||"";
 $("#fy").addEventListener("change", e=>{ filt.y=e.target.value; ls("kb.filters",filt); render(); });
 $("#fq").addEventListener("change", e=>{ filt.qo=e.target.checked; ls("kb.filters",filt); render(); });
+$("#fx").checked = !!filt.x;
+$("#fx").addEventListener("change", e=>{ filt.x=e.target.checked; ls("kb.filters",filt); render(); });
 function fcount(){ const n = COLS.filter(c => filt.hide[c.k]).length; const b = $("#fcount"); b.hidden = !n; b.textContent = n ? n + " hidden" : ""; }
 $("#fpop").append(el("div",{class:"fh"}, "Show columns"));
 for(const col of COLS){   // which columns show
@@ -2457,6 +2539,7 @@ async function load(sha){
     for (const x of fresh){
       const name = String(x.change).split("__");
       changes.delete(x.change); sentAt.delete(x.change);
+      refusedAdd(name[0], name[1] || "", x.why);          // the card shows "Sync refused" for a day (HUB68)
       toast(`Not applied (${name[0]} ${name[1] || ""}): ${x.why}`);
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
