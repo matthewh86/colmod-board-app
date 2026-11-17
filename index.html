@@ -159,6 +159,7 @@ body.ro #selbtn{display:none}
 /* the sheen moves also when the system asks for reduced motion (the user, 2026-11-16) */
 .card .t{font-weight:600; font-size:.86rem; text-wrap:pretty}
 .card .st{font-size:.78rem; color:var(--muted)}
+a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
 .card .blkb{font-size:.85rem; color:var(--blk-ink); background:var(--blk-bg); border-radius:6px; padding:6px 9px; margin:4px 0}
 .card .lnk{font-size:.78rem} .card .lnk a{color:inherit; opacity:.8} .card .lnk a:hover{opacity:1}
@@ -334,6 +335,12 @@ table.st tr.heat td.num:first-of-type{font-weight:600}
 .qmove button{min-width:30px; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
 .qmove button:disabled{opacity:.35; cursor:default}
 .qbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.qgrip{cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; padding:2px 8px; color:var(--muted); font-size:1.05rem; line-height:1}
+.qgrip[aria-disabled="true"]{opacity:.35; cursor:default}
+tr.qdrag{opacity:.55; outline:2px dashed var(--c-prog); outline-offset:-2px}
+body.qdragging{cursor:grabbing; user-select:none; -webkit-user-select:none}
+.jwhat{display:block; color:var(--ink); font-size:.78rem; margin-top:2px; overflow-wrap:anywhere}
+.jid{display:block}
 dl.facts{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:.86rem; margin:0}
 dl.facts dt{color:var(--muted)}
 dl.facts dd{margin:0; overflow-wrap:anywhere}
@@ -913,11 +920,28 @@ function colTip(c){
   const since = c.colSince ? Date.parse(c.colSince) : NaN;
   return isNaN(since) ? "" : "⏳ "+fmtDur(Date.now()-since)+(col?" in "+col.name:"");
 }
+// a text with its web addresses as links that open in a new tab (the user, 2026-11-17, HUB98: a card's link was plain
+// text). Only http(s) addresses; a trailing full stop, comma or bracket stays text. A tap on one never opens the card.
+const URL_RX = /\bhttps?:\/\/[^\s<>"'`]+/g;
+function linkify(text){
+  const s = String(text == null ? "" : text), out = [];
+  let i = 0, m;
+  URL_RX.lastIndex = 0;
+  while((m = URL_RX.exec(s))){
+    let url = m[0];
+    while(/[.,;:!?)\]}'"]$/.test(url) && !(url.endsWith(")") && url.includes("("))) url = url.slice(0, -1);
+    if(m.index > i) out.push(s.slice(i, m.index));
+    out.push(el("a",{href:url, target:"_blank", rel:"noopener noreferrer", class:"tlink", onclick:ev=>ev.stopPropagation()}, url));
+    i = m.index + url.length; URL_RX.lastIndex = i;
+  }
+  if(i < s.length) out.push(s.slice(i));
+  return out;
+}
 // the description: text, with the vault's picture embeds (![[media/...|320]]) shown as pictures
 function descEl(d){
   const p = el("div",{class:"d"}), rx = /!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
   let i = 0, m;
-  const text = s => { s = s.replace(/^\s+|\s+$/g, ""); if(s) p.append(el("span",{}, s)); };
+  const text = s => { s = s.replace(/^\s+|\s+$/g, ""); if(s) p.append(el("span",{}, linkify(s))); };
   while((m = rx.exec(d))){
     text(d.slice(i, m.index)); i = rx.lastIndex;
     const src = mediaImg(m[1].trim());
@@ -950,7 +974,7 @@ function cardEl(c, full=false){
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null,
     openSteps(c).length ? el("span",{class:"qmark", title:"Waits on a step of yours: "+openSteps(c).map(s=>s.step).join("; "), "aria-label":"Waits on your step"}, "🧑") : null));
-  if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), c.blk));
+  if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), linkify(c.blk)));
   if(full) for(const s of openSteps(c)) e.append(el("div",{class:"blkb", onclick:ev=>ev.stopPropagation()}, el("b",{},"🧑 Your step: "), s.step, " ",
     readOnly ? null : el("button",{type:"button", class:"rec", title:"Mark this step done", onclick:()=>markStep(c, s.id, true)}, "Done"), " ", pendNote(c.id, s.id, "step.")));
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
@@ -966,7 +990,7 @@ function cardEl(c, full=false){
     e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(ep?ep.hue:210), title:"Change this card's epic"},
       el("span",{"aria-hidden":"true"}, (ep?ep.name:"(no epic)")+" ▾"), es)));
   } else if(ep) e.append(el("div",{}, tpath, el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
-  if(c.st && full) e.append(el("div",{class:"st"}, c.st));   // board cards stay short: details in the card window
+  if(c.st && full) e.append(el("div",{class:"st"}, linkify(c.st)));   // board cards stay short: details in the card window
   if(c.link && /^https:\/\/[\w.-]+\//.test(c.link))        // the change-log entry for this card
     e.append(el("div",{class:"lnk"}, el("a",{href:c.link, target:"_blank", rel:"noopener", onclick:ev=>ev.stopPropagation(),
       title:"Open this item in the change log"}, full ? "What changed (change log) ↗" : "Changes ↗")));
@@ -1003,8 +1027,8 @@ function cardEl(c, full=false){
           write(c.id,{ans: patch});
         });
         const qsrc = mediaImg(o.img);   // e.g. the original, for comparison
-        return el("div",{class:"dq"}, el("div",{class:"qt"}, o.q), qsrc ? pic(qsrc, {class:"qimg zoom", alt:o.q, loading:"lazy", tabindex:"0", title:"Click to enlarge"}) : null,
-          row, other, o.hint?el("div",{class:"hint"},o.hint):null);
+        return el("div",{class:"dq"}, el("div",{class:"qt"}, linkify(o.q)), qsrc ? pic(qsrc, {class:"qimg zoom", alt:o.q, loading:"lazy", tabindex:"0", title:"Click to enlarge"}) : null,
+          row, other, o.hint?el("div",{class:"hint"},linkify(o.hint)):null);
       };
       // open decisions in full; answered ones fold into "Earlier decisions" (question -> answer), with the full
       // controls one more click away under "Change an answer"
@@ -1018,12 +1042,12 @@ function cardEl(c, full=false){
           return ch ? ch.t + (note ? " — " + note : "") : (note || (ans[o.id] == null ? "(no answer)" : String(ans[o.id])));
         };
         box.append(foldEl("past:"+c.id, "Earlier decisions ("+past.length+")", "past",
-          ...past.map(o => el("div",{class:"pd"}, el("span",{class:"pdq"}, o.q), el("span",{class:"pda"}, answerOf(o)))),
+          ...past.map(o => el("div",{class:"pd"}, el("span",{class:"pdq"}, linkify(o.q)), el("span",{class:"pda"}, answerOf(o)))),
           foldEl("edit:"+c.id, "Change an answer", "pedit", ...past.map(optEl))));
       }
       e.append(box);
     }
-  } else if(c.q && !qList(c).length) e.append(full ? el("div",{class:"qb"}, c.q) : el("div",{class:"labs"}, el("span",{class:"lab"}, "Question")));
+  } else if(c.q && !qList(c).length) e.append(full ? el("div",{class:"qb"}, linkify(c.q)) : el("div",{class:"labs"}, el("span",{class:"lab"}, "Question")));
   const qs = qList(c);
   if(qs.length){   // free-text questions: a text field under each, saved when you leave it
     const qdone = qs.filter(x=>String(ans[x.id]||"").trim()).length;
@@ -1036,7 +1060,7 @@ function cardEl(c, full=false){
         const ta = el("textarea",{id:tid, placeholder:"Your answer (saved when you leave the field)", onclick:ev=>ev.stopPropagation()});
         ta.value = ans[x.id] || "";
         ta.addEventListener("blur", ()=>{ const v = ta.value.trim(); if(v !== String(ans[x.id]||"")) write(c.id,{ans:{[x.id]: v || null}}); });
-        return el("div",{class:"dq"}, el("label",{class:"qt", for:tid}, x.q), ta);
+        return el("div",{class:"dq"}, el("label",{class:"qt", for:tid}, linkify(x.q)), ta);
       };
       const qDone = pastAtOpen(c, qs.map(x=>"q:"+x.id), k=>!!String(ans[k.slice(2)]||"").trim());
       for(const x of qs) if(!qDone("q:"+x.id)) box.append(qEl(x));
@@ -1063,7 +1087,7 @@ function cardEl(c, full=false){
         const imgs = (Array.isArray(a.img) ? a.img : a.img ? [a.img] : []).map(mediaImg).filter(Boolean);
         box.append(el("div",{class:"ai"},
           el("div",{class:"at"}, a.ts ? fmtTime(a.ts) : ""),
-          a.t ? el("div",{class:"ax"}, String(a.t)) : null,
+          a.t ? el("div",{class:"ax"}, linkify(a.t)) : null,
           imgs.length ? el("div",{class:"aimgs"}, ...imgs.map(src => pic(src, {alt:a.t||"screenshot", loading:"lazy", class:"zoom", tabindex:"0", title:"Click to enlarge"}))) : null));
       }
       e.append(box);
@@ -1850,7 +1874,7 @@ const tokens = new Map(), tokEls = new Map();   // machine -> its history / {sig
 let tokMode = "all";                            // "all" | "new" (without what was read back from the cache)
 let tokHours = 24;                              // the span shown: the last day by default (the node keeps a day)
 let tokPick = "";                               // one session or agent shown alone; "" = all of them, stacked
-const TOK_COL = ["--c-prog", "--c-decide", "--c-done", "--c-test", "--c-built", "--c-next"];
+const TOK_COL = ["--c-prog", "--c-decide", "--c-done", "--c-test", "--c-built", "--c-next", "--c-refining", "--c-refined", "--c-rej", "--c-back"];
 const TOK_ALL = "all machines";                 // the total graph's key: a machine's name never has a space
 // The long-context marker (HUB40): a session or agent whose context is long, because it has run a long time, re-reads
 // all of it with every reply. Measured by the context its latest reply read (new input + cache write + cache read,
@@ -1940,11 +1964,12 @@ function drawTokens(box, machine){
 function buildTokens(d, machine, w){
   const {n, rows} = tokSeries(d);
   const step = (d.step || 1800) * 1000, end = d.end * 1000, t0 = end - n * step;
-  const shown = rows.slice(0, TOK_COL.length), rest = rows.slice(TOK_COL.length);
-  const colOf = r => { const i = shown.indexOf(r); return i >= 0 ? TOK_COL[i] : "--c-park"; };
+  // every session and agent has its own band and legend entry, none summed into "more" (the user, 2026-11-17, HUB92);
+  // the colours repeat past the palette, and the hover names each band
+  const shown = rows.filter(r => r.total > 0);
+  const colOf = r => { const i = shown.indexOf(r); return TOK_COL[Math.max(0, i) % TOK_COL.length]; };
   const picked = rows.find(r => r.name === tokPick);
   let stack = shown.map(r => ({name: r.name, col: colOf(r), val: r.val}));
-  if(rest.length) stack.push({name: rest.length + " more", col: "--c-park", val: Array.from({length: n}, (_, i) => rest.reduce((s, r) => s + r.val[i], 0))});
   if(picked) stack = [{name: picked.name, col: colOf(picked), val: picked.val}];   // one session or agent alone, on its own scale
   const tot = Array.from({length: n}, (_, i) => stack.reduce((s, r) => s + r.val[i], 0)), most = Math.max(1, ...tot);
   const all = picked ? picked.total : rows.reduce((s, r) => s + r.total, 0);
@@ -2175,7 +2200,7 @@ function renderMachines(){
 
 // ---------- Hub: the hub's own facts, and whether this App is the hub's
 function renderHubTab(){
-  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts], host => {
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size], host => {
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
     // what stops it (T50)
@@ -2184,6 +2209,13 @@ function renderHubTab(){
     else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this App is the hub's is " + appPub));
     const hb = facts.filter(f => f.group === "hub").map(f => el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
     host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
+    // the hub's own jobs (the user, 2026-11-17, HUB96): for a HUB card, or for no card (summaries, syncs)
+    const hubJobs = (Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : []).filter(j => !j.card || /^HUB/.test(j.card));
+    const queued = hubJobs.filter(j => j.state === "queued");
+    host.append(el("h2",{}, "Hub jobs"), el("p",{class:"note"}, queued.length
+      ? queued.length + " queued: " + queued.map(j => j.kind + (j.card ? " " + j.card : "")).join(", ") + " (the Queues tab orders them)."
+      : "No hub job is queued."));
+    jobTables(host, hubJobs, {h: "h3", running: "Running hub jobs", finished: "Finished hub jobs"});
   });
 }
 
@@ -2239,38 +2271,81 @@ function moveQueued(from, to){
   change({id: "jobs"}, "queue", ids);
   renderQueues(); markSyncTabs();
 }
+function jobCell(j){   // a job: its kind, what it does (HUB95), who asked, and its id
+  return el("td",{}, j.kind || "-", j.what ? el("span",{class:"jwhat"}, j.what) : null,
+    el("small",{class:"jid"}, j.id + (j.requested_by ? " · by " + j.requested_by : "")));
+}
+function cardCell(j){   // a job's card, with the card's title when the board has it
+  const c = j.card && cards.get(j.card);
+  return el("td",{}, j.card || "-", c && c.t ? el("small",{class:"jwhat"}, String(c.t).slice(0, 80)) : null);
+}
+function jobTables(host, jobs, opts={}){   // Running and Finished lately, for the Queues tab and the Hub tab
+  const live = jobs.filter(j => j.state === "claimed" || j.state === "running");
+  host.append(el(opts.h || "h2",{}, opts.running || "Running"), live.length ? stTable(["State", "Machine", "Job", "Card", "Started", "Build", "Tests"], live.map(j => {
+    const t0 = Date.parse(j.claimed_at);
+    return el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
+      jobCell(j), cardCell(j),
+      el("td",{}, isNaN(t0) ? "-" : agoEl(t0, " ago")), el("td",{}, j.build || "-"), el("td",{}, j.tests || "-"));
+  })) : el("p",{class:"note"}, "No job runs right now."));
+  const fin = jobs.filter(j => !["queued", "claimed", "running"].includes(j.state));
+  host.append(el(opts.h || "h2",{}, opts.finished || "Finished lately"), fin.length ? stTable(["State", "Machine", "Job", "Card", "Build", "Result"], fin.map(j =>
+    el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
+      jobCell(j), cardCell(j),
+      el("td",{}, j.build || "-"), el("td",{}, j.result || "-")))) : el("p",{class:"note"}, "No finished jobs in the export."));
+}
+// drag and drop of the queued rows (the user, 2026-11-17, HUB94): press the grip and drag the row to its place; the
+// arrow buttons stay for the keyboard and a screen reader. The tab is not rebuilt while a row is held.
+let qdrag = null;
+function qGripDown(ev, i){
+  if(ev.button > 0 || !connected() || readOnly) return;
+  const tr = ev.currentTarget.closest("tr"), body = tr && tr.parentElement;
+  if(!body) return;
+  ev.preventDefault();
+  qdrag = {from: i, to: i, tr, body, id: ev.pointerId};
+  try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch {}
+  tr.classList.add("qdrag"); document.body.classList.add("qdragging");
+}
+function qGripMove(ev){
+  if(!qdrag || ev.pointerId !== qdrag.id) return;
+  const rows = [...qdrag.body.children].filter(r => r !== qdrag.tr);
+  let at = rows.length;
+  for(let k = 0; k < rows.length; k++){ const b = rows[k].getBoundingClientRect(); if(ev.clientY < b.top + b.height / 2){ at = k; break; } }
+  if(at !== qdrag.to){ qdrag.to = at; qdrag.body.insertBefore(qdrag.tr, rows[at] || null); }
+  const m = 48;   // near the window's edge the page scrolls
+  if(ev.clientY < m) scrollBy(0, -12); else if(ev.clientY > innerHeight - m) scrollBy(0, 12);
+}
+function qGripUp(ev, cancel){
+  if(!qdrag || (ev && ev.pointerId !== qdrag.id)) return;
+  const {from, to} = qdrag;
+  qdrag = null; document.body.classList.remove("qdragging");
+  if(!cancel && to !== from) moveQueued(from, to);
+  else { const q = document.getElementById("queues"); if(q) q.dataset.sig = ""; renderQueues(); }   // put the row back
+}
 function renderQueues(){
-  rebuildPanel("queues", ["q", loaded, hubStatus && hubStatus.jobs, queuePending(), readOnly, connected()], host => {
+  if(qdrag) return;
+  rebuildPanel("queues", ["q", loaded, hubStatus && hubStatus.jobs, queuePending(), readOnly, connected(), cards.size], host => {
     const jobs = Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : [];
     const {list, ranked} = queuedJobs();
     const can = connected() && !readOnly;
     const mv = (i, to, label, title) => el("button",{type:"button", title, "aria-label":title, disabled: !can || to < 0 || to >= list.length || to === i,
       onclick:()=>moveQueued(i, to)}, label);
+    const grip = i => el("span",{class:"qgrip", title:"Drag to move " + list[i].id, "aria-hidden":"true", "aria-disabled":String(!can || list.length < 2),
+      onpointerdown:ev=>qGripDown(ev, i), onpointermove:qGripMove, onpointerup:ev=>qGripUp(ev), onpointercancel:ev=>qGripUp(ev, true)}, "⠿");
     const rows = list.map((j, i) => el("tr",{},
       el("td",{class:"num"}, String(i + 1)),
-      el("td",{}, el("div",{class:"qmove"}, mv(i, 0, "⤒", "Move " + j.id + " to the top"), mv(i, i - 1, "↑", "Move " + j.id + " up"), mv(i, i + 1, "↓", "Move " + j.id + " down"))),
-      el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)),
-      el("td",{}, j.target || "-"), el("td",{}, j.card || "-"),
+      el("td",{}, el("div",{class:"qmove"}, grip(i), mv(i, 0, "⤒", "Move " + j.id + " to the top"), mv(i, i - 1, "↑", "Move " + j.id + " up"), mv(i, i + 1, "↓", "Move " + j.id + " down"))),
+      jobCell(j),
+      el("td",{}, j.target || "-"), cardCell(j),
       el("td",{}, (j.needs || []).join(", ") || "-"),
       el("td",{}, ranked.has(j.id) ? "placed" : "automatic")));
     host.append(el("h2",{}, "Queued"), el("p",{class:"note"},
       "Jobs start top first: the ones placed here go first, in this order, on whichever machine offers what each needs; "
-      + "the rest follow in the automatic order (a release's tests first, then the projects take turns). A move reaches the board within about a minute."),
+      + "the rest follow in the automatic order (a release's tests first, then the projects take turns). Drag a row by its grip, or use the arrows. "
+      + "A move reaches the board within about a minute."),
       list.length ? stTable(["#", "Move", "Job", "Target", "Card", "Needs", "Order"], rows, [0]) : el("p",{class:"note"}, "Nothing is queued."));
     if(list.length && ranked.size) host.append(el("div",{class:"qbar"}, el("button",{type:"button", class:"linkbtn", disabled:!can,
       onclick:()=>{ change({id: "jobs"}, "queue", []); renderQueues(); markSyncTabs(); }}, "Back to the automatic order")));
-    const live = jobs.filter(j => j.state === "claimed" || j.state === "running");
-    host.append(el("h2",{}, "Running"), live.length ? stTable(["State", "Machine", "Job", "Card", "Started", "Build", "Tests"], live.map(j => {
-      const t0 = Date.parse(j.claimed_at);
-      return el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
-        el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)), el("td",{}, j.card || "-"),
-        el("td",{}, isNaN(t0) ? "-" : agoEl(t0, " ago")), el("td",{}, j.build || "-"), el("td",{}, j.tests || "-"));
-    })) : el("p",{class:"note"}, "No job runs right now."));
-    const fin = jobs.filter(j => !["queued", "claimed", "running"].includes(j.state));
-    host.append(el("h2",{}, "Finished lately"), fin.length ? stTable(["State", "Machine", "Job", "Card", "Build", "Result"], fin.map(j =>
-      el("tr",{}, el("td",{}, stateEl(j.state)), el("td",{}, j.machine || j.target || "-"),
-        el("td",{}, j.kind || "-", el("br"), el("small",{}, j.id)), el("td",{}, j.card || "-"),
-        el("td",{}, j.build || "-"), el("td",{}, j.result || "-")))) : el("p",{class:"note"}, "No finished jobs in the export."));
+    jobTables(host, jobs);
   });
 }
 
@@ -2467,12 +2542,12 @@ function sessEl(doc){
     other.value = a[o.id+OTHER] || "";
     other.addEventListener("blur", ()=>{ const v = other.value.trim(); if(!v || v === String(a[o.id+OTHER]||"")) return;
       change(doc, "ans." + o.id + OTHER, v); sessAnswer(doc, o.id, "__other"); });
-    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ "+o.q), row, other, o.hint ? el("div",{class:"hint"}, o.hint) : null));
+    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ ", linkify(o.q)), row, other, o.hint ? el("div",{class:"hint"}, linkify(o.hint)) : null));
   }
   for(const x of qs){
     const ta = el("textarea",{placeholder:"Your answer (saved when you leave the field)", "aria-label":"Answer: "+x.q});
     ta.addEventListener("blur", ()=>{ const v = ta.value.trim(); if(v) sessAnswer(doc, x.id, v); });
-    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ "+x.q), ta));
+    box.append(el("div",{class:"dq"}, el("div",{class:"qt"}, "❓ ", linkify(x.q)), ta));
   }
   return box;
 }
