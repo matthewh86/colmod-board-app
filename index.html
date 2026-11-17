@@ -56,8 +56,10 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tally b{font-weight:600}
 .tally span.pend{background:var(--pend-bg); color:var(--pend-fg); border-color:transparent}
 .projsel{width:100%; flex:none; margin:2px 0 4px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg)}
-.tab{font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a phone; the page never widens (Manual actions was off-screen, 2026-11-17) */
+.tabs::-webkit-scrollbar{display:none}
+.tab .badge{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:9px; background:#d93025; color:#fff; font-size:.7rem; font-weight:700; line-height:1; vertical-align:2px; box-sizing:border-box}   /* the open count, a red circle (Decisions, Manual actions) */
+.tab{flex:none; white-space:nowrap; font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
 .bar{position:sticky; top:calc(env(safe-area-inset-top,0px) + 41px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 .bar input:not([type=checkbox]),.bar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
@@ -368,10 +370,10 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
-    <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Waiting on me</button>
+    <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
+    <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines &amp; jobs</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
-    <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
   </nav>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
@@ -1194,7 +1196,7 @@ function render(){
   const t = $("#tally"); t.textContent = "";
   if(loaded){
     const qs = all.filter(openQ).length;
-    if(qs) t.append(el("span",{}, el("b",{},String(qs)), " open questions"));
+    tabBadge("tab-board", "Board", qs);   // the cards with open questions: a red circle on the Board tab (the user, 2026-11-17)
     if(changes.size) t.append(el("span",{class:"pend"}, el("b",{},String(changes.size)), changes.size===1 ? " change syncing to the desktop" : " changes syncing to the desktop"));
   }
   if(focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
@@ -1281,7 +1283,7 @@ function setProject(j){   // the project switcher; an epic or a theme of another
 }
 let projSel = null;   // the project switcher, at the top of the Projects panel (the user, 2026-11-17)
 function fillProjects(){
-  const sel = projSel || (projSel = el("select",{id:"fj", class:"projsel", "aria-label":"Project", title:"Show one project or all of them (the board and Waiting on me)"}));
+  const sel = projSel || (projSel = el("select",{id:"fj", class:"projsel", "aria-label":"Project", title:"Show one project or all of them (the board and Decisions)"}));
   if(!sel.dataset.on){ sel.dataset.on = "1"; sel.addEventListener("change", e=>setProject(e.target.value)); }
   sel.textContent=""; sel.append(el("option",{value:""},"All projects"));
   for(const [k,v] of [...projects.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)))
@@ -2063,7 +2065,7 @@ function renderStatus(){
 }
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "decisions", "status", "artifacts", "manual"];
+const TABS = ["board", "decisions", "manual", "status", "artifacts"];   // the tab order (the user, 2026-11-17)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -2135,8 +2137,17 @@ function manDone(doc){    // the exported state with this action's change that i
     if(ch.card === doc.id && ch.field === "done") v = ch.value === true;
   return v;
 }
+function tabBadge(id, label, n){   // a tab's count: a red circle with the number, none at 0 (the user, 2026-11-17)
+  const tab = document.getElementById(id);
+  if(!tab) return;
+  const sig = label + "|" + n;
+  if(tab.dataset.badge === sig) return;
+  tab.dataset.badge = sig;
+  tab.replaceChildren(label, n ? el("span",{class:"badge", "aria-label":n + " open"}, n > 99 ? "99+" : String(n)) : "");
+}
 function renderManual(){   // a fault in this tab must never stop the board from drawing
   const host = document.getElementById("manual");
+  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d)).length); } catch { /* the count is an extra */ }
   if(!host || host.hidden) return;
   try { drawManual(host); }
   catch(e){ host.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
@@ -2211,7 +2222,7 @@ function sessOpen(doc){
 }
 // the user's steps (HUB27): something only the user can do that a card waits on (the card's user_steps [{id, step}]
 // and steps_done {id: true}). Marked done here with a change file `step.<id>`, like an answer; a done step leaves
-// Waiting on me and is listed with the past decisions, where it can be reopened.
+// Decisions and is listed with the past decisions, where it can be reopened.
 function cardSteps(c){ return (Array.isArray(c.user_steps) ? c.user_steps : []).filter(s => s && s.id && s.step); }
 function stepDone(c, sid){ return (c.steps_done || {})[sid] === true; }
 function openSteps(c){ return c.col === "done" || c.col === "rej" ? [] : cardSteps(c).filter(s => !stepDone(c, s.id)); }
@@ -2265,11 +2276,11 @@ function drawDecisions(){
   const sess = [...sessDocs.values()].filter(d => { const o = sessOpen(d); return (!filt.j || !d.project || d.project === filt.j) && o.opts.length + o.qs.length; });
   const n = list.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0)
           + sess.reduce((s,d) => { const o = sessOpen(d); return s + o.opts.length + o.qs.length; }, 0);
-  // Waiting on me: the user's steps count too, so the tab never says nothing waits while a step is open (HUB27)
+  // Decisions: the user's steps count too, so the tab never says nothing waits while a step is open (HUB27)
   const stepCards = [...cards.values()].filter(c => openSteps(c).length && inProject(c)).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
   const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), total = n + nSteps;
   const tab = document.getElementById("tab-decisions");
-  if(tab) tab.textContent = total ? "Waiting on me ("+total+")" : "Waiting on me";
+  tabBadge("tab-decisions", "Decisions", total);
   const host = document.getElementById("decisions");
   if(!host || host.hidden) return;
   // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
@@ -2290,7 +2301,7 @@ function drawDecisions(){
   host.dataset.sig = sig;
   if(host.offsetHeight) host.style.minHeight = host.offsetHeight + "px";      // the page keeps its height while the tab is rebuilt
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
-  host.replaceChildren(el("h2",{}, total ? "Waiting on me: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : ""].filter(Boolean).join(" and ")
+  host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : ""].filter(Boolean).join(" and ")
     : "Nothing is waiting for you"));
   if(nSteps) host.append(el("h2",{}, "Your steps"),
     el("p",{}, readOnly ? "This view is read-only: mark a step done on the desktop." : "Something only you can do; a card waits on it. Press Done when it is done."), stepsEl(stepCards));
@@ -2327,7 +2338,7 @@ function pastDecisionsEl(){
       rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, x.q), el("td",{}, el("b",{}, String(a[x.id])), " ", pendNote(c.id, x.id))));
     for(const s of cardSteps(c)) if(stepDone(c, s.id))         // a step marked done: it can be reopened (HUB27)
       rows.push(el("tr",{}, el("td",{}, open()), el("td",{}, "🧑 " + s.step), el("td",{}, el("b",{}, "Done"), " ", pendNote(c.id, s.id, "step."), " ",
-        readOnly ? null : el("button",{type:"button", title:"Not done after all: back to Waiting on me", onclick:()=>markStep(c, s.id, false)}, "Reopen"))));
+        readOnly ? null : el("button",{type:"button", title:"Not done after all: back to Decisions", onclick:()=>markStep(c, s.id, false)}, "Reopen"))));
   }
   const d = el("details",{id:"pastdec"}, el("summary",{}, "Past decisions (" + rows.length + ")"));
   if(filt.pastOpen) d.open = true;
@@ -2356,6 +2367,7 @@ function showTab(name, fromHash){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
     b.tabIndex = on ? 0 : -1;
+    if(on) b.scrollIntoView({block:"nearest", inline:"nearest"});   // the chosen tab is in view on a phone
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
