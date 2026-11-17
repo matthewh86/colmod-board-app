@@ -353,6 +353,51 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 .meter{height:8px; border-radius:999px; background:var(--line); overflow:hidden}
 .meter span{display:block; height:100%; background:var(--c-done)}
 .tblwrap{overflow-x:auto}
+/* HUB105: the Gantt tab. The label column stays put (sticky) while the chart scrolls sideways inside its own box */
+#gantt{--glw:190px; --grow:26px; grid-template-columns:minmax(0,1fr)}
+#gantt > *{min-width:0}
+.ghead{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center}
+.ghead .pill{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
+.ghead .pill.over{color:var(--blk-ink); background:var(--blk-bg); border-color:transparent; font-weight:600}
+.gscale{display:inline-flex; margin-left:auto; border:1px solid var(--line); border-radius:6px; overflow:hidden}
+.gscale button{font:inherit; font-size:.8rem; border:0; background:var(--surface); color:var(--ink); padding:4px 12px; cursor:pointer; min-height:30px}
+.gscale button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
+.glegend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.75rem; color:var(--muted)}
+.glegend i{display:inline-block; width:22px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:4px; background:var(--muted)}
+.gwrap{overflow-x:auto; overflow-y:hidden; border:1px solid var(--line); border-radius:8px; background:var(--surface); max-width:100%; -webkit-overflow-scrolling:touch}
+.gin{position:relative}
+.grow{display:flex; height:var(--grow); border-bottom:1px solid var(--line)}
+.grow.gaxis{height:34px; position:sticky; top:0}
+.grow.gproj{height:24px; background:var(--sunk)}
+.grow.gres{height:34px; background:var(--sunk)}
+.glab{position:sticky; left:0; z-index:3; flex:none; width:var(--glw); background:inherit; background-color:var(--surface); border-right:1px solid var(--line); display:flex; align-items:center; gap:5px; padding:0 6px; font-size:.76rem; overflow:hidden; white-space:nowrap; cursor:pointer}
+.gproj .glab, .gres .glab{background-color:var(--sunk); cursor:default; font-weight:600; color:var(--muted)}
+.gproj .glab{color:var(--ink); text-transform:uppercase; letter-spacing:.05em; font-size:.7rem}
+.glab .gid{font-family:var(--f-mono); font-weight:600; color:var(--tc,var(--muted))}
+.glab .gk{font-size:.75rem; color:transparent; text-shadow:0 0 0 var(--tc,var(--muted))}
+.glab .gt{overflow:hidden; text-overflow:ellipsis; color:var(--ink)}
+.gcell{position:relative; flex:none}
+.gtick{position:absolute; top:0; bottom:0; border-left:1px solid var(--line); font-size:.68rem; color:var(--muted); padding:2px 3px; white-space:nowrap}
+.gtick.day{border-left-color:var(--muted); color:var(--ink); font-weight:600}
+.gbar{position:absolute; top:5px; height:calc(var(--grow) - 11px); min-width:4px; border-radius:4px; border:1px solid var(--tc,var(--muted)); background:var(--tc,var(--muted)); padding:0; cursor:pointer; font:inherit}
+.gbar.planned{background:color-mix(in srgb, var(--tc,var(--muted)) 45%, transparent)}
+.gbar.waiting{background:repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px)}
+.gbar.dashed{background:color-mix(in srgb, var(--tc,var(--muted)) 18%, transparent); border:2px dashed var(--tc,var(--muted))}
+.gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
+.gbar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.gms{position:absolute; top:calc(var(--grow) / 2 - 7px); width:14px; height:14px; margin-left:-7px; transform:rotate(45deg); background:var(--t-rel); border:1px solid var(--surface); padding:0; cursor:pointer}
+.gmsi{position:absolute; top:3px; margin-left:10px; font-size:.8rem; pointer-events:none}
+.gline{position:absolute; top:0; bottom:0; width:0; border-left:2px solid var(--accent); z-index:2; pointer-events:none}
+.gline.rel{border-left:2px dashed var(--t-rel); z-index:1}
+.gline span{position:absolute; top:17px; left:3px; font-size:.68rem; font-weight:600; white-space:nowrap; color:var(--accent); background:var(--surface); padding:0 2px; border-radius:3px}
+.gline.rel span{color:var(--t-rel); top:auto; bottom:2px}
+.gslice{position:absolute; bottom:2px; background:var(--accent); opacity:.75; border-radius:2px 2px 0 0}
+.gslice.over{background:var(--p1); opacity:1}
+.glimit{position:absolute; left:0; right:0; border-top:1px dashed var(--muted); pointer-events:none}
+.gtip{position:fixed; z-index:60; max-width:320px; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.2); padding:6px 9px; font-size:.78rem; line-height:1.4; pointer-events:none; white-space:pre-line}
+.g-t-bug{--tc:var(--t-bug)} .g-t-feature{--tc:var(--t-feature)} .g-t-technical{--tc:var(--t-technical)} .g-t-administration{--tc:var(--t-admin)}
+.g-t-artwork{--tc:var(--t-art)} .g-t-documentation{--tc:var(--t-doc)} .g-t-release{--tc:var(--t-rel)}
+@media (max-width:640px){ #gantt{--glw:104px} .glab .gt{display:none} .gscale{margin-left:0} }
 table.st{border-collapse:collapse; width:100%; font-size:.82rem}
 table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
 table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
@@ -399,6 +444,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
+    <button class="tab" role="tab" id="tab-gantt" data-tab="gantt" aria-controls="gantt" type="button">Gantt</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
@@ -408,6 +454,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
   </nav>
   <div class="synconly" id="synconly" role="status" hidden></div>
+  <section class="status" id="gantt" role="tabpanel" aria-labelledby="tab-gantt" hidden></section>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
@@ -1280,7 +1327,7 @@ function render(){
   if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
   if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
   render.later = false;
-  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual();
+  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
@@ -2351,8 +2398,211 @@ function renderQueues(){
   });
 }
 
+// ---------- Gantt (HUB105): the live cards on a time line, planned against the hub's resource limits.
+// A started card (In progress, Ready to merge, Merged in testing) runs from `started` (else column_since) to its `eta`
+// (else start + `estimate`); Next up and Refined cards are planned forward from now, one after another in board order,
+// as slots free up: the game projects share the stream slots, the coordinator's projects have their own, and a card
+// whose `blocked` text names another card starts after that card ends. Release cards are milestones at their eta.
+const GANTT_STREAMS_MAX = 5;              // game development streams at once, all game projects together (docs/BOARD.md "Roles")
+const GANTT_COORD_MAX = 2;                // the coordinator works the HUB / primarch cards one or two at a time
+const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; every other project's cards are game streams
+const GANTT_DEFAULT_MIN = 240;            // the length of a card with no estimate (and, started, no eta): dashed
+const GANTT_OVERDUE_MIN = 60;             // an In progress card past its eta is taken to need this much more from now
+const GANTT_COLS = ["prog", "test", "built", "next", "refined"];   // the rows' order: started first, then the plan
+const GANTT_SCALES = {day: {pxh: 22, slice: 1, tick: 3, label: "Day"}, week: {pxh: 3, slice: 6, tick: 24, label: "Week"}};
+const G_H = 3600000, G_MIN = 60000;
+function gTime(s){   // the board's times: UTC; a time without a zone is UTC too, a date alone means the end of that day
+  if(!s) return NaN;
+  let v = String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v)) v += "T23:59:00Z";
+  else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) v += "Z";
+  return Date.parse(v);
+}
+function gPool(c){ return GANTT_COORD_PROJECTS.includes(cardProject(c)) ? "coord" : "stream"; }
+function gOrder(a, b){
+  return GANTT_COLS.indexOf(a.col) - GANTT_COLS.indexOf(b.col) || (a.pri || 9) - (b.pri || 9) || (a.rank || 0) - (b.rank || 0) || String(a.id).localeCompare(String(b.id));
+}
+function gBusyAt(iv, t){ let n = 0; for(const x of iv) if(x[0] <= t && x[1] > t) n++; return n; }
+function gPeak(iv, s, e){   // the most intervals running at once in [s, e)
+  let most = gBusyAt(iv, s);
+  for(const x of iv) if(x[0] > s && x[0] < e) most = Math.max(most, gBusyAt(iv, x[0]));
+  return most;
+}
+function gEarliest(iv, lim, from, dur){   // the first time from `from` at which a card of length dur fits under the limit
+  const cands = [from, ...iv.map(x => x[1]).filter(t => t > from)].sort((a, b) => a - b);
+  for(const t of cands) if(gPeak(iv, t, t + dur) < lim) return t;
+  return cands[cands.length - 1];
+}
+// the plan: id -> {c, s, e, src, pool, kind: started|waiting|planned|milestone, dashed, overdue, waits}
+function ganttPlan(list, now){
+  const byId = new Map(list.map(c => [c.id, c]));
+  const out = new Map(), busy = {stream: [], coord: []}, limit = {stream: GANTT_STREAMS_MAX, coord: GANTT_COORD_MAX};
+  const est = c => Number(c.estimate) > 0 ? Number(c.estimate) : 0;
+  const deps = c => [...new Set(String(c.blk || "").match(/\b[A-Z]+\d+[a-z]?\b/g) || [])].filter(id => id !== c.id && byId.has(id));
+  for(const c of list){   // the started cards and the releases first: they hold their place
+    const started = c.col === "prog" || c.col === "test" || c.col === "built";
+    if(cardKind(c) === "Release"){
+      let t = gTime(c.eta), src = "eta";
+      if(isNaN(t)){ t = now; src = "no eta yet: drawn at now"; }
+      out.set(c.id, {c, s: t, e: t, src, pool: null, kind: "milestone"});
+      continue;
+    }
+    if(!started) continue;
+    let s = gTime(c.started); if(isNaN(s)) s = gTime(c.colSince); if(isNaN(s)) s = now;
+    let e = gTime(c.eta), src = "eta", dashed = false, overdue = false;
+    if(isNaN(e) || e <= s){ const m = est(c); e = s + (m || GANTT_DEFAULT_MIN) * G_MIN; src = m ? "start + estimate (" + fmtDur(m * G_MIN) + ")" : "start + default length (no estimate, no eta)"; dashed = !m; }
+    const pool = c.col === "prog" ? gPool(c) : null;   // Ready to merge and Merged in testing wait on the merge, not on a stream
+    if(pool && e < now){ overdue = true; e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: overdue, " + fmtDur(GANTT_OVERDUE_MIN * G_MIN) + " more assumed"; }
+    out.set(c.id, {c, s, e, src, pool, kind: pool ? "started" : "waiting", dashed, overdue, waits: []});
+    if(pool) busy[pool].push([s, e]);
+  }
+  const queue = list.filter(c => (c.col === "next" || c.col === "refined") && !out.has(c.id)).sort(gOrder);
+  const inQueue = new Set(queue.map(c => c.id)), visiting = new Set();
+  const place = c => {
+    if(out.has(c.id)) return out.get(c.id);
+    if(visiting.has(c.id)) return null;   // a loop of blocks: planned as if it were free
+    visiting.add(c.id);
+    let after = now;
+    const waits = [];
+    for(const id of deps(c)){
+      const it = out.get(id) || (inQueue.has(id) ? place(byId.get(id)) : null);
+      if(it){ after = Math.max(after, it.e); waits.push(id); }
+    }
+    const m = est(c), dur = (m || GANTT_DEFAULT_MIN) * G_MIN, pool = gPool(c);
+    const s = gEarliest(busy[pool], limit[pool], after, dur);
+    const it = {c, s, e: s + dur, pool, kind: "planned", dashed: !m, overdue: false, waits,
+      src: m ? "planned: estimate " + fmtDur(dur) : "planned: default length " + fmtDur(dur) + " (no estimate)"};
+    busy[pool].push([it.s, it.e]); out.set(c.id, it); visiting.delete(c.id);
+    return it;
+  };
+  for(const c of queue) place(c);
+  return {items: out, busy, limit};
+}
+function ganttCards(){ return [...cards.values()].filter(c => GANTT_COLS.includes(c.col)); }
+let gTipEl = null;
+function gTip(ev, text){
+  if(!gTipEl){ gTipEl = el("div",{class:"gtip", role:"tooltip"}); document.body.append(gTipEl); }
+  if(!text){ gTipEl.hidden = true; return; }
+  gTipEl.textContent = text; gTipEl.hidden = false;
+  const r = ev.currentTarget && ev.currentTarget.getBoundingClientRect ? ev.currentTarget.getBoundingClientRect() : null;
+  const x = ev.clientX || (r ? r.left + 8 : 8), y = ev.clientY || (r ? r.bottom : 8);
+  const w = gTipEl.offsetWidth, h = gTipEl.offsetHeight;
+  gTipEl.style.left = Math.max(4, Math.min(x + 12, innerWidth - w - 4)) + "px";
+  gTipEl.style.top = (y + 16 + h > innerHeight ? Math.max(4, y - h - 10) : y + 16) + "px";
+}
+function gTipText(it){
+  const c = it.c, when = t => fmtTime(new Date(t).toISOString());
+  const lines = [c.id + " · " + (c.t || ""), "Column: " + (COL_NAME[c.col] || c.col)];
+  if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
+  else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
+  if(it.kind === "waiting") lines.push("Waits on the merge (no stream slot)");
+  if(it.waits && it.waits.length) lines.push("After: " + it.waits.join(", "));
+  if(c.blk) lines.push("Blocked: " + c.blk);
+  if(it.kind === "planned" && c.eta) lines.push("Board ETA: " + fmtTime(new Date(gTime(c.eta)).toISOString()));
+  return lines.join("\n");
+}
+function renderGantt(){   // a fault in this tab must never stop the board from drawing
+  const host = document.getElementById("gantt");
+  if(!host || host.hidden) return;
+  try { drawGantt(host); }
+  catch(e){ host.replaceChildren(el("p",{class:"note"}, "The Gantt view could not be shown: " + (e && e.message || e))); }
+}
+function drawGantt(host){
+  const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
+  const list = ganttCards();
+  const sig = JSON.stringify([loaded, filt.j, scaleKey, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+    list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)])]);
+  if(host.dataset.sig === sig && host.childElementCount) return;
+  host.dataset.sig = sig;
+  const old = host.querySelector(".gwrap"), keepX = old && old.dataset.scale === scaleKey ? old.scrollLeft : null;
+  host.replaceChildren();
+  if(!loaded){ host.append(el("p",{class:"note"}, "Loading…")); return; }
+  const plan = ganttPlan(list, now);
+  const shown = [...plan.items.values()].filter(it => inProject(it.c));
+  const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
+  const sNow = nowIn("stream"), cNow = nowIn("coord");
+  const noEst = shown.filter(it => it.dashed).length;
+  const planEnd = shown.reduce((m, it) => Math.max(m, it.e), now);
+  const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderGantt(); };
+  host.append(el("div",{class:"ghead"},
+    el("h2",{}, "Gantt"),
+    el("span",{class:"pill" + (sNow > GANTT_STREAMS_MAX ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit"}, "Streams: " + sNow + " of " + GANTT_STREAMS_MAX + " now"),
+    el("span",{class:"pill" + (cNow > GANTT_COORD_MAX ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit"}, "Coordinator: " + cNow + " of " + GANTT_COORD_MAX + " now"),
+    noEst ? el("span",{class:"pill", title:"Drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"}, noEst + (noEst === 1 ? " card" : " cards") + " without an estimate") : null,
+    el("span",{class:"pill"}, "Plan ends " + fmtTime(new Date(planEnd).toISOString())),
+    el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
+      el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
+  host.append(el("div",{class:"glegend"},
+    el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
+    el("span",{}, el("i",{style:"background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "waiting on the merge"),
+    el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
+    el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
+    el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
+  if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j ? " in this project." : "."))); return; }
+  // the time range: from a little before now (or the earliest start, at most 3 days back) to the end of the plan
+  const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const minS = shown.reduce((m, it) => Math.min(m, it.s), now - 6 * G_H);
+  const t0 = day0(Math.max(minS, now - 3 * 24 * G_H));
+  const t1 = Math.min(day0(Math.max(planEnd, now + 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
+  const W = Math.ceil((t1 - t0) / G_H * sc.pxh), X = t => Math.round((Math.max(t0, Math.min(t1, t)) - t0) / G_H * sc.pxh);
+  const inner = el("div",{class:"gin", style:"width:calc(var(--glw) + " + W + "px)"});
+  const row = (cls, lab, cell) => el("div",{class:"grow " + cls}, lab, el("div",{class:"gcell", style:"width:" + W + "px"}, cell));
+  // the axis: day boundaries, and hour ticks on the day scale
+  const ticks = [];
+  for(let t = t0; t < t1; t += sc.tick * G_H){
+    const d = new Date(t), isDay = d.getHours() === 0;
+    ticks.push(el("span",{class:"gtick" + (isDay ? " day" : ""), style:"left:" + X(t) + "px"},
+      isDay ? d.toLocaleDateString(undefined, {weekday:"short", day:"numeric"}) : d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"})));
+  }
+  inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gt", style:"color:var(--muted)"}, sc.label + " scale")), ticks));
+  // the resource strips: per slice, the most cards running at once against the limit (from now on: the past is history)
+  for(const [pool, name] of [["stream", "Streams"], ["coord", "Coordinator"]]){
+    const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
+    let peak = lim;
+    const slices = [];
+    for(let t = t0; t < t1; t += step){ if(t + step <= now) continue; const n = gPeak(iv, Math.max(t, now), t + step); slices.push([t, n]); peak = Math.max(peak, n); }
+    const hpx = 28, top = 34 - 2 - hpx;
+    for(const [t, n] of slices) if(n) kids.push(el("span",{class:"gslice" + (n > lim ? " over" : ""), title:name + ": " + n + " of " + lim + " at " + fmtTime(new Date(t).toISOString()),
+      style:"left:" + X(Math.max(t, now)) + "px; width:" + Math.max(1, X(t + step) - X(Math.max(t, now)) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
+    kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
+    inner.append(row("gres", el("div",{class:"glab", title:name + ": at most " + lim + " at once"}, name + " ≤" + lim), kids));
+  }
+  // the rows, grouped by project in the registry's order
+  const projOrder = k => { const p = projects.get(k); return p && p.order != null ? p.order : 99; };
+  const groups = new Map();
+  for(const it of shown.sort((a, b) => gOrder(a.c, b.c))){ const k = cardProject(it.c); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
+  const lines = [];
+  for(const k of [...groups.keys()].sort((a, b) => projOrder(a) - projOrder(b) || a.localeCompare(b))){
+    const its = groups.get(k);
+    inner.append(row("gproj", el("div",{class:"glab"}, (projects.get(k)?.name || k || "No project") + " (" + its.length + ")"), null));
+    for(const it of its){
+      const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", tip = gTipText(it);
+      const open = () => openCard(c.id);
+      const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
+        onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); open(); } };
+      const lab = el("div",{class:"glab" + tcls, title:c.id + " " + (c.t || ""), onclick:open},
+        kind ? el("span",{class:"gk", "aria-hidden":"true"}, KIND_ICON[kind]) : null, el("span",{class:"gid"}, c.id), el("span",{class:"gt"}, c.t || ""));
+      let cell;
+      if(it.kind === "milestone"){
+        cell = [el("button",{type:"button", class:"gms", style:"left:" + X(it.s) + "px", "aria-label":tip, ...hover}),
+          el("span",{class:"gmsi", style:"left:" + X(it.s) + "px"}, "\u{1F4E6}")];
+        if(it.s >= t0 && it.s <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(it.s) + "px)"}, el("span",{}, "\u{1F4E6} " + c.id)));
+      } else {
+        const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (it.kind === "waiting" ? " waiting" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : "");
+        cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + Math.max(4, X(it.e) - X(it.s)) + "px", "aria-label":tip, ...hover});
+      }
+      inner.append(row(it.kind, lab, cell));
+    }
+  }
+  lines.push(el("span",{class:"gline", style:"left:calc(var(--glw) + " + X(now) + "px)"}, el("span",{}, "now")));
+  inner.append(...lines);
+  const wrap = el("div",{class:"gwrap", "data-scale":scaleKey, onscroll:() => gTip(null, "")}, inner);
+  host.append(wrap);
+  wrap.scrollLeft = keepX != null ? keepX : Math.max(0, X(now) - 2 * sc.pxh * (scaleKey === "day" ? 1 : 12));
+}
+
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "decisions", "manual", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90)
+const TABS = ["board", "gantt", "decisions", "manual", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -2664,7 +2914,7 @@ function showTab(name, fromHash){
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
-  renderStatus(); renderDecisions(); renderArtifacts(); renderManual();
+  renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt();
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
