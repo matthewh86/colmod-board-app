@@ -2063,6 +2063,7 @@ function renderStatus(){
     } else add("Test slots free", m.slots == null ? m.slots_free : `${m.slots_free} of ${m.slots} (${m.tests})`);
     if(m.comfy !== "-") add("ComfyUI", m.comfy);
     if(m.llm !== "-") add("Local LLM", m.llm);
+    if(m.app_control) add("App control", m.app_control);   // blocks freshly built test programs (HUB71)
     add("Running job", m.running_job || "none");
     add("Queued for it", m.queued);
     if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
