@@ -49,6 +49,7 @@ body{background:var(--bg); color:var(--ink); font:14px/1.45 var(--f-body); margi
 header.top{padding-block:14px 6px; display:grid; gap:8px}
 h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
+.hrow .projsel{width:auto; max-width:46vw; margin:0; align-self:center}   /* HUB148: beside the title */
 .sync{font-size:.82rem; color:var(--muted)}
 .sync b{font-weight:600; color:var(--ink)}
 .tally{display:flex; flex-wrap:wrap; gap:6px}
@@ -387,6 +388,9 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
   -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
 .gbar.planned{background:color-mix(in srgb, var(--tc,var(--muted)) 45%, transparent)}
 /* HUB144: hatched from the gate pass (--gsplit) to the merge (--gend), solid before and after */
+/* HUB146: Merged, in testing: solid only while it was worked on, hatched while it waited for the merge, then pale
+   with a dotted edge while it is in testing: no agent works on it */
+.gbar.testing{border-style:dotted; background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px) 0 0 / var(--gend,0px) 100% no-repeat, color-mix(in srgb, var(--tc,var(--muted)) 20%, transparent)}
 .gbar.waiting{background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px) var(--gend,100%), var(--tc,var(--muted)) var(--gend,100%)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px)}
 .grow.gtheme{height:24px; background:color-mix(in srgb, var(--sunk) 60%, transparent)} .grow.gepic{height:22px}
 .gtheme .glab{font-weight:600; background-color:var(--sunk)} .gepic .glab{padding-left:16px; color:var(--muted)} .glab.gcard{padding-left:24px}
@@ -541,6 +545,7 @@ const changes = new Map();      // change id -> {card, field, value, ts, base_up
 const sentAt = new Map();       // change id -> when its file reached GitHub
 const epics = new Map();        // key -> {name,hue,order,blurb,theme}
 const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
+const RELEASES_OUT = [];          // HUB147: [{id, t, at}] Done release cards of the last weeks (export releases_out)
 const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
@@ -1428,7 +1433,7 @@ function renderEpics(all){
       title: folded ? "Show the projects and epics" : "Fold the projects and epics to the side", "aria-label": folded ? "Show the projects and epics" : "Fold the projects and epics to the side",
       onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Projects")));
   if(folded){ box.scrollTop = 0; return; }
-  fillProjects(); if(!projSel.hidden) box.append(projSel);
+  fillProjects();   // HUB148: the switcher sits beside the title (placeProjSel), not in this panel
   const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
       el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
@@ -1484,6 +1489,10 @@ function setProject(j){   // the project switcher; an epic or a theme of another
   syncFilters();
 }
 let projSel = null;   // the project switcher, at the top of the Projects panel (the user, 2026-11-17)
+function placeProjSel(){   // HUB148 (the user, 2026-11-18): beside the main title, left of "Board as of"
+  const row = document.querySelector(".hrow"), sync = document.getElementById("sync");
+  if(projSel && row && sync && projSel.parentNode !== row) row.insertBefore(projSel, sync);
+}
 function fillProjects(){
   const sel = projSel || (projSel = el("select",{id:"fj", class:"projsel", "aria-label":"Project", title:"Show one project or all of them (the board and Decisions)"}));
   if(!sel.dataset.on){ sel.dataset.on = "1"; sel.addEventListener("change", e=>setProject(e.target.value)); }
@@ -1491,6 +1500,7 @@ function fillProjects(){
   for(const [k,v] of [...projects.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)))
     sel.append(el("option",{value:k, selected:k===filt.j}, v.name || k));
   sel.hidden = projects.size < 2;
+  placeProjSel();
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
@@ -2539,12 +2549,12 @@ function ganttPlan(list, now){
       done = gTime(mw.from); if(isNaN(done)) done = gTime(c.colSince); if(isNaN(done) || done < s) done = s;
       if(e < now){ e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: still waiting for the merge"; }
     }
-    else if(kind === "testing"){   // merged: its wait for the merge stays drawn, hatched, between the gate and the merge
-      const a = gTime(mw.from), b = gTime(mw.to);
-      if(!isNaN(a) && !isNaN(b) && b > a){
-        done = Math.max(s, a); merged = Math.max(done, b);
-        if(merged > e) e = merged;
-      }
+    else if(kind === "testing"){   // HUB146: worked on (solid) up to the gate, hatched to the merge, then in testing (pale)
+      const a = gTime(mw.from), b = gTime(mw.to), moved = gTime(c.colSince);
+      merged = !isNaN(b) ? b : !isNaN(moved) ? moved : s;
+      if(merged < s) merged = s;
+      done = !isNaN(a) && a <= merged ? Math.max(s, a) : merged;
+      if(e <= merged){ e = Math.max(now, merged + GANTT_OVERDUE_MIN * G_MIN); src += "; in testing since the merge"; }
     }
     out.set(c.id, {c, s, e, src, pool: kind === "started" ? pool : null, kind, done, merged, dashed, overdue, waits: []});
     if(pool && kind === "started") busy[pool].push([s, e]);
@@ -2605,7 +2615,7 @@ function gTipText(it){
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
-  if(it.kind === "testing") lines.push((it.merged != null ? "Gate passed: " + when(it.done) + "; merged: " + when(it.merged) + ". " : "") + "Merged; in testing (no stream slot)");
+  if(it.kind === "testing") lines.push((it.done != null && it.merged != null && it.done < it.merged ? "Gate passed: " + when(it.done) + ". " : "") + (it.merged != null ? "Merged: " + when(it.merged) + ". " : "") + "In testing: nobody works on it (no stream slot)");
   if(it.waits && it.waits.length) lines.push("After: " + it.waits.join(", "));
   if(c.blk) lines.push("Blocked: " + c.blk);
   if(it.kind === "planned" && c.eta) lines.push("Board ETA: " + fmtTime(new Date(gTime(c.eta)).toISOString()));
@@ -2707,6 +2717,12 @@ function drawGantt(host){
     return open;
   };
   const lines = [];
+  // HUB147: a yellow line for every release: the planned ones (Release cards at their eta) and the ones already out
+  // (Done release cards of the last weeks, export releases_out), whatever is folded or filtered below
+  const relName = c => (String(c.t || "").match(/\brel\d+\b/) || [c.id])[0];   // "rel72", else the card id
+  const relLine = (t, label, tip) => { if(t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"}, el("span",{}, "\u{1F4E6} " + label))); };
+  for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)");
+  for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")");
   const cardRow = it => {
     const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", tip = gTipText(it);
     const open = () => openCard(c.id);
@@ -2720,8 +2736,9 @@ function drawGantt(host){
         el("span",{class:"gmsi", style:"left:" + X(it.s) + "px"}, "\u{1F4E6}")];
       if(it.s >= t0 && it.s <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(it.s) + "px)"}, el("span",{}, "\u{1F4E6} " + c.id)));
     } else {
-      const hatch = it.done != null && (it.kind === "waiting" || it.merged != null);   // HUB144: passed its gate, waiting for (or past) the merge
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (hatch ? " waiting" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : "");
+      const testing = it.kind === "testing";   // HUB146: merged: no longer drawn like work in progress
+      const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
       const split = hatch ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
@@ -3178,6 +3195,7 @@ async function load(sha){
   if (filt.j && !projects.has(filt.j)){ filt.j = ""; ls("kb.filters", filt); }   // a remembered project that is gone
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
+  RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
   ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
     .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
