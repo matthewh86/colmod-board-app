@@ -597,6 +597,10 @@ function rebuild(){
       if(ch.rank != null) c.rank = ch.rank;
     }
     else if(f === "order"){ ch.value.forEach((id, n)=>{ const x = cards.get(id); if(x){ x.rank = (n + 1) * 1000; x._pending++; } }); continue; }
+    else if(f === "comment"){   // HUB117: a comment on its way shows in the activity until the board has it
+      c.log = [...(Array.isArray(c.log) ? c.log : []), {ts: ch.ts, t: "Your comment (on its way): " + ch.value}];
+      c.log_n = (Number(c.log_n) || 0) + 1;
+    }
     else c[f] = ch.value;   // un, pri, rank, epic
     c._pending++;
   }
@@ -632,6 +636,7 @@ function changeText(ch){
   if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
   if(f === "order") return "new order";
+  if(f === "comment") return "comment: " + String(v || "").slice(0, 80);
   if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
 }
@@ -729,7 +734,8 @@ function change(card, field, value, extra){
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
   const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
-  for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }   // the later edit wins on screen
+  if(field !== "comment")   // each comment is a line of its own (HUB117); for any other field the later edit wins on screen
+    for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }
   changes.set(id, doc);
   pendSave();
   queueSend(id);
@@ -789,6 +795,7 @@ function write(id, patch, quiet){
   if(patch.ans) for(const [k, v] of Object.entries(patch.ans)) change(base, "ans." + k, v);
   if(patch.pri !== undefined) change(base, "pri", patch.pri);
   if(patch.un !== undefined) change(base, "un", patch.un);
+  if(patch.comment) change(base, "comment", patch.comment);
   if(patch.epic !== undefined) change(base, "epic", patch.epic);
   if(patch.col !== undefined && patch.col !== c.col) change(base, "column", COL_NAME[patch.col], patch.rank !== undefined ? {rank: patch.rank} : null);
   else if(patch.rank !== undefined) change(base, "rank", patch.rank);
@@ -1176,10 +1183,14 @@ function cardEl(c, full=false){
       el("button",{type:"button", title:"Move to top", onclick:ev=>{ev.stopPropagation(); moveTo(c.id,c.col,0);}},"Top"),
       el("button",{type:"button", title:"Move up", onclick:ev=>{ev.stopPropagation(); nudge(c.id,-1);}},"↑"),
       el("button",{type:"button", title:"Move down", onclick:ev=>{ev.stopPropagation(); nudge(c.id,1);}},"↓")));
-    const ta = el("textarea",{placeholder:"Your note (saved when you leave the field)", "aria-label":"Your note", onclick:ev=>ev.stopPropagation()});
-    ta.value = c.un||"";
-    ta.addEventListener("blur", ()=>{ const v=ta.value.trim(); if(v!==(c.un||"")) write(c.id,{un:v}); });
-    more.append(ta);
+    // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
+    if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
+    const ta = el("textarea",{placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
+                              onclick:ev=>ev.stopPropagation()});
+    const post = () => { const v = ta.value.trim(); if(!v) return; ta.value = ""; write(c.id,{comment:v}); };
+    ta.addEventListener("keydown", ev=>{ if(ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); post(); } });
+    more.append(ta, el("div",{class:"row"}, el("button",{type:"button", title:"Add the comment to the activity (Ctrl+Enter)",
+      onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
     e.append(more); return e;
   }
   if(!readOnly){   // hover controls: rank within the column
