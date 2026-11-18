@@ -2531,9 +2531,10 @@ function ganttPlan(list, now){
     if(isNaN(e) || e <= s){ const m = est(c); e = s + (m || GANTT_DEFAULT_MIN) * G_MIN; src = m ? "start + estimate (" + fmtDur(m * G_MIN) + ")" : "start + default length (no estimate, no eta)"; dashed = !m; }
     const pool = c.col === "prog" ? gPool(c) : null;   // Ready to merge and Merged in testing wait on the merge, not on a stream
     if(pool && e < now){ overdue = true; e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: overdue, " + fmtDur(GANTT_OVERDUE_MIN * G_MIN) + " more assumed"; }
-    let kind = pool ? "started" : c.col === "built" ? "waiting" : "testing", done = null, merged = null;
-    // HUB144: the board's merge_wait is the latest stay in Ready to merge: the gate passed (from), the merge done (to)
+    // HUB144: the board's merge_wait: the card's gate passed (from), the merge done (to; empty while it waits)
     const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {};
+    const gated = c.col === "prog" && !isNaN(gTime(mw.from)) && !mw.to;   // In progress, gate passed: it waits for the merge
+    let kind = pool && !gated ? "started" : c.col === "built" || gated ? "waiting" : "testing", done = null, merged = null;
     if(kind === "waiting"){   // HUB133: the work ended when it went to Ready to merge; from then on it waits for the merge
       done = gTime(mw.from); if(isNaN(done)) done = gTime(c.colSince); if(isNaN(done) || done < s) done = s;
       if(e < now){ e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: still waiting for the merge"; }
@@ -2545,8 +2546,8 @@ function ganttPlan(list, now){
         if(merged > e) e = merged;
       }
     }
-    out.set(c.id, {c, s, e, src, pool, kind, done, merged, dashed, overdue, waits: []});
-    if(pool) busy[pool].push([s, e]);
+    out.set(c.id, {c, s, e, src, pool: kind === "started" ? pool : null, kind, done, merged, dashed, overdue, waits: []});
+    if(pool && kind === "started") busy[pool].push([s, e]);
   }
   const queue = list.filter(c => (c.col === "next" || c.col === "refined") && !out.has(c.id)).sort(gOrder);
   const inQueue = new Set(queue.map(c => c.id)), visiting = new Set();
