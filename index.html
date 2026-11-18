@@ -386,7 +386,8 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
   background:conic-gradient(var(--accent, var(--muted)) var(--p, 0%), color-mix(in srgb, var(--muted) 30%, transparent) 0);
   -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
 .gbar.planned{background:color-mix(in srgb, var(--tc,var(--muted)) 45%, transparent)}
-.gbar.waiting{background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px)}
+/* HUB144: hatched from the gate pass (--gsplit) to the merge (--gend), solid before and after */
+.gbar.waiting{background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px) var(--gend,100%), var(--tc,var(--muted)) var(--gend,100%)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px)}
 .grow.gtheme{height:24px; background:color-mix(in srgb, var(--sunk) 60%, transparent)} .grow.gepic{height:22px}
 .gtheme .glab{font-weight:600; background-color:var(--sunk)} .gepic .glab{padding-left:16px; color:var(--muted)} .glab.gcard{padding-left:24px}
 .gfold{font:inherit; font-size:.8rem; line-height:1; width:18px; height:18px; flex:none; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink); cursor:pointer}
@@ -540,6 +541,7 @@ const changes = new Map();      // change id -> {card, field, value, ts, base_up
 const sentAt = new Map();       // change id -> when its file reached GitHub
 const epics = new Map();        // key -> {name,hue,order,blurb,theme}
 const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
+const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
 let ansAt = {};   // {card: {question: when it was answered}} (export ans_at, HUB102): Past decisions newest first
@@ -837,7 +839,7 @@ function matches(c){
   if(filt.t && epicTheme(c.epic)!==filt.t) return false;
   if(filt.qo && !openQ(c)) return false;
   if(filt.x && !cardIssue(c)) return false;            // HUB68: blocked, not synced, refused, idle
-  if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
+  if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,areas.get(c.cat)?.name,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
     ...(Array.isArray(c.opts)?c.opts:[]).map(o=>o&&o.q), ...qList(c).map(x=>x.q)].some(x=>x&&String(x).toLowerCase().includes(s))) return false; }
   return true;
 }
@@ -1185,7 +1187,7 @@ function cardEl(c, full=false){
       more.append(el("div",{class:"tlist"}, el("div",{class:"th"}, "Tasks", el("span",{}, tdone+"/"+ttotal+" done")), ul));
     }
     if(c.d) more.append(descEl(String(c.d)));
-    more.append(el("div",{class:"meta"}, ...[c.g&&("Group: "+c.g), c.cat&&("Area: "+c.cat), c.imp&&("Impact: "+c.imp), c.dif&&("Effort: "+c.dif), c.tri&&("Triage: "+c.tri)].filter(Boolean).map(s=>el("span",{},s))));
+    more.append(el("div",{class:"meta"}, ...[c.g&&("Group: "+c.g), c.cat&&("Area: "+(areas.get(c.cat)?.name || c.cat)), c.imp&&("Impact: "+c.imp), c.dif&&("Effort: "+c.dif), c.tri&&("Triage: "+c.tri)].filter(Boolean).map(s=>el("span",{},s))));
     const pr = el("div",{class:"row"}, el("span",{class:"lbl"},"Priority"));
     for(const p of [1,2,3,4]) pr.append(el("button",{type:"button", "aria-pressed":String(c.pri===p), onclick:ev=>{ev.stopPropagation(); write(c.id,{pri:c.pri===p?0:p});}}, PRI[p]));
     more.append(pr);
@@ -2529,12 +2531,21 @@ function ganttPlan(list, now){
     if(isNaN(e) || e <= s){ const m = est(c); e = s + (m || GANTT_DEFAULT_MIN) * G_MIN; src = m ? "start + estimate (" + fmtDur(m * G_MIN) + ")" : "start + default length (no estimate, no eta)"; dashed = !m; }
     const pool = c.col === "prog" ? gPool(c) : null;   // Ready to merge and Merged in testing wait on the merge, not on a stream
     if(pool && e < now){ overdue = true; e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: overdue, " + fmtDur(GANTT_OVERDUE_MIN * G_MIN) + " more assumed"; }
-    let kind = pool ? "started" : c.col === "built" ? "waiting" : "testing", done = null;
+    let kind = pool ? "started" : c.col === "built" ? "waiting" : "testing", done = null, merged = null;
+    // HUB144: the board's merge_wait is the latest stay in Ready to merge: the gate passed (from), the merge done (to)
+    const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {};
     if(kind === "waiting"){   // HUB133: the work ended when it went to Ready to merge; from then on it waits for the merge
-      done = gTime(c.colSince); if(isNaN(done) || done < s) done = s;
+      done = gTime(mw.from); if(isNaN(done)) done = gTime(c.colSince); if(isNaN(done) || done < s) done = s;
       if(e < now){ e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: still waiting for the merge"; }
     }
-    out.set(c.id, {c, s, e, src, pool, kind, done, dashed, overdue, waits: []});
+    else if(kind === "testing"){   // merged: its wait for the merge stays drawn, hatched, between the gate and the merge
+      const a = gTime(mw.from), b = gTime(mw.to);
+      if(!isNaN(a) && !isNaN(b) && b > a){
+        done = Math.max(s, a); merged = Math.max(done, b);
+        if(merged > e) e = merged;
+      }
+    }
+    out.set(c.id, {c, s, e, src, pool, kind, done, merged, dashed, overdue, waits: []});
     if(pool) busy[pool].push([s, e]);
   }
   const queue = list.filter(c => (c.col === "next" || c.col === "refined") && !out.has(c.id)).sort(gOrder);
@@ -2593,7 +2604,7 @@ function gTipText(it){
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
-  if(it.kind === "testing") lines.push("Merged; in testing (no stream slot)");
+  if(it.kind === "testing") lines.push((it.merged != null ? "Gate passed: " + when(it.done) + "; merged: " + when(it.merged) + ". " : "") + "Merged; in testing (no stream slot)");
   if(it.waits && it.waits.length) lines.push("After: " + it.waits.join(", "));
   if(c.blk) lines.push("Blocked: " + c.blk);
   if(it.kind === "planned" && c.eta) lines.push("Board ETA: " + fmtTime(new Date(gTime(c.eta)).toISOString()));
@@ -2708,11 +2719,13 @@ function drawGantt(host){
         el("span",{class:"gmsi", style:"left:" + X(it.s) + "px"}, "\u{1F4E6}")];
       if(it.s >= t0 && it.s <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(it.s) + "px)"}, el("span",{}, "\u{1F4E6} " + c.id)));
     } else {
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (it.kind === "waiting" ? " waiting" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : "");
+      const hatch = it.done != null && (it.kind === "waiting" || it.merged != null);   // HUB144: passed its gate, waiting for (or past) the merge
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (hatch ? " waiting" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : "");
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
-      const split = it.kind === "waiting" && it.done != null ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
-      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (split != null ? "; --gsplit:" + split + "px" : ""), "aria-label":tip, ...hover});
+      const split = hatch ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
+      const gend = hatch && it.merged != null ? Math.max(split, Math.min(w, X(it.merged) - X(it.s))) : null;
+      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover});
     }
     inner.append(row(it.kind, lab, cell));
   };
@@ -3159,10 +3172,11 @@ async function load(sha){
   for (const [id, doc] of Object.entries(data.manual || {})) if (doc && typeof doc === "object" && /^MAN-\d{1,6}$/.test(id)) manDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
   for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
-  epics.clear(); themes.clear(); projects.clear();
+  epics.clear(); themes.clear(); projects.clear(); areas.clear();
   for (const [k, v] of Object.entries(data.projects || {})) if (v && typeof v === "object") projects.set(k, Object.assign({name: k, hue: 210}, v));
   if (filt.j && !projects.has(filt.j)){ filt.j = ""; ls("kb.filters", filt); }   // a remembered project that is gone
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
+  for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
   ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
     .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
