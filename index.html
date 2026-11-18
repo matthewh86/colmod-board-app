@@ -640,6 +640,7 @@ function markSyncTabs(){
 function changeText(ch){
   const f = String(ch.field), v = ch.value;
   if(f === "done") return v ? "marked done" : "marked not done";
+  if(f === "snooze") return v ? "snoozed" : "woken from snooze";
   if(f === "delete") return v ? "marked for deletion" : "kept after all";
   if(f.startsWith("ans.")) return "answer: " + (v == null || v === "" ? "cleared" : String(v)).slice(0, 80);
   if(f.startsWith("step.")) return v ? "your step marked done" : "your step reopened";
@@ -715,6 +716,7 @@ function changeSettled(id, ch, sent, exp){
     }
     else if(f === "delete"){ if((doc.del === true) === (ch.value === true)) return "shown"; }
     else if(f === "done"){ if((doc.done === true) === (ch.value === true)) return "shown"; }
+    else if(f === "snooze"){ if((doc.snoozed === true) === (ch.value === true) || doc.done === true) return "shown"; }
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
     else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
     else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
@@ -2806,6 +2808,15 @@ function manDone(doc){    // the exported state with this action's change that i
     if(ch.card === doc.id && ch.field === "done") v = ch.value === true;
   return v;
 }
+function manSnoozed(doc){   // HUB137: put aside by the user: still open, on the Snoozed list, not on the badge
+  let v = doc.snoozed === true;
+  for(const ch of [...changes.values()].sort((x,y)=>(x.ts||"").localeCompare(y.ts||""))){
+    if(ch.card !== doc.id) continue;
+    if(ch.field === "snooze") v = ch.value === true;
+    else if(ch.field === "done") v = false;
+  }
+  return v && !manDone(doc);
+}
 function tabBadge(id, label, n){   // a tab's count: a red circle with the number, none at 0 (the user, 2026-11-17)
   const tab = document.getElementById(id);
   if(!tab) return;
@@ -2816,7 +2827,7 @@ function tabBadge(id, label, n){   // a tab's count: a red circle with the numbe
 }
 function renderManual(){   // a fault in this tab must never stop the board from drawing
   const host = document.getElementById("manual");
-  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d)).length); } catch { /* the count is an extra */ }
+  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length); } catch { /* the count is an extra */ }
   if(!host || host.hidden) return;
   try { drawManual(host); }
   catch(e){ host.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
@@ -2828,17 +2839,19 @@ function manDay(iso){
 function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
 function drawManual(host){
   const all = [...manDocs.values()];
-  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d)])]);
+  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
   host.replaceChildren(el("h2",{}, "Manual actions"));
-  const open = all.filter(d => !manDone(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
+  const open = all.filter(d => !manDone(d) && !manSnoozed(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
+  const snoozed = all.filter(manSnoozed).sort((a, b) => String(b.snoozed_at || "").localeCompare(String(a.snoozed_at || "")) || String(a.id).localeCompare(String(b.id)));
   const done = all.filter(manDone).sort((a, b) => String(b.done_at || "").localeCompare(String(a.done_at || "")));
   if(!all.length){
     host.append(el("p",{class:"note"}, loaded ? "No manual actions are recorded. A session that needs a step only you can do records it here." : "Loading…"));
     return;
   }
-  host.append(el("p",{class:"note"}, open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done.` : "Nothing is waiting on you here."));
+  host.append(el("p",{class:"note"}, (open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done, or Snooze it to put it aside without a notification.` : "Nothing is waiting on you here.")
+    + (snoozed.length ? ` ${snoozed.length} snoozed.` : "")));
   const groups = new Map();
   for(const d of open){ const k = String(d.project || ""); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
   const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
@@ -2848,11 +2861,28 @@ function drawManual(host){
       const btn = el("button",{type:"button", class:"artbtn"}, "Done");
       btn.disabled = readOnly;
       btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
+      const zz = el("button",{type:"button", class:"artbtn", title:"Put it aside: it moves to Snoozed and gives no notification"}, "Snooze");
+      zz.disabled = readOnly;
+      zz.addEventListener("click", () => { change(d, "snooze", true); renderManual(); });
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id)), d.d ? el("div",{}, String(d.d)) : null),
-        el("td",{}, String(d.card || "")), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn));
+        el("td",{}, String(d.card || "")), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn, " ", zz));
     });
     host.append(el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Machine", "Added", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+  }
+  if(snoozed.length){   // HUB137: open, put aside by the user, no notification until woken
+    const rows = snoozed.map(d => {
+      const wake = el("button",{type:"button", class:"artbtn", title:"Back to the open list, with its notification"}, "Unsnooze");
+      wake.disabled = readOnly;
+      wake.addEventListener("click", () => { change(d, "snooze", false); renderManual(); });
+      const btn = el("button",{type:"button", class:"artbtn"}, "Done");
+      btn.disabled = readOnly;
+      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
+      return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.project ? " · " + String((projects.get(d.project) || {}).name || d.project) : "")), d.d ? el("div",{}, String(d.d)) : null),
+        el("td",{}, String(d.card || "")), el("td",{}, manDay(d.snoozed_at)), el("td",{}, wake, " ", btn));
+    });
+    host.append(el("details",{class:"snoozed"}, el("summary",{}, `Snoozed (${snoozed.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+      el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
   }
   if(done.length){
     const rows = done.map(d => {
