@@ -396,6 +396,8 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 .gtheme .glab{font-weight:600; background-color:var(--sunk)} .gepic .glab{padding-left:16px; color:var(--muted)} .glab.gcard{padding-left:24px}
 .gfold{font:inherit; font-size:.8rem; line-height:1; width:18px; height:18px; flex:none; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink); cursor:pointer}
 .gspan{position:absolute; top:calc(50% - 3px); height:6px; border-radius:3px; background:hsl(var(--h,220) 45% 55% / .55)}
+/* HUB152: an epic's bar across a gap between its cards' work (nothing worked on or planned then): dotted, lighter */
+.gspan.gap{box-sizing:border-box; border:1px dotted hsl(var(--h,220) 45% 50% / .9); background:hsl(var(--h,220) 45% 55% / .14); border-radius:0}
 .gfilt{display:inline-flex; flex-wrap:wrap; gap:4px} .gfilt select{font:inherit; font-size:.78rem; max-width:160px; padding:2px 4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink)}
 .gbar.dashed{background:color-mix(in srgb, var(--tc,var(--muted)) 18%, transparent); border:2px dashed var(--tc,var(--muted))}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
@@ -2644,6 +2646,10 @@ function drawGantt(host){
   const noEst = shown.filter(it => it.dashed).length;
   const planEnd = shown.reduce((m, it) => Math.max(m, it.e), now);
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderGantt(); };
+  // HUB153: one button folds every epic shown (its cards hidden), or unfolds them all when all are folded
+  const epicKeys = [...new Set(shown.map(it => "e:" + cardProject(it.c) + ":" + (it.c.epic || "")))];
+  const allFolded = epicKeys.length > 0 && epicKeys.every(k => gFold.has(k));
+  const foldAll = () => { for(const k of epicKeys) allFolded ? gFold.delete(k) : gFold.add(k); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
   host.append(el("div",{class:"ghead"},
     el("h2",{}, "Gantt"),
     el("span",{class:"pill" + (sNow > sLim ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit" + (sLim < GANTT_STREAMS_MAX ? " the pace allows (the hub's own is " + GANTT_STREAMS_MAX + ")" : "")}, "Streams: " + sNow + " of " + sLim + " now"),
@@ -2653,12 +2659,14 @@ function drawGantt(host){
     el("span",{class:"pill"}, "Plan ends " + fmtTime(new Date(planEnd).toISOString())),
     ...usagePills(),
     ganttFilters(),
+    epicKeys.length ? el("button",{type:"button", class:"gfoldall", "aria-pressed":String(allFolded), title:allFolded ? "Show every epic's cards" : "Fold every epic: one row each", onclick:foldAll}, allFolded ? "Expand epics" : "Collapse epics") : null,
     el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
       el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
   host.append(el("div",{class:"glegend"},
     el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
     el("span",{}, el("i",{style:"background:linear-gradient(90deg,var(--muted) 0 50%,transparent 50%),repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "work done, then waiting for the merge"),
     el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
+    el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
     el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
     el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
   if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || filt.t || filt.e ? " with these filters." : "."))); return; }
@@ -2712,7 +2720,20 @@ function drawGantt(host){
     const lab = el("div",{class:"glab"},
       el("button",{type:"button", class:"gfold", "aria-expanded":String(open), "aria-label":(open ? "Fold " : "Unfold ") + name, onclick:() => toggle(key)}, open ? "−" : "+"),
       el("span",{class:"gt", ...hover}, name + " (" + n + ")"));
-    const bar = el("span",{class:"gspan", style:"left:" + X(s) + "px; width:" + Math.max(4, X(e) - X(s)) + "px" + (hue != null ? "; --h:" + hue : ""), ...hover});
+    const hstyle = hue != null ? "; --h:" + hue : "";
+    let bar;
+    if(cls === "gepic"){   // HUB152: solid where its cards are worked on or planned, dotted and lighter across the gaps
+      const runs = [];
+      for(const [a, b] of its.map(i => [i.s, Math.max(i.s, i.e)]).sort((x, y) => x[0] - y[0])){
+        const last = runs[runs.length - 1];
+        if(last && a <= last[1]) last[1] = Math.max(last[1], b); else runs.push([a, b]);
+      }
+      bar = [];
+      runs.forEach(([a, b], i) => {
+        if(i){ const g0 = runs[i - 1][1]; if(X(a) > X(g0)) bar.push(el("span",{class:"gspan gap", style:"left:" + X(g0) + "px; width:" + (X(a) - X(g0)) + "px" + hstyle, ...hover})); }
+        bar.push(el("span",{class:"gspan", style:"left:" + X(a) + "px; width:" + Math.max(4, X(b) - X(a)) + "px" + hstyle, ...hover}));
+      });
+    } else bar = el("span",{class:"gspan", style:"left:" + X(s) + "px; width:" + Math.max(4, X(e) - X(s)) + "px" + hstyle, ...hover});
     inner.append(row(cls, lab, bar));
     return open;
   };
