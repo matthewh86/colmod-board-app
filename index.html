@@ -2275,7 +2275,7 @@ function renderMachines(){
 
 // ---------- Hub: the hub's own facts, and whether this App is the hub's
 // ---------- the plan's token limits and the development pace (HUB128-130): status/usage.json, recorded by the coordinator
-const PACES = [["conservative", "Conservative", "Streams are limited so that no token limit runs out before it refreshes"],
+const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"], ["turbo", "Turbo", "Full speed: no limit from tokens"]];
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
