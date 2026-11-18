@@ -1369,7 +1369,7 @@ function render(){
   // tally
   const t = $("#tally"); t.textContent = "";
   if(loaded){
-    const qs = all.filter(openQ).length;
+    const qs = all.filter(c => openQ(c) && c.col !== "park").length;   // Parked cards' questions are not counted (HUB112)
     tabBadge("tab-board", "Board", qs);   // the cards with open questions: a red circle on the Board tab (the user, 2026-11-17)
   }
   markSyncTabs(); renderSyncOnly();   // HUB68: the count itself is the sync pill beside the checked time
