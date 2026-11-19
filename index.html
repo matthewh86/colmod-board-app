@@ -140,6 +140,11 @@ body.selmode .card .hov{display:none !important}
 .selbar button:disabled,.selbar select:disabled{opacity:.45; cursor:default}
 body.ro #selbtn{display:none}
 .selbar .hint{color:var(--muted); font-size:.78rem}
+.selbar .seldone{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}   /* HUB221 */
+.selep{position:relative; display:inline-block}   /* HUB225: the Epics dropdown */
+.selepop{position:absolute; bottom:calc(100% + 6px); left:0; z-index:26; min-width:200px; max-width:calc(100vw - 32px); max-height:50vh; overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:8px 10px; display:grid; gap:6px}
+.selepop label{display:flex; gap:8px; align-items:center; line-height:1.2; cursor:pointer; white-space:nowrap}
+.selepop input[type=checkbox]{margin:0; flex:none; width:15px; height:15px; accent-color:var(--accent)}
 /* HUB190: the placement controls (top, up, down, bottom, position): one set and look on the card's hover bar and in the card window */
 .place{display:inline-flex; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:2px}
 .place button,.row .place button{font:inherit; font-size:.8rem; line-height:1; width:24px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--ink); cursor:pointer}
@@ -624,7 +629,6 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
     <button class="tab" role="tab" id="tab-gantt" data-tab="gantt" aria-controls="gantt" type="button">Gantt</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
-    <button class="tab" role="tab" id="tab-manual" data-tab="manual" aria-controls="manual" type="button">Manual actions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
     <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Hub</button>
     <button class="tab" role="tab" id="tab-queues" data-tab="queues" aria-controls="queues" type="button">Queues</button>
@@ -677,7 +681,6 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   <section class="status" id="queues" role="tabpanel" aria-labelledby="tab-queues" hidden></section>
   <section class="status" id="releases" role="tabpanel" aria-labelledby="tab-releases" hidden></section>
   <section class="status" id="artifacts" role="tabpanel" aria-labelledby="tab-artifacts" hidden></section>
-  <section class="status" id="manual" role="tabpanel" aria-labelledby="tab-manual" hidden></section>
 </div>
 <div class="modal" id="modal" hidden></div>
 <div class="modal" id="rankm" hidden></div>
@@ -788,6 +791,7 @@ function rebuild(){
       c.log = [...(Array.isArray(c.log) ? c.log : []), {ts: ch.ts, t: "Your comment (on its way): " + ch.value}];
       c.log_n = (Number(c.log_n) || 0) + 1;
     }
+    else if(f === "blocked") c.blk = ch.value || "";   // HUB222: blocked (or unblocked) here
     else c[f] = ch.value;   // un, pri, rank, epic
     c._pending++;
   }
@@ -804,7 +808,7 @@ let lastStamp = 0, sending = 0, sendq = Promise.resolve();
 let syncOnly = "";   // "" or the tab that shows only the changes on their way (set by the sync pill, cleared by "Show all")
 function pendTab(ch){
   if(ch.card === "jobs" && ch.field === "queue") return "queues";   // HUB90: the Queues tab's order
-  if(manDocs.has(ch.card)) return "manual";
+  if(manDocs.has(ch.card)) return "decisions";   // HUB220: Manual actions is a section of Decisions
   if(artDocs.has(ch.card)) return "artifacts";
   const f = String(ch.field);
   if(f.startsWith("ans.") || f.startsWith("step.") || sessDocs.has(ch.card)) return "decisions";
@@ -823,6 +827,7 @@ function changeText(ch){
   if(f.startsWith("step.")) return v ? "your step marked done" : "your step reopened";
   if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
+  if(f === "blocked") return v ? "blocked: " + String(v).slice(0, 80) : "unblocked";
   if(f === "order") return "new order";
   if(f === "comment") return "comment: " + String(v || "").slice(0, 80);
   if(f === "create") return "new " + String((v && v.kind) || "thing") + ": " + String((v && (v.t || v.name)) || "").slice(0, 80);
@@ -841,7 +846,7 @@ function renderSyncOnly(){
   const box = document.getElementById("synconly"); if(!box) return;
   const mine = [...changes.entries()].filter(([, ch]) => pendTab(ch) === syncOnly).sort((a, b) => (a[1].ts || "").localeCompare(b[1].ts || ""));
   if(syncOnly && (filt.tab !== syncOnly || !mine.length)) syncOnly = "";   // another tab chosen, or all of them arrived
-  for(const id of ["decisions", "manual", "artifacts", "queues"]){ const p = document.getElementById(id); if(p) p.classList.toggle("tabhide", syncOnly === id); }
+  for(const id of ["decisions", "artifacts", "queues"]){ const p = document.getElementById(id); if(p) p.classList.toggle("tabhide", syncOnly === id); }
   box.hidden = !syncOnly;
   if(!syncOnly){ box.replaceChildren(); return; }
   const rows = mine.map(([k, ch]) => {
@@ -900,6 +905,7 @@ function changeSettled(id, ch, sent, exp){
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
     else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
     else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
+    else if(f === "blocked"){ if(sameValue(doc.blk, ch.value)) return "shown"; }   // HUB222
     else if(f === "rank"){ if(doc.rank === ch.value) return "shown"; }
     else if(f === "column"){
       if((COL_BY_NAME[doc.column] || doc.col) === (COL_BY_NAME[ch.value] || ch.value) && (ch.rank == null || doc.rank === ch.rank)) return "shown";
@@ -1518,22 +1524,96 @@ function selMove(how){   // per column: the selected cards are gathered into one
     moveMany(ids, k, idx);
   }
 }
+// >>> select-rules (tests/test_app.py runs this block)
+// HUB223: why card c may not move to column k: the board's move rules (hub/pm/rules.py move_problem), "" when it may.
+// A card In refinement leaves it here only for Backlog, Parked or Rejected: the App does not hold its refinement
+// record, and the board itself moves one with nothing uncertain left to Refined.
+function moveProblem(c, k){
+  if(c.col === k) return "";
+  if(c.col === "refining" && !["park", "back", "rej"].includes(k)) return "still in refinement";
+  if(NEEDS_ANSWERS.includes(k) && openCount(c, k)) return "open questions";
+  if(k === "done" && cardSteps(c).some(s => !stepDone(c, s.id))) return "a step of the user is open";
+  return "";
+}
+function selTargets(list){ return list.length ? COLS.map(col => col.k).filter(k => list.every(c => !moveProblem(c, k))) : []; }   // HUB223
+function selColCount(list){ return new Set(list.map(c => c.col)).size; }   // HUB224
+// HUB225: the cards an epic's box selects: the epic's cards in the chosen project, in the columns shown
+function epicPickIds(k){ return [...cards.values()].filter(c => (c.epic || "") === k && inProject(c) && !(filt.hide && filt.hide[c.col])).map(c => c.id); }
+function epicPickState(k){
+  const ids = epicPickIds(k), n = ids.filter(id => picked.has(id)).length;
+  return !ids.length ? "none" : n === ids.length ? "all" : n ? "some" : "off";
+}
+// <<< select-rules
+let selEpOpen = false;   // HUB225: the Select bar's Epics dropdown is open
+function selEpicsEl(){
+  const eps = sortedEpics().filter(([k]) => epicPickIds(k).length);
+  const wrap = el("span",{class:"selep"}, el("button",{type:"button", "aria-haspopup":"true", "aria-expanded":String(selEpOpen && !!eps.length), disabled:!eps.length,
+    title:"Select every card of an epic (the project filter applies)", onclick:()=>{ selEpOpen = !selEpOpen; renderSelBar(); }}, "Epics ▾"));
+  if(!selEpOpen || !eps.length) return wrap;
+  const pop = el("div",{class:"selepop", role:"group", "aria-label":"Select the cards of an epic"});
+  for(const [k, v] of eps){
+    const st = epicPickState(k), ids = epicPickIds(k);
+    const cb = el("input",{type:"checkbox", "aria-label":"Select the cards of " + v.name});
+    cb.checked = st === "all"; cb.indeterminate = st === "some";
+    cb.addEventListener("change", () => { for(const id of epicPickIds(k)) cb.checked ? picked.add(id) : picked.delete(id); render(); });
+    pop.append(el("label",{}, cb, v.name + " (" + ids.length + ")"));
+  }
+  wrap.append(pop);
+  return wrap;
+}
+// HUB222: Block asks for the reason; each card gets a `blocked` change (the board tells its session to stop)
+function selBlock(ids){
+  if(readOnly){ toast("This view is read-only."); return; }
+  const inp = el("textarea",{id:"blkWhy", rows:"3", maxlength:"300", required:true, placeholder:"What the cards wait on, or why their work stops"});
+  const err = el("p",{class:"err", role:"alert"});
+  const form = edForm("Block the selected cards",
+    el("h3",{}, "Block " + ids.length + (ids.length === 1 ? " card" : " cards")),
+    el("p",{class:"hint"}, ids.join(", ") + ". Work on them stops at the next safe point: the session or stream that holds each card is told to stop and hand back."),
+    el("label",{}, "Reason", inp), err,
+    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeEd}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Block")));
+  form.addEventListener("submit", ev=>{
+    ev.preventDefault();
+    const why = inp.value.split(/\s+/).filter(Boolean).join(" ");
+    if(!why){ err.textContent = "Give the reason: what the cards wait on."; return; }
+    closeEd();
+    setBlocked(ids, why);
+  });
+  inp.focus({preventScroll:true});
+}
+function setBlocked(ids, why){   // why "" unblocks
+  let n = 0;
+  for(const id of ids){
+    const base = raw.get(id), c = cards.get(id);
+    if(!base || !c || (c.blk || "") === why) continue;
+    change(base, "blocked", why); n++;
+  }
+  rebuild(); render();
+  if(n) toast((why ? "Blocked " : "Unblocked ") + n + (n === 1 ? " card" : " cards") + ".");
+}
 function renderSelBar(){
   const bar = $("#selbar");
-  if(!selMode || readOnly){ bar.hidden = true; bar.textContent = ""; return; }
+  if(!selMode || readOnly){ bar.hidden = true; bar.textContent = ""; selEpOpen = false; return; }
   bar.textContent = "";
-  const n = [...picked].filter(id=>cards.has(id)).length;
-  const btn = (label, tip, fn) => el("button",{type:"button", title:tip, disabled:!n, onclick:fn}, label);
-  const to = el("select",{"aria-label":"Move the selected cards to a column", disabled:!n, onchange:ev=>{ const k = ev.target.value; ev.target.value = ""; if(k) moveMany(selOrder(), k, 0); }},
-    el("option",{value:""}, "Move to…"), ...COLS.map(col=>el("option",{value:col.k}, col.name)));
+  const ids = selOrder(), list = ids.map(id => cards.get(id)), n = ids.length;
+  const several = selColCount(list) > 1, targets = selTargets(list), blocked = list.filter(c => c.blk);
+  const btn = (label, tip, fn, off) => el("button",{type:"button", title:tip, disabled:!n || !!off, onclick:fn}, label);
+  const place = tip => several ? "The selected cards are in several columns: select cards of one column to move them within it" : tip;   // HUB224
+  const to = el("select",{"aria-label":"Move the selected cards to a column", disabled:!targets.length,
+    title:n && !targets.length ? "No column takes every selected card (open questions, a step of the user, or a card still in refinement)" : null,
+    onchange:ev=>{ const k = ev.target.value; ev.target.value = ""; if(k) moveMany(selOrder(), k, 0); }},
+    el("option",{value:""}, "Move to…"), ...COLS.filter(col => targets.includes(col.k)).map(col=>el("option",{value:col.k}, col.name)));
   bar.append(el("b",{}, n + " selected"),
-    btn("⤒ Top","Move the selected cards to the top of their column", ()=>selMove("top")),
-    btn("↑ Up","Move the selected cards up one place, together", ()=>selMove("up")),
-    btn("↓ Down","Move the selected cards down one place, together", ()=>selMove("down")),
-    btn("⤓ Bottom","Move the selected cards to the bottom of their column", ()=>selMove("bottom")),
+    btn("⤒ Top", place("Move the selected cards to the top of their column"), ()=>selMove("top"), several),
+    btn("↑ Up", place("Move the selected cards up one place, together"), ()=>selMove("up"), several),
+    btn("↓ Down", place("Move the selected cards down one place, together"), ()=>selMove("down"), several),
+    btn("⤓ Bottom", place("Move the selected cards to the bottom of their column"), ()=>selMove("bottom"), several),
     to,
+    btn("🚩 Block", "Block the selected cards: give the reason; their work stops at the next safe point", ()=>selBlock(ids)),
+    blocked.length ? btn("Unblock", "Clear the block of the " + blocked.length + " selected blocked card" + (blocked.length === 1 ? "" : "s"), ()=>setBlocked(blocked.map(c => c.id), "")) : null,
+    selEpicsEl(),
     btn("Clear","Clear the selection", ()=>{ picked.clear(); selAnchor = null; render(); }),
-    el("span",{class:"hint"}, n ? "Drag a selected card to move them all" : "Click cards to select; Shift+click for a range"));
+    el("button",{type:"button", class:"seldone", title:"Finish selecting (Esc)", onclick:()=>setSelMode(false)}, "Done"),
+    el("span",{class:"hint"}, n > 1 ? "Dragging is off while several cards are selected" : "Click cards to select; Shift+click for a range"));
   bar.hidden = false;
 }
 function nudge(id, dir){
@@ -2106,6 +2186,7 @@ function cardPress(ev, id, e){
   if(drag || readOnly || ev.isPrimary === false) return;
   if(ev.pointerType === "mouse" && ev.button !== 0) return;
   if(ev.target.closest("button, select, input, textarea, a, .hov")) return;
+  if(selMode && selOrder().length > 1) return;   // HUB223: several cards selected: no dragging, the Select bar moves them
   drag = {id, src:e, pid:ev.pointerId, type:ev.pointerType, x0:ev.clientX, y0:ev.clientY, x:ev.clientX, y:ev.clientY, active:false};
   if(ev.pointerType !== "mouse") drag.timer = setTimeout(()=>{ if(drag && !drag.active) dragStart(); }, 350);
   addEventListener("pointermove", dragMove, true); addEventListener("pointerup", dragUp, true); addEventListener("pointercancel", dragCancel, true);
@@ -4231,7 +4312,7 @@ document.addEventListener("touchmove", ev => { if(gDrag && gDrag.active) ev.prev
 document.addEventListener("contextmenu", ev => { if(gDrag) ev.preventDefault(); });   // nor opens the long-press menu
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "gantt", "decisions", "manual", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
+const TABS = ["board", "gantt", "decisions", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -4320,25 +4401,16 @@ function tabBadge(id, label, n){   // a tab's count: a red circle with the numbe
   tab.dataset.badge = sig;
   tab.replaceChildren(label, n ? el("span",{class:"badge", "aria-label":n + " open"}, n > 99 ? "99+" : String(n)) : "");
 }
-// HUB139: one list of what only the user can do. The cards' steps (pm.py step, HUB27) are listed here too, beside
-// the manual actions, in their card's project group; Done / Open again marks the step (a change file `step.<id>`,
-// like on Decisions, where they stay listed). A Parked card's steps are left out (HUB112), and so are a Done or
-// Rejected card's. A step has no snooze: it is the card's, and the card waits on it.
-function manSteps(){
-  const out = [];
-  for(const c of cards.values()){
-    if(c.col === "done" || c.col === "rej" || c.col === "park") continue;
-    for(const s of cardSteps(c)) out.push({c, s, done: stepDone(c, s.id)});
-  }
-  return out;
-}
-function manStepAt(x){ return x.done ? String((ansAt[x.c.id] || {})["step." + x.s.id] || "") : String(x.s.asked || ""); }
-function renderManual(){   // a fault in this tab must never stop the board from drawing
-  const host = document.getElementById("manual");
-  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length + manSteps().filter(x => !x.done).length); } catch { /* the count is an extra */ }
-  if(!host || host.hidden) return;
-  try { drawManual(host); }
-  catch(e){ host.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
+// HUB220 (the user, 2026-11-19): the manual actions are a section of the Decisions page, after its questions and
+// before the past decisions; the Manual actions tab is gone. The cards' steps for the user (HUB139 listed them here
+// too) are on the same page under "Your steps", so this section holds the manual actions alone. Its open count is
+// part of the Decisions tab's badge.
+const manHost = el("section",{id:"manual", class:"mansec", "aria-label":"Manual actions"});
+function manOpen(){ return [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length; }
+function renderManual(){   // a fault in this section must never stop the board from drawing
+  if(filt.tab !== "decisions") return;
+  try { drawManual(manHost); }
+  catch(e){ manHost.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
 }
 function manDay(iso){
   const when = iso ? new Date(iso) : null;
@@ -4347,49 +4419,30 @@ function manDay(iso){
 function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
 function manCardBtn(id){ return id && cards.has(String(id)) ? el("button",{type:"button", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : String(id || ""); }
 function drawManual(host){
-  const all = [...manDocs.values()], steps = manSteps();
-  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)]),
-    steps.map(x => [x.c.id, x.c.t, cardProject(x.c), x.s.id, x.s.step, x.s.asked, x.done, manStepAt(x)]),
-    [...changes.entries()].filter(([, ch]) => String(ch.field).startsWith("step.")).map(([k]) => [k, sentAt.has(k)])]);
+  const all = [...manDocs.values()];
+  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
-  host.replaceChildren(el("h2",{}, "Manual actions"));
-  const open = all.filter(d => !manDone(d) && !manSnoozed(d)).map(d => ({d, at: String(d.added || "")}))
-    .concat(steps.filter(x => !x.done).map(x => Object.assign({at: manStepAt(x)}, x)))
-    .sort((a, b) => b.at.localeCompare(a.at) || String(a.d ? a.d.id : a.c.id).localeCompare(String(b.d ? b.d.id : b.c.id)));
+  host.replaceChildren();
+  if(!all.length) return;   // nothing recorded: no section
+  host.append(el("h2",{}, "Manual actions"));
+  const open = all.filter(d => !manDone(d) && !manSnoozed(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
   const snoozed = all.filter(manSnoozed).sort((a, b) => String(b.snoozed_at || "").localeCompare(String(a.snoozed_at || "")) || String(a.id).localeCompare(String(b.id)));
-  const done = all.filter(manDone).map(d => ({d, at: String(d.done_at || "")}))
-    .concat(steps.filter(x => x.done).map(x => Object.assign({at: manStepAt(x)}, x)))
-    .sort((a, b) => b.at.localeCompare(a.at));
-  if(!all.length && !steps.length){
-    host.append(el("p",{class:"note"}, loaded ? "No manual actions are recorded. A session that needs a step only you can do records it here." : "Loading…"));
-    return;
-  }
-  const nSteps = open.filter(x => !x.d).length;
-  host.append(el("p",{class:"note"}, (open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do` + (nSteps ? ` (${nSteps} a card waits on, also on Decisions)` : "")
-    + ". Tick one off with Done once it is done, or Snooze a manual action to put it aside without a notification." : "Nothing is waiting on you here.")
-    + (snoozed.length ? ` ${snoozed.length} snoozed.` : "")));
+  const done = all.filter(manDone).sort((a, b) => String(b.done_at || "").localeCompare(String(a.done_at || "")));
+  host.append(el("p",{class:"note"}, (open.length ? `${open.length} manual action${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done, or Snooze it to put it aside without a notification.`
+    : "No manual action is waiting on you.") + (snoozed.length ? ` ${snoozed.length} snoozed.` : "")));
   const groups = new Map();
-  for(const x of open){ const k = x.d ? String(x.d.project || "") : cardProject(x.c); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
+  for(const d of open){ const k = String(d.project || ""); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
   const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
   for(const k of keys){
     host.append(el("h3",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
-    const rows = groups.get(k).map(x => {
-      if(!x.d){   // a card's step (HUB139)
-        const {c, s} = x;
-        const btn = el("button",{type:"button", class:"artbtn", title:"Mark this step done"}, "Done");
-        btn.disabled = readOnly;
-        btn.addEventListener("click", () => markStep(c, s.id, true));
-        return el("tr",{}, el("td",{}, el("span",{}, "🧑 " + s.step), el("div",{class:"note"}, "Step " + s.id + " of " + c.id + (c.t ? " · " + c.t : ""))),
-          el("td",{}, manCardBtn(c.id)), el("td",{}, ""), el("td",{}, manDay(s.asked)), el("td",{}, btn, " ", pendNote(c.id, s.id, "step.") || ""));
-      }
-      const d = x.d;
+    const rows = groups.get(k).map(d => {
       const btn = el("button",{type:"button", class:"artbtn"}, "Done");
       btn.disabled = readOnly;
-      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
+      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); renderDecisions(); });
       const zz = el("button",{type:"button", class:"artbtn", title:"Put it aside: it moves to Snoozed and gives no notification"}, "Snooze");
       zz.disabled = readOnly;
-      zz.addEventListener("click", () => { change(d, "snooze", true); renderManual(); });
+      zz.addEventListener("click", () => { change(d, "snooze", true); renderManual(); renderDecisions(); });
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id)), d.d ? el("div",{}, String(d.d)) : null),
         el("td",{}, manCardBtn(d.card)), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn, " ", zz));
     });
@@ -4400,10 +4453,10 @@ function drawManual(host){
     const rows = snoozed.map(d => {
       const wake = el("button",{type:"button", class:"artbtn", title:"Back to the open list, with its notification"}, "Unsnooze");
       wake.disabled = readOnly;
-      wake.addEventListener("click", () => { change(d, "snooze", false); renderManual(); });
+      wake.addEventListener("click", () => { change(d, "snooze", false); renderManual(); renderDecisions(); });
       const btn = el("button",{type:"button", class:"artbtn"}, "Done");
       btn.disabled = readOnly;
-      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
+      btn.addEventListener("click", () => { change(d, "done", true); renderManual(); renderDecisions(); });
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.project ? " · " + String((projects.get(d.project) || {}).name || d.project) : "")), d.d ? el("div",{}, String(d.d)) : null),
         el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.snoozed_at)), el("td",{}, wake, " ", btn));
     });
@@ -4411,24 +4464,14 @@ function drawManual(host){
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
   }
   if(done.length){
-    const rows = done.map(x => {
-      if(!x.d){   // a card's step marked done (HUB139): Open again reopens it, as Reopen does on Decisions
-        const {c, s} = x;
-        const btn = el("button",{type:"button", class:"artbtn", title:"Not done after all: the card waits on it again"}, "Open again");
-        btn.disabled = readOnly;
-        btn.addEventListener("click", () => markStep(c, s.id, false));
-        const by = s.done_by ? " · done by session " + s.done_by : "", note = s.done_note ? " · " + s.done_note : "";
-        return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, "🧑 " + s.step), el("div",{class:"note"}, "Step " + s.id + " of " + c.id + by + note)),
-          el("td",{}, manCardBtn(c.id)), el("td",{}, manDay(x.at)), el("td",{}, btn, " ", pendNote(c.id, s.id, "step.") || ""));
-      }
-      const d = x.d;
+    const rows = done.map(d => {
       const btn = el("button",{type:"button", class:"artbtn"}, "Open again");
       btn.disabled = readOnly;
-      btn.addEventListener("click", () => { change(d, "done", false); renderManual(); });
+      btn.addEventListener("click", () => { change(d, "done", false); renderManual(); renderDecisions(); });
       return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.note ? " · " + String(d.note) : ""))),
         el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
     });
-    host.append(el("details",{}, el("summary",{}, `Done (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+    host.append(el("details",{}, el("summary",{}, `Done manual actions (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Done", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
   }
 }
@@ -4463,7 +4506,7 @@ function stepDone(c, sid){ return (c.steps_done || {})[sid] === true; }
 function openSteps(c){ return c.col === "done" || c.col === "rej" ? [] : cardSteps(c).filter(s => !stepDone(c, s.id)); }
 function markStep(c, sid, done){
   const base = raw.get(c.id); if(!base) return;
-  change(base, "step." + sid, done); rebuild(); render(); renderDecisions(); renderManual();   // listed on Manual actions too (HUB139)
+  change(base, "step." + sid, done); rebuild(); render(); renderDecisions();
 }
 function stepsEl(list){
   return el("div",{class:"tblwrap"}, el("table",{class:"st"},
@@ -4518,14 +4561,13 @@ function drawDecisions(){
   const allSteps = [...cards.values()].filter(c => openSteps(c).length && inProject(c)).sort((a,b) => (a.pri||9)-(b.pri||9) || a.id.localeCompare(b.id));
   const stepCards = allSteps.filter(c => c.col !== "park"), parkedSteps = allSteps.filter(c => c.col === "park");
   const nParked = parkedQs.reduce((s,c) => s + Math.max(1, openQuestions(c).length), 0) + parkedSteps.reduce((s,c) => s + openSteps(c).length, 0);
-  const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), total = n + nSteps;
-  const tab = document.getElementById("tab-decisions");
+  const nSteps = stepCards.reduce((s,c) => s + openSteps(c).length, 0), nMan = manOpen(), total = n + nSteps + nMan;   // HUB220
   tabBadge("tab-decisions", "Decisions", total);
   const host = document.getElementById("decisions");
   if(!host || host.hidden) return;
   // The page checks for changes in the background: the tab is only rebuilt when what it shows has changed, never
   // while an answer is being typed in it, and it keeps its place on the page (it used to jump on every refresh).
-  const sig = JSON.stringify([filt.j, readOnly, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
+  const sig = JSON.stringify([filt.j, readOnly, nMan, sess.map(d => [d.id, d.opts, d.qs, sessAns(d)]), [...sessDocs.values()].map(d => [d.id, sessAns(d)]),
     all.map(c => [c.id, c.col, c.pri, c.t, openQuestions(c)]), [...cards.values()].filter(c => cardSteps(c).length).map(c => [c.id, c.t, cardSteps(c), c.steps_done]),
     [...cards.values()].filter(c => c.opts || c.qs).map(c => [c.id, c.ans]), [...changes.keys()].map(k => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -4541,7 +4583,7 @@ function drawDecisions(){
   host.dataset.sig = sig;
   if(host.offsetHeight) host.style.minHeight = host.offsetHeight + "px";      // the page keeps its height while the tab is rebuilt
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
-  host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : ""].filter(Boolean).join(" and ")
+  host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : "", nMan ? nMan+(nMan===1?" manual action":" manual actions") : ""].filter(Boolean).join(", ")
     : "Nothing is waiting for you"));
   if(nSteps) host.append(el("h2",{}, "Your steps"),
     el("p",{}, readOnly ? "This view is read-only: mark a step done on the desktop." : "Something only you can do; a card waits on it. Press Done when it is done."), stepsEl(stepCards));
@@ -4559,6 +4601,7 @@ function drawDecisions(){
     if(parkedQs.length) d.append(cardDecisionsEl(parkedQs));
     host.append(d);
   }
+  host.append(manHost);   // HUB220: the manual actions, kept between redraws (renderManual fills it)
   host.append(pastDecisionsEl());
 }
 // the decisions already made: the sessions' and the live cards' (an archived card keeps its own on the desktop)
@@ -4613,6 +4656,7 @@ function cardDecisionsEl(list){
       el("td",{}, COL_NAME[c.col] || c.col || ""))))));
 }
 function showTab(name, fromHash){
+  if(name === "manual") name = "decisions";   // HUB220: the old Manual actions tab's link opens Decisions
   const tab = TABS.includes(name) ? name : "board";
   filt.tab = tab; ls("kb.filters", filt);
   document.getElementById("view-board").hidden = tab !== "board";
