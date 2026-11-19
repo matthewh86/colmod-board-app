@@ -123,6 +123,7 @@ body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .list .card.shunt{transition:transform .15s ease-out}
 @media (prefers-reduced-motion: reduce){ .list .card.shunt{transition:none} }
 .card:not(.full){-webkit-user-select:none; user-select:none}   /* board cards are dragged, not text-selected */
+.rsel, .rsel .rwhy{-webkit-user-select:text; user-select:text; cursor:text}   /* HUB229: the refusal reason is selectable */
 .card.ghost{position:fixed; z-index:40; margin:0; pointer-events:none; opacity:.95; box-shadow:0 8px 24px rgba(0,0,0,.25); cursor:grabbing}   /* the card under the pointer while dragging */
 .card.ghost .hov{display:none !important}
 .card.ghost .fcount{position:absolute; top:-8px; right:-8px}
@@ -1255,6 +1256,12 @@ function cardEl(c, full=false){
   if(full) for(const s of openSteps(c)) e.append(el("div",{class:"blkb", onclick:ev=>ev.stopPropagation()}, el("b",{},"🧑 Your step: "), s.step, " ",
     readOnly ? null : el("button",{type:"button", class:"rec", title:"Mark this step done", onclick:()=>markStep(c, s.id, true)}, "Done"), " ", pendNote(c.id, s.id, "step.")));
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
+  // HUB229: the board's refusal reason as text the user can select and copy (the board tile only had a tooltip)
+  if(full && refusedNote(c.id)){ const why = refusedNote(c.id);
+    e.append(el("div",{class:"blkb rsel", onclick:ev=>ev.stopPropagation(), onmousedown:ev=>ev.stopPropagation()},
+      el("b",{},"⚠ Sync refused: "), el("span",{class:"rwhy"}, why), " ",
+      el("button",{type:"button", class:"rec", title:"Copy the reason", onclick:ev=>{ ev.stopPropagation();
+        try{ navigator.clipboard.writeText(why).then(()=>{ ev.target.textContent = "Copied"; }, ()=>{}); }catch(e){} }}, "Copy"))); }
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
   if(!full && flags.length) e.append(el("div",{class:"flags"}, ...flags));   // HUB215
