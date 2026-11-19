@@ -374,7 +374,7 @@ body.modal-open{overflow:hidden}
 .setup input{font:inherit; color:var(--ink); padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
 .setup p{margin:0; font-size:.84rem; color:var(--muted)}
 .pbtn{font:inherit; color:var(--ink); border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:5px 12px; cursor:pointer; min-height:36px}
-body.noconn .bar, body.noconn .main, body.noconn #empty, body.noconn #note{display:none}
+body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 /* machines and jobs */
 .status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
 .status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
@@ -503,6 +503,8 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gbar[class*="g-t-"]::after{width:10px; height:10px; background:var(--tc)}
 .glegend i.grib{display:inline-block; width:12px; height:12px; border-radius:0; vertical-align:-1px; margin-right:3px; background:var(--tc); clip-path:polygon(0 0, 100% 0, 0 100%)}
 .gsw{display:inline-block; width:22px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:4px}
+.discon{margin:2em 0 1em} .dangerbtn{background:var(--p1); color:var(--surface); border:0; border-radius:6px; padding:.5em 1.2em; font:inherit; font-weight:600; cursor:pointer}   /* HUB245 */
+.dangerbtn:hover{filter:brightness(1.1)} .dangerbtn:focus-visible{outline:2px solid var(--p1); outline-offset:2px}
 .rspin{display:inline-block; width:.8em; height:.8em; margin-left:.4em; vertical-align:-.1em; border-radius:50%;
   background:conic-gradient(var(--accent, var(--muted)) var(--p, 0%), color-mix(in srgb, var(--muted) 30%, transparent) 0);
   -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
@@ -674,8 +676,6 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
       <div class="board" id="board"></div>
     </div>
     <div class="empty" id="empty" hidden></div>
-    <p class="note" id="note">Answers, notes, priorities, epics, moves and card order are saved to the board straight away and reach
-      Obsidian on both PCs within about a minute. <button class="linkbtn" id="signout" type="button">Disconnect</button></p>
   </div>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
   <section class="status" id="hub" role="tabpanel" aria-labelledby="tab-hub" hidden></section>
@@ -1674,7 +1674,7 @@ function renderSync(){
   const sync = $("#sync"); if(!conn || !loaded) return;
   sync.replaceChildren(meta.exported_at ? el("span",{}, "Board as of ", el("b",{}, fmtTime(meta.exported_at)),
     lastCheck ? " · checked " + new Date(lastCheck).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", second:"2-digit"}) : "",
-    lastCheck ? el("span",{class:"rspin", role:"img"}) : "")
+    lastCheck ? el("span",{class:"rspin", role:"img", title:SAVE_NOTE, "aria-label":SAVE_NOTE}) : "")
     : el("span",{}, "No board export yet: the desktop's node writes it."),
     changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:gotoSyncing},   // HUB68
       el("b",{}, String(changes.size)), changes.size === 1 ? " change syncing to the desktop" : " changes syncing to the desktop") : "");
@@ -3221,22 +3221,22 @@ function usageCredits(u){
     left: n("left_usd"), running: n("runs_running"), runs: n("runs_month")};
 }
 function creditLine(c){   // "API credits 2026-11: $12.30 spent, $25.00 held by running runs, $162.70 left of $200"
-  return "API credits " + c.month + ": $" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by running runs, $"
-    + c.left.toFixed(2) + " left of $" + c.cap.toFixed(0) + (c.on ? "" : " (overflow off: no key file)");
+  return "API credits " + c.month + ": $" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by running runs until they end, $"
+    + c.left.toFixed(2) + " free of $" + c.cap.toFixed(0) + (c.on ? "" : " (overflow off: no key file)");
 }
 function creditsTable(u){
   const c = usageCredits(u);
   if(!c) return [el("p",{class:"note"}, "API credits: no reading yet (hub/overflow.py).")];
-  const pct = c.cap ? Math.round(100 * (c.spent + c.held) / c.cap) : 0;
+  const pct = c.cap ? Math.round(100 * c.spent / c.cap) : 0;   // HUB240: spent only; held is not spent
   const state = !c.on ? "Overflow off: no key file on the hub's machine."
     : u.plan_used_up ? (c.left >= 1 ? "The plan is used up: overflow streams on the paid API may run while the cap has room." : "The plan is used up and the cap has no room: no overflow runs until next month.")
     : "Overflow streams start only once a plan limit is used up.";
   return [el("h3",{}, "API credits (overflow streams)"),
     el("div",{class:"tblwrap"}, el("table",{class:"st"},
-      el("thead",{}, el("tr",{}, el("th",{}, "Month"), el("th",{}, "Spent"), el("th",{}, "Held by running runs"), el("th",{}, "Left"), el("th",{}, "Cap"))),
+      el("thead",{}, el("tr",{}, el("th",{}, "Month"), el("th",{}, "Spent"), el("th",{}, "Held by running runs"), el("th",{}, "Free for new runs"), el("th",{}, "Cap"))),
       el("tbody",{}, el("tr",{}, el("td",{}, c.month), el("td",{}, "$" + c.spent.toFixed(2)),
         el("td",{}, "$" + c.held.toFixed(2) + (c.running ? " (" + c.running + " run" + (c.running === 1 ? "" : "s") + ")" : "")),
-        el("td",{}, "$" + c.left.toFixed(2)), el("td",{}, "$" + c.cap.toFixed(0) + " (" + pct + " % used)"))))),
+        el("td",{}, "$" + c.left.toFixed(2)), el("td",{}, "$" + c.cap.toFixed(0) + " (" + pct + " % spent)"))))),
     el("p",{class:"note"}, state + " " + c.runs + " run" + (c.runs === 1 ? "" : "s") + " this month.")];
 }
 function usageSection(host){
@@ -3327,6 +3327,9 @@ function renderHubTab(){
       ? queued.length + " queued: " + queued.map(j => j.kind + (j.card ? " " + j.card : "")).join(", ") + " (the Queues tab orders them)."
       : "No hub job is queued."));
     jobTables(host, hubJobs, {h: "h3", running: "Running hub jobs", finished: "Finished hub jobs"});
+    host.append(el("div",{class:"discon"}, el("button",{type:"button", class:"dangerbtn", id:"signout",
+      title:"Forget this browser's connection to the board",
+      onclick:() => { if(confirm("Disconnect this browser from the board? The connection details have to be entered again to reconnect.")) disconnect(); }}, "Disconnect")));
   });
 }
 
@@ -4793,12 +4796,14 @@ function startPolling(){
   nextCheck = Date.now() + POLL_MS;
   check();
 }
+const SAVE_NOTE = "Answers, notes, priorities, epics, moves and card order are saved to the board straight away and reach Obsidian on both PCs within about a minute.";
 // HUB135: a small ring that fills up until the next check of the board, beside "checked hh:mm:ss"
 setInterval(() => {
   const rings = document.querySelectorAll(".rspin"); if(!rings.length || nextCheck == null) return;
   const left = Math.max(0, nextCheck - Date.now()), span = left > POLL_MS ? left : POLL_MS;
   const frac = document.hidden ? 0 : 1 - left / span, secs = Math.ceil(left / 1000);
-  const tip = document.hidden ? "Checks pause while the page is hidden" : left ? "Next check in " + secs + " s" : "Checking now";
+  const tip = (document.hidden ? "Checks pause while the page is hidden" : left ? "Next check in " + secs + " s" : "Checking now")
+    + ". " + SAVE_NOTE;   // HUB245: the save note lives in this tooltip
   for(const r of rings){ r.style.setProperty("--p", (frac * 100).toFixed(1) + "%"); r.title = tip; r.setAttribute("aria-label", tip); }
 }, 250);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
@@ -4835,14 +4840,14 @@ document.getElementById("setup").addEventListener("submit", async ev => {
       "Can't reach GitHub.";
   }
 });
-document.getElementById("signout").addEventListener("click", () => {
+function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a confirmation
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
   tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
   render(); showSetup("");
-});
+}
 
 render();
 setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
