@@ -449,7 +449,15 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .ghead button.pill:hover{border-color:var(--accent)}
 .ghead button.pill[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); font-weight:600}
 .ghead .pill.over{color:var(--blk-ink); background:var(--blk-bg); border-color:transparent; font-weight:600}
-.gscale{display:inline-flex; margin-left:auto; border:1px solid var(--line); border-radius:6px; overflow:hidden}
+/* HUB285: the usage pills in one box; HUB283: the token pills' colour by the share left */
+.ubox{display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; padding:3px 6px; border:1px solid var(--line); border-radius:8px}
+.ghead .pill.tk-blue{--tk:#1f5fbf} .ghead .pill.tk-green{--tk:#2e8b3e} .ghead .pill.tk-yellow{--tk:#b58b00}
+.ghead .pill.tk-orange{--tk:#d0661a} .ghead .pill.tk-red{--tk:#c62828}
+.ghead .pill[class*="tk-"]{color:var(--tk); border-color:var(--tk); background:color-mix(in srgb, var(--tk) 12%, var(--surface)); font-weight:600}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ghead .pill[class*="tk-"]{color:color-mix(in srgb, var(--tk) 55%, #fff)} }
+:root[data-theme="dark"] .ghead .pill[class*="tk-"]{color:color-mix(in srgb, var(--tk) 55%, #fff)}
+.gscale{display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden}
+.gaxis .gscale button{min-height:24px; padding:2px 10px}
 .gscale button{font:inherit; font-size:.8rem; border:0; background:var(--surface); color:var(--ink); padding:4px 12px; cursor:pointer; min-height:30px}
 .gscale button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
 /* HUB175: the Hub tab's pace selector, three equal segments; the help below follows the hovered or focused one */
@@ -590,6 +598,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 /* HUB208: a release's name at the top of its line too; HUB204/HUB205: the token run-out lines, named at the top */
 .gline.rel span.gltop, .gline span.gltop{top:17px; bottom:auto; pointer-events:auto; cursor:default}
 .gline.rel span.rlink{pointer-events:auto; cursor:pointer; text-decoration:underline dotted}
+.gline.rel span.rnames span{position:static; padding:0; background:none; border-radius:0}   /* HUB282: names side by side */
 .gline.rel span.rlink:hover, .gline.rel span.rlink:focus-visible{text-decoration:underline; outline:none}
 .rlinks{margin:6px 0; font-size:.88rem}
 .rlinks .rcards{margin:4px 0 0}
@@ -613,7 +622,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .g-t-bug{--tc:var(--t-bug)} .g-t-feature{--tc:var(--t-feature)} .g-t-technical{--tc:var(--t-technical)} .g-t-administration{--tc:var(--t-admin)}
 .g-t-artwork{--tc:var(--t-art)} .g-t-documentation{--tc:var(--t-doc)} .g-t-release{--tc:var(--t-rel)} .g-t-testing{--tc:var(--t-test)}
 .g-t-plan{--tc:var(--t-plan)} .g-t-spike{--tc:var(--t-spike)}
-@media (max-width:640px){ #gantt{--glw:104px} .glab.gcard .gt{display:none} .gscale{margin-left:0} .gepic .glab, .glab.gcard{padding-left:6px} }
+@media (max-width:640px){ #gantt{--glw:104px} .glab.gcard .gt{display:none} .gaxis .gscale button{padding:2px 6px} .gepic .glab, .glab.gcard{padding-left:6px} }
 table.st{border-collapse:collapse; width:100%; font-size:.82rem}
 table.st th button.sorth{all:unset; cursor:pointer; font-weight:600; color:inherit}
 table.st th button.sorth:hover, table.st th button.sorth.on{color:var(--fg, inherit); text-decoration:underline}
@@ -3383,22 +3392,27 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   if(!u || !wins.length) return [el("span",{class:"pill", title:"The coordinator records the plan's limits on each wake (hub/usage.py)"}, "Tokens: no reading yet")];
   const out = wins.filter(w => w.runs_out_at).sort((a, b) => String(a.runs_out_at).localeCompare(String(b.runs_out_at)));
   const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
-  // HUB279: the API credits as two pills: what is really left under the cap (spent only), and the budget still free
-  // (the cap less what is spent and what running runs hold)
+  // HUB281: the API credits in one pill: what is really left under the cap (spent only) | the budget still free (the
+  // cap less what is spent and what running runs hold); HUB283: coloured by the budget figure, what new runs can use
   const c = usageCredits(u), cp = [];
   if(c){
     const pc = v => c.cap ? Math.round(100 * v / c.cap) : 0, real = Math.max(0, c.cap - c.spent);
-    cp.push(el("span",{class:"pill" + (u.plan_used_up && real < 1 ? " over" : ""), title:creditLine(c)},
-      "API Tokens Remaining: " + pc(real) + " % / $" + real.toFixed(2) + " (Real)"));
-    cp.push(el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c) + "\nBudgeted: the cap less what is spent and what running runs hold until they end"},
-      "API Tokens Budget " + pc(c.left) + " % / $" + c.left.toFixed(2) + " (Budgeted)"));
+    cp.push(el("span",{class:"pill " + tokLevel(pc(c.left)), title:creditLine(c) + "\nReal: the cap less what is spent. Budget: the cap less what is spent and what running runs hold until they end."},
+      "API Tokens: " + pc(real) + " % / $" + real.toFixed(2) + " (Real) | " + pc(c.left) + " % / $" + c.left.toFixed(2) + " (Budget)"));
   }
   const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
-  if(x) cp.push(el("span",{class:"pill" + (x.left != null && x.left < 1 ? " over" : ""), title:extraLine(x)},
+  if(x) cp.push(el("span",{class:"pill" + (x.rising ? " over" : ""), title:extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : "")},
     x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used"));
-  const rw = usageRunway(u), over = Number(w.pct) >= 100;   // the plan's tokens; the run-out times are in the title
-  return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + "\nRuns out" + runoutText(u, w).replace(/^ · /, ": ") + (rw && rw.why ? "\n(the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
-    "Plan Tokens Remaining: " + Math.max(0, 100 - Math.round(Number(w.pct) || 0)) + " %"), ...cp];
+  const rw = usageRunway(u), left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));   // the run-out times are in the title
+  // HUB285: the three usage measurements in one box
+  return [el("span",{class:"ubox", role:"group", "aria-label":"Usage"}, el("span",{class:"pill " + tokLevel(left), title:wins.map(usageLine).join("\n") + "\nRuns out" + runoutText(u, w).replace(/^ · /, ": ") + (rw && rw.why ? "\n(the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
+    "Plan Tokens Remaining: " + left + " %"), ...cp)];
+}
+// HUB283: a token pill's colour by the share left: blue from 90 %, green under 90, yellow under 50, orange under 30,
+// red under 10
+function tokLevel(pct){
+  const p = Number(pct) || 0;
+  return p >= 90 ? "tk-blue" : p >= 50 ? "tk-green" : p >= 30 ? "tk-yellow" : p >= 10 ? "tk-orange" : "tk-red";
 }
 // >>> runway (tests/test_app.py runs this block)
 // HUB204-HUB206: the hub's runway (hub/usage.py runway): when the plan runs out, then the API credits after it.
@@ -3449,7 +3463,7 @@ function usageExtra(u){
   const set = extraBudget(u);   // the reading's limit when it gives one, else the budget the user set here
   const limit = x.limit != null && !isNaN(Number(x.limit)) ? Number(x.limit) : set > 0 ? set : null;
   const spent = Math.max(0, Number(x.spent));
-  return {on: !!x.enabled, spent, limit, left: limit != null ? Math.max(0, limit - spent) : null,
+  return {on: !!x.enabled, spent, limit, left: limit != null ? Math.max(0, limit - spent) : null, rising: x.rising === true,
     cur: String(x.currency || "USD"), recorded: x.recorded || ""};
 }
 // HUB272: the user's usage credits budget (hub/usage.py LIMITS "extra", whole USD, 0 = not set), with a change on its way
@@ -3857,6 +3871,7 @@ function renderQueues(){
 // Turbo, HUB196)
 const GANTT_HORIZON_H = 24;               // HUB131: Next up plans this far ahead; Refined cards join only to fill it
 const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; every other project's cards are game streams
+const REL_GAP_PX = 60;                     // HUB282: release lines closer than this share one line and one label
 const GANTT_DEFAULT_MIN = 240;            // the length of a card with no estimate (and, started, no eta): dashed
 const GANTT_OVERDUE_MIN = 60;             // an In progress card past its eta is taken to need this much more from now
 const GANTT_COLS = ["prog", "test", "built", "next", "refined"];   // the rows' order: started first, then the plan
@@ -4308,9 +4323,7 @@ function drawGantt(host){
     noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
       title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
       noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
-    ...usagePills(),
-    el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
-      el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
+    ...usagePills()));
   if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || gSelCount() || !gRel ? " with these filters." : "."))); return; }
   // the time range: from a little before now (or the earliest start, at most 3 days back) to the end of the plan
   const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
@@ -4331,7 +4344,9 @@ function drawGantt(host){
     ticks.push(el("span",{class:"gtick" + (isDay ? " day" : ""), style:"left:" + X(t) + "px"},
       isDay ? d.toLocaleDateString(undefined, {weekday:"short", day:"numeric"}) : d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"})));
   }
-  inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gt", style:"color:var(--muted)"}, sc.label + " scale")), ticks));
+  // HUB286: the Day / Week selector sits in the top-left header cell
+  inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
+    ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
@@ -4429,13 +4444,20 @@ function drawGantt(host){
   // HUB239: the labels at both ends of the line open that release's card (an archived release card opens read-only)
   const relLink = (cls, id, tip, label) => el("span",{class:cls + " rlink", role:"link", tabindex:"0", title:tip + " (open " + id + ")", "data-card":id,
     onclick:ev => { ev.stopPropagation(); openCard(id); }, onkeydown:ev => { if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); openCard(id); } }}, label);
-  const relLine = (t, label, tip, id) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(t) + "px)"},
-    relLink("gltop", id, tip, "\u{1F4E6} " + label), relLink("", id, tip, "\u{1F4E6} " + label))); };
+  const rels = [];   // HUB282: [{x, items: [{id, label, tip}]}]: lines closer than REL_GAP_PX share one
+  const relLine = (t, label, tip, id) => { if(gRel && t >= t0 && t <= t1) rels.push({x: X(t), items: [{id, label, tip}]}); };
+  const relDraw = () => {
+    const grp = [];
+    for(const r of rels.sort((a, b) => a.x - b.x)){ const g = grp[grp.length - 1]; if(g && r.x - g.x < REL_GAP_PX) g.items.push(...r.items); else grp.push(r); }
+    const names = (cls, g) => el("span",{class:cls + " rnames"}, "\u{1F4E6} ", ...g.items.flatMap((it, i) => [i ? " + " : "", relLink("", it.id, it.tip, it.label)]));
+    for(const g of grp) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + g.x + "px)"}, names("gltop", g), names("", g)));
+  };
   // HUB204, HUB205: where the plan's tokens, then the Claude API credits, are estimated to run out
   for(const x of tok) if(x.t >= t0 && x.t <= t1) lines.push(el("span",{class:"gline tok " + x.k, style:"left:calc(var(--glw) + " + X(x.t) + "px)"},
     el("span",{class:"gltop", title:x.tip + ": " + fmtTime(new Date(x.t).toISOString())}, x.label)));
   for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)", it.c.id);
   for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")", r.id);
+  relDraw();
   const cardRow = (it, data) => {
     const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", hue = hueOf(c.epic || "");
     const movable = !readOnly && it.kind !== "past" && it.kind !== "milestone";   // HUB163, HUB191: drag the label
