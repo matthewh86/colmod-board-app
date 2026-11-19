@@ -628,11 +628,27 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .usage .utip .ut{color:var(--ink)}
 .usage .note{margin:0}
 .usage details{font-size:.8rem} .usage summary{cursor:pointer; color:var(--muted)}
+/* HUB252: the AI Assistant panel (right side; answers and suggests only) */
+.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px; cursor:pointer}
+.aipanel{position:fixed; top:0; right:0; bottom:0; width:min(420px,100%); z-index:15; background:var(--surface); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column}
+.aipanel[hidden]{display:none}
+.aihead{display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
+.aihead h2{font-size:.95rem; margin:0; flex:1}
+.aihead button,.aisend{font:inherit; font-size:.8rem; color:var(--ink); background:var(--sunk); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer}
+.aimsgs{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
+.aimsg{max-width:92%; padding:7px 10px; border-radius:10px; font-size:.85rem; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line)}
+.aimsg.user{justify-self:end; background:var(--sunk)}
+.aimsg.assistant{justify-self:start}
+.aimsg.wait{color:var(--muted); font-style:italic}
+.aimsg .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); padding:0; cursor:pointer}
+.aiform{display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--line)}
+.aiform textarea{flex:1; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; min-height:2.6em}
+.aihint{color:var(--muted); font-size:.8rem}
 </style>
 
 <div class="wrap" id="app">
   <header class="top">
-    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div></div>
+    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel">AI Assistant</button></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -695,6 +711,11 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 <div class="modal" id="newm" hidden></div>
 <div class="modal" id="edm" hidden></div>
 <div class="selbar" id="selbar" role="toolbar" aria-label="Selected cards" hidden></div>
+<aside class="aipanel" id="aipanel" role="complementary" aria-label="AI Assistant" hidden>
+  <div class="aihead"><h2>AI Assistant</h2><button type="button" id="ainew" title="Start a new conversation (the assistant forgets this one)">New conversation</button><button type="button" id="aiclose" aria-label="Close the assistant">×</button></div>
+  <div class="aimsgs" id="aimsgs" aria-live="polite"></div>
+  <form class="aiform" id="aiform"><textarea id="aiq" rows="2" placeholder="Ask about the cards… (Enter sends, Shift+Enter a new line)" aria-label="Message"></textarea><button type="submit" class="aisend" id="aisend">Send</button></form>
+</aside>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -5019,5 +5040,65 @@ if (conn) pendLoad();                 // the changes of an earlier visit that th
 // another tab of the App in this browser made or settled a change: both show the same
 window.addEventListener("storage", ev => { if (ev.key === PEND_KEY && conn){ pendLoad(); rebuild(); render(); saveState(); } });
 if (conn){ setRO(false); startPolling(); } else showSetup("");
+
+// ---------- HUB252: the AI Assistant. It answers and suggests only (the user, 2026-11-19). A message is a file in
+// inbox/assistant/ of the board data; the primary node answers it with its local LLM and writes
+// export/assistant/<conv>.json, which this panel polls. The conversation is kept in this browser over a reload (the
+// user, 2026-11-19: keeping it is fine); "New conversation" starts a fresh one with no earlier context. A card id in an
+// answer opens that card.
+const AI_KEY = "hub.assistant";
+const ai = Object.assign({msgs: [], conv: "", n: 0, busy: false}, (() => { const k = ls(AI_KEY);
+  return k && typeof k.conv === "string" && Array.isArray(k.msgs) ? {conv: k.conv, n: Number(k.n) || 0, msgs: k.msgs.filter(m => !m.wait)} : {}; })());
+function aiSave(){ ls(AI_KEY, {conv: ai.conv, n: ai.n, msgs: ai.msgs.filter(m => !m.wait).slice(-40)}); }
+function aiNewConv(){ ai.msgs = []; ai.n = 0; ai.busy = false; ai.conv = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); aiSave(); aiDraw(); }
+function aiText(el, text, ids){
+  el.textContent = "";
+  const known = new Set(ids || []);
+  for(const part of String(text).split(/\b([A-Z]{1,6}-?\d{1,5})\b/)){
+    if(known.has(part) && raw.has(part)){
+      const b = document.createElement("button"); b.type = "button"; b.className = "aicard"; b.textContent = part;
+      b.title = "Open " + part; b.addEventListener("click", () => openCard(part)); el.appendChild(b);
+    } else el.appendChild(document.createTextNode(part));
+  }
+}
+function aiDraw(){
+  const box = $("#aimsgs"); box.textContent = "";
+  if(!ai.msgs.length){ const h = document.createElement("div"); h.className = "aihint";
+    h.textContent = "Ask about the board: what a card is for, what is blocked, what to start next. I answer and suggest; I change nothing."; box.appendChild(h); }
+  for(const m of ai.msgs){ const d = document.createElement("div"); d.className = "aimsg " + m.role + (m.wait ? " wait" : "");
+    aiText(d, m.text, m.cards); box.appendChild(d); }
+  box.scrollTop = box.scrollHeight;
+  $("#aisend").disabled = ai.busy;
+  aiSave();
+}
+async function aiAsk(text){
+  if(!conn || readOnly){ toast("The assistant needs a token that can write to the board data."); return; }
+  const history = ai.msgs.filter(m => !m.wait).slice(-12).map(m => ({role: m.role, text: m.text}));
+  const n = ++ai.n, conv = ai.conv;
+  ai.msgs.push({role: "user", text}); ai.msgs.push({role: "assistant", text: "Thinking…", wait: true}); ai.busy = true; aiDraw();
+  const doc = {conv, n, text, history, ts: new Date().toISOString()};
+  const fin = (t, cards) => { if(conv !== ai.conv) return; const w = ai.msgs.findIndex(m => m.wait);
+    if(w >= 0) ai.msgs[w] = {role: "assistant", text: t, cards: cards || []}; ai.busy = false; aiDraw(); };
+  try{
+    await gh(`contents/inbox/assistant/${conv}__${n}.json`, {method: "PUT",
+      body: {message: `assistant: ${conv} ${n}\n\nHub-Source: user\nHub-Machine: phone`, content: b64(JSON.stringify(doc) + "\n"), branch: branch()}});
+  }catch(e){ fin("The question could not be sent (" + (e.status || "offline") + ")."); return; }
+  const until = Date.now() + 6 * 60 * 1000;
+  while(Date.now() < until && conv === ai.conv){
+    await new Promise(r => setTimeout(r, 4000));
+    try{
+      const d = await (await gh(`contents/export/assistant/${conv}.json?ref=${branch()}`, {raw: true})).json();
+      const r = (d.replies || []).find(x => x.n === n);
+      if(r){ fin(r.text, r.cards); return; }
+    }catch(e){ /* not written yet (404), or a blip: look again */ }
+  }
+  fin("No answer yet. The node's local model may be busy or off; ask again later.");
+}
+function aiOpen(v){ $("#aipanel").hidden = !v; $("#aibtn").setAttribute("aria-expanded", String(!!v)); if(v){ if(!ai.conv) aiNewConv(); $("#aiq").focus(); } }
+$("#aibtn").addEventListener("click", () => aiOpen($("#aipanel").hidden));
+$("#aiclose").addEventListener("click", () => aiOpen(false));
+$("#ainew").addEventListener("click", aiNewConv);
+$("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(); if(!t || ai.busy) return; $("#aiq").value = ""; aiAsk(t); });
+$("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
 </script>
 </html>
