@@ -408,6 +408,10 @@ details.rel .rname{font-weight:600; overflow-wrap:anywhere}
 .rid{font:inherit; font-family:var(--f-mono); font-size:.85em; padding:0; border:0; background:none; color:var(--accent); cursor:pointer}
 span.rid{color:var(--muted); cursor:default}
 ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-wrap:anywhere}
+.rst{display:inline-block; font-size:.72em; font-weight:600; padding:0 5px; border-radius:4px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+.rst.done{color:var(--on-accent); background:var(--accent); border-color:var(--accent)}
+.rst.planned{border-style:dashed}
+.mpanel.arch .march{margin:0 0 8px; color:var(--muted); font-size:.85rem}
 .ghead button.pill{font:inherit; font-size:.78rem; color:var(--ink); cursor:pointer}
 .ghead button.pill:hover{border-color:var(--accent)}
 .ghead button.pill[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); font-weight:600}
@@ -433,6 +437,7 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .limrow .limval{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .limrow select{font:inherit; font-size:.9rem; padding:4px 6px; min-height:34px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink)}
 .limrow.lifted select{opacity:.55}
+.limrow .limfixed{display:inline-flex; align-items:center; min-height:34px; padding:0 10px; border:1px dashed var(--line); border-radius:6px; font-weight:600}   /* HUB194: not settable */
 .limrow .limtext{font-size:.82rem; display:grid; gap:3px; min-width:0}
 .limrow .limhint{color:var(--muted)}
 @media (max-width:640px){ .limrow{grid-template-columns:1fr auto} .limrow .limtext{grid-column:1 / -1} }
@@ -504,9 +509,20 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gfilt[open] > summary, .gfilt.on > summary{border-color:var(--accent)}
 .grel[aria-pressed=true]{background:var(--accent); color:var(--on-accent); border-color:var(--accent)}
 .gfpop{position:absolute; z-index:40; top:calc(100% + 4px); left:0; min-width:220px; max-width:min(320px, 90vw); max-height:60vh; overflow:auto; overflow-x:hidden; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.2); padding:6px 8px}
-.gfpop fieldset{border:0; margin:0 0 6px; padding:0}
-.gfpop legend{font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:4px 0 2px}
-.gfpop label{display:flex; align-items:center; gap:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* HUB197: one tree, project > theme > epic; each branch folds */
+.gfpop{max-width:min(340px, calc(100vw - 32px))}
+.gfpop ul.gft{list-style:none; margin:0; padding:0 0 0 14px}
+.gfpop ul.gftop{padding-left:0; margin-bottom:6px}
+.gfpop ul.gft[hidden]{display:none}
+.gfpop .gfrow{display:flex; align-items:center; gap:2px; min-height:30px}
+.gfpop .gftog{flex:none; width:26px; height:26px; padding:0; border:0; border-radius:4px; background:none; color:var(--muted); font:inherit; cursor:pointer}
+.gfpop .gftog::before{content:"\25B8"; display:inline-block; transition:transform .12s}
+.gfpop .gftog[aria-expanded=true]::before{transform:rotate(90deg)}
+.gfpop .gftog.none::before{content:""}
+.gfpop .gftog:focus-visible, .gfpop input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.gfpop label{display:flex; flex:1; min-width:0; align-items:center; gap:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gfpop label span{overflow:hidden; text-overflow:ellipsis}
+.gfpop input[type=checkbox]{flex:none; width:16px; height:16px; margin:0}
 .gfpop label i{flex:none; width:10px; height:10px; border-radius:2px; background:hsl(var(--h,210) var(--gs) var(--gl-card))}
 .gfpop .gfclr{font:inherit; font-size:.75rem; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); padding:2px 8px; cursor:pointer}
 .gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
@@ -559,6 +575,8 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .usage .ukey{display:inline-block; width:12px; height:2px; border-radius:1px; vertical-align:middle; margin-right:5px}
 .usage .ukey.box{height:8px; opacity:.55}
 .usage .ukey.thin{height:1px}
+.rbox.mrate{margin-top:10px}   /* HUB198: a machine's streams per hour, one line each, under its token graph */
+.usage .tleg .tmach{font-weight:600; color:var(--ink)}
 .usage .uplot{position:relative; line-height:0; border-radius:4px}
 .usage .uplot:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .usage svg{display:block; touch-action:pan-y; max-width:100%}
@@ -669,6 +687,7 @@ const epics = new Map();        // key -> {name,hue,order,blurb,theme}
 const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
 const RELEASES_OUT = [];          // HUB147: [{id, t, at}] Done release cards of the last weeks (export releases_out)
 const RELEASES = [];              // HUB182: every Release card with its cards (export releases): not out yet first, then out, newest first
+const REL_DOCS = new Map();       // HUB199: the archived Release cards themselves (export releases[].doc), opened read-only
 const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
@@ -876,6 +895,7 @@ function settleChanges(data){
 }
 function change(card, field, value, extra){
   if(readOnly){ toast("This view is read-only."); return; }
+  if(card && REL_DOCS.has(card.id) && !cards.has(card.id)){ toast("An archived card is read-only here."); return; }   // HUB199
   lastStamp = Math.max(Date.now(), lastStamp + 1);   // one per millisecond: the stamp is in the file's name
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
@@ -930,13 +950,14 @@ function openCount(c, col){
 }
 // The old board's write(id, patch): the patch's fields become change files. {col, rank} is one `column` change that
 // carries its place; a rank alone is a `rank` change. Times (colSince, started, ended) are the desktop's to set.
-function write(id, patch, quiet){
-  if(readOnly) return;
-  const base = raw.get(id), c = cards.get(id); if(!base || !c) return;
+function write(id, patch, quiet){   // returns true when the patch became changes on their way (HUB211)
+  if(readOnly){ toast("This view is read-only."); return false; }
+  const base = raw.get(id), c = cards.get(id);
+  if(!base || !c){ toast(id + " is not on the board's data yet. Try again after the next check."); return false; }
   if(patch.col !== undefined && patch.col !== c.col && NEEDS_ANSWERS.includes(patch.col) && openCount(c, patch.col)){
     toast(id + " has open questions: answer them before moving it to " + COL_NAME[patch.col] + ".");
     if(!quiet) render();
-    return;
+    return false;
   }
   if(patch.ans) for(const [k, v] of Object.entries(patch.ans)) change(base, "ans." + k, v);
   if(patch.pri !== undefined) change(base, "pri", patch.pri);
@@ -947,6 +968,7 @@ function write(id, patch, quiet){
   else if(patch.rank !== undefined) change(base, "rank", patch.rank);
   rebuild();
   if(!quiet) render();
+  return true;
 }
 
 // >>> project-rules (tests/test_app.py runs this block)
@@ -1347,12 +1369,16 @@ function cardEl(c, full=false){
       el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
+    // HUB211: the typed text is kept per card (a redraw of the card brings it back), the button does not take the
+    // focus (taking it ran the held-back redraw, which removed the button before its click), and the box is only
+    // emptied once the comment is on its way
     const ta = el("textarea",{placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
-                              onclick:ev=>ev.stopPropagation()});
-    const post = () => { const v = ta.value.trim(); if(!v) return; ta.value = ""; write(c.id,{comment:v}); };
+                              onclick:ev=>ev.stopPropagation(), oninput:()=>draftSet(c.id, ta.value)});
+    ta.value = draftGet(c.id);
+    const post = () => { const v = ta.value.trim(); if(!v) return; if(write(c.id,{comment:v})){ ta.value = ""; draftSet(c.id, ""); } };
     ta.addEventListener("keydown", ev=>{ if(ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); post(); } });
-    more.append(ta, el("div",{class:"row"}, el("button",{type:"button", title:"Add the comment to the activity (Ctrl+Enter)",
-      onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
+    more.append(ta, el("div",{class:"row"}, el("button",{type:"button", class:"cpost", title:"Add the comment to the activity (Ctrl+Enter)",
+      onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
     e.append(more); return e;
   }
   if(!readOnly) e.append(el("div",{class:"hov place"}, ...placeBtns(c)));   // hover controls: rank within the column
@@ -1366,19 +1392,31 @@ function cardEl(c, full=false){
 }
 
 let lastFocus = null;
+// >>> comment-drafts (tests/test_app.py runs this block)
+// HUB211: comment text typed but not posted yet, per card; kept in this browser (through a redraw and a reload)
+const DRAFT_KEY = "hub.commentDrafts";
+const drafts = (() => { try{ return new Map(Object.entries(JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"))); }catch(e){ return new Map(); } })();
+function draftGet(id){ return drafts.get(id) || ""; }
+function draftSet(id, v){
+  if(v) drafts.set(id, String(v)); else drafts.delete(id);
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.fromEntries(drafts))); }catch(e){}
+}
+// <<< comment-drafts
 function openCard(id){ lastFocus = document.activeElement; openId = id; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); }
 function closeCard(){ openId = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }
 function renderModal(){
   const box = $("#modal");
-  const c = openId && cards.get(openId);
+  const c = openId && (cards.get(openId) || REL_DOCS.get(openId));   // HUB199: an archived Release card opens too
   if(!c){ openId = null; box.hidden = true; box.textContent = ""; if(!rank) document.body.classList.remove("modal-open"); return; }
+  const arch = !cards.has(c.id);
   const old = box.querySelector(".mpanel");
   const keepScroll = old ? old.scrollTop : 0, keepBox = box.scrollTop, same = old && old.dataset.id === c.id;
   box.textContent = "";
   const col = COLS.find(x=>x.k===c.col);
-  const panel = el("div",{class:"mpanel", role:"dialog", "aria-modal":"true", "aria-label":c.id+" "+(c.t||""), "data-id":c.id},
+  const panel = el("div",{class:"mpanel" + (arch ? " arch" : ""), role:"dialog", "aria-modal":"true", "aria-label":c.id+" "+(c.t||""), "data-id":c.id},
     el("div",{class:"mhead"}, el("span",{class:"mcol", style:"--cc:var("+(col?col.cc:"--muted")+")"}, col?col.name:""),
       el("button",{type:"button", class:"mclose", "aria-label":"Close", onclick:closeCard}, "Close")),
+    arch ? el("p",{class:"march"}, "Archived: the board keeps this card in its archive; it is shown here read-only.") : null,
     cardEl(c, true));
   box.append(panel);
   box.hidden = false; document.body.classList.add("modal-open");
@@ -2586,8 +2624,13 @@ function tokRate(r, step){   // tokens per hour over the last hour of the series
   const k = Math.max(1, Math.min(r.val.length, Math.round(3600 / (step || 1800))));
   return r.val.slice(-k).reduce((x, y) => x + y, 0) * 3600 / (k * (step || 1800));
 }
-// HUB179: tokens per hour over time, every machine's sessions and agents summed (aggregate numbers only), from the
-// same token files as the graphs below; one line per machine beside the total when there are several
+// HUB179: tokens per hour over time, from the same token files as the graphs below (aggregate numbers only).
+// The Overview's "Tokens per hour" card sums every machine (one dashed line per machine beside the total). HUB198
+// (the user, 2026-11-19: "These should be graphs under each existing token total graphs"): under each machine's
+// token graph, a tokens per hour graph of that machine with one line per stream (each session or agent of its file).
+// At most TOK_HOURLY_LINES lines a machine; the rest are summed as "other".
+const TOK_HOURLY_LINES = 6;
+// >>> tok-hourly (tests/test_app.py runs this block in node)
 function tokHourly(){
   const docs = [...tokens.entries()].filter(([, d]) => d && d.end && Array.isArray(d.series) && d.series.length);
   if(!docs.length) return null;
@@ -2596,27 +2639,41 @@ function tokHourly(){
   const end = Math.max(...docs.map(([, d]) => d.end));
   const full = Math.max(...docs.flatMap(([, d]) => d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0)));
   const n = Math.max(1, Math.min(full, Math.round(tokHours * 3600 / step)));
-  const per = step / 3600, lines = [];
+  const per = step / 3600, parts = tokMode === "all" ? ["in", "write", "read", "out"] : ["in", "write", "out"], machines = [];
   for(const [name, d] of docs){
-    const off = Math.round((end - d.end) / step), v = Array(n).fill(0);
+    const off = Math.round((end - d.end) / step), lines = [];
     for(const s of d.series){
       if(!s || typeof s !== "object") continue;
-      for(const part of (tokMode === "all" ? ["in", "write", "read", "out"] : ["in", "write", "out"])){
+      const v = Array(n).fill(0);
+      for(const part of parts){
         const a = Array.isArray(s[part]) ? s[part] : [];
         a.forEach((x, i) => { const j = n - a.length + i - off; if(j >= 0 && j < n && typeof x === "number" && x > 0) v[j] += x / per; });
       }
+      const sum = v.reduce((a, b) => a + b, 0);
+      if(sum > 0) lines.push({name: String(s.name || "unnamed").slice(0, 48), kind: String(s.kind || ""), v, sum});
     }
-    lines.push({name: String(name).slice(0, 40), v});
+    lines.sort((a, b) => b.sum - a.sum || a.name.localeCompare(b.name));
+    if(lines.length > TOK_HOURLY_LINES){   // the smallest folded into one line, so a phone's legend stays short
+      const rest = lines.splice(TOK_HOURLY_LINES - 1);
+      lines.push({name: "other (" + rest.length + ")", kind: "other", v: Array.from({length: n}, (_, i) => rest.reduce((t, l) => t + l.v[i], 0)), sum: rest.reduce((t, l) => t + l.sum, 0)});
+    }
+    const total = Array.from({length: n}, (_, i) => lines.reduce((t, l) => t + l.v[i], 0));
+    machines.push({key: String(name), name: String(name).slice(0, 40), total, lines});
   }
-  const total = Array.from({length: n}, (_, i) => lines.reduce((t, l) => t + l.v[i], 0));
-  return {step, end, n, total, lines: lines.length > 1 ? lines : []};
+  machines.sort((a, b) => a.name.localeCompare(b.name));
+  const total = Array.from({length: n}, (_, i) => machines.reduce((t, m) => t + m.total[i], 0));
+  const lines = machines.length > 1 ? machines.map(m => ({name: m.name, v: m.total})) : [];   // HUB179's dashed lines
+  return {step, end, n, total, lines, machines};
 }
+// <<< tok-hourly
 function renderTokHourly(box){   // a fault in the graph must never stop the rest of the page from drawing
   try {
-    const h = tokHourly();
-    if(!h || !h.total.some(v => v > 0)){ box.hidden = true; return; }
+    const h = tokHourly(), one = box.dataset.machine;   // HUB198: a machine's box shows that machine's streams
+    const m = h && one != null ? h.machines.find(x => x.key === one) : null;
+    if(!h || (one != null ? !m || !m.total.some(v => v > 0) : !h.total.some(v => v > 0))){ box.hidden = true; return; }
     box.hidden = false;
-    box.replaceChildren(buildTokHourly(h, Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)))));
+    const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
+    box.replaceChildren(m ? tokHourlyMachine(m, h, w) : buildTokHourly(h, w));
   } catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The tokens per hour graph could not be shown: " + (e && e.message || e))); }
 }
 function buildTokHourly(h, w){
@@ -2679,6 +2736,63 @@ function buildTokHourly(h, w){
     ...lines.map((l, k) => el("span",{}, key(TOK_COL[(k + 1) % TOK_COL.length], true), l.name))) : null;
   return el("div",{class:"usage"}, head, legend, plot,
     el("p",{class:"note"}, `Claude ${view} per hour, every machine's sessions and agents together, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min. The span and the view follow the token graphs below.`));
+}
+function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own scale, a legend naming each
+  const {n} = h, step = h.step * 1000, end = h.end * 1000, t0 = end - n * step, {total, lines} = m;
+  const most = Math.max(1, ...lines.flatMap(l => l.v)), L = 52, R = 8, pw = w - L - R, T = 6, Hh = 90, H = T + Hh + 16;
+  const f = v => v.toFixed(1), x = i => L + pw * (i + .5) / n, y = v => T + Hh * (1 - v / most);
+  const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
+  const col = k => TOK_COL[k % TOK_COL.length];
+  const words = `${m.name}, Claude tokens per hour by session or agent: ` + lines.map(l => `${l.name} now ${fmtTok(l.v[n - 1])}/h, peak ${fmtTok(Math.max(...l.v))}/h`).join("; ") + ".";
+  const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":words});
+  for(const v of [most, most / 2, 0])
+    svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, v ? fmtTok(v) + "/h" : "0"));
+  const hours = n * step / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
+  tick.setMinutes(0, 0, 0);
+  for(let k = 0; k < 30; k++){
+    tick.setHours(tick.getHours() + 1);
+    if(tick.getTime() > end) break;
+    if(tick.getTime() < t0 || tick.getHours() % every) continue;
+    const tx = L + pw * (tick.getTime() - t0) / (end - t0);
+    if(tx < L + 14 || tx > L + pw - 14) continue;
+    svg.append(sv("text",{x:f(tx), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
+  }
+  const path = v => v.map((p, i) => (i ? "L" : "M") + f(x(i)) + " " + f(y(p))).join(" ");
+  lines.forEach((l, k) => svg.append(sv("path",{d:path(l.v), fill:"none", stroke:`var(${col(k)})`, "stroke-width":k ? 1.5 : 2})));
+  const mark = sv("line",{x1:0, x2:0, y1:T, y2:T + Hh, stroke:"var(--ink)", "stroke-opacity":.35, visibility:"hidden"});
+  svg.append(mark);
+  const key = c => { const k = el("i",{class:"ukey"}); k.style.background = `var(${c})`; return k; };
+  const tipEl = el("div",{class:"utip", hidden:true});
+  let at = -1;
+  const hide = () => { at = -1; tipEl.hidden = true; mark.setAttribute("visibility", "hidden"); };
+  const show = i => {
+    at = Math.min(n - 1, Math.max(0, i));
+    const px = x(at), t = t0 + at * step;
+    mark.setAttribute("x1", f(px)); mark.setAttribute("x2", f(px)); mark.setAttribute("visibility", "visible");
+    tipEl.replaceChildren(el("div",{class:"ut"}, `${m.name}, ${day(t)} ${hm(t)} to ${hm(t + step)}: `, el("b",{}, fmtTok(total[at]) + "/h")),
+      ...lines.map((l, k) => l.v[at] ? el("div",{}, key(col(k)), el("b",{}, fmtTok(l.v[at]) + "/h"), " " + l.name) : null).filter(Boolean));
+    tipEl.hidden = false;
+    tipEl.style.left = px < w / 2 ? (px + 10) + "px" : "auto";
+    tipEl.style.right = px < w / 2 ? "auto" : (w - px + 10) + "px";
+  };
+  const point = ev => { const r = svg.getBoundingClientRect(); show(Math.floor((ev.clientX - r.left - L) / (pw / n))); };
+  svg.addEventListener("pointermove", point);
+  svg.addEventListener("pointerdown", point);
+  svg.addEventListener("pointerleave", hide);
+  const plot = el("div",{class:"uplot", tabindex:"0", role:"group", "aria-label":"Tokens per hour graph of " + m.name + ": the left and right arrow keys read each point"}, svg, tipEl);
+  plot.style.width = w + "px";
+  plot.addEventListener("keydown", ev => {
+    const to = {ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: n - 1}[ev.key];
+    if(ev.key === "Escape") hide();
+    else if(to !== undefined){ ev.preventDefault(); show(at < 0 ? n - 1 : to); }
+  });
+  plot.addEventListener("blur", hide);
+  const legend = el("div",{class:"uleg tleg"}, el("span",{class:"tmach"}, m.name, " ", el("b",{}, fmtTok(total[n - 1]) + "/h now")),
+    ...lines.map((l, k) => el("span",{}, key(col(k)), l.name)));
+  const view = tokMode === "all" ? "all tokens" : "tokens without cache reads";
+  return el("div",{class:"usage tmachblock"}, legend, plot,
+    el("p",{class:"note"}, `Claude ${view} per hour on ${m.name}, one line per session or agent, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min.`));
 }
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
@@ -2813,7 +2927,8 @@ function drawMachines(host){
       el("div",{class:"ubox tbox", "data-machine":TOK_ALL, hidden:true})));
     for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine)),
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
-      el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true})));
+      el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true}),
+      el("div",{class:"rbox mrate", "data-machine":String(m.machine), hidden:true})));   // HUB198: its streams per hour
     // HUB177: the span is chosen once for every graph here (it was on each token graph only)
     const span = (h, label) => { const b = el("button",{type:"button", class:"tmode" + (tokHours === h ? " on" : ""), "aria-pressed":String(tokHours === h)}, label);
       b.addEventListener("click", () => { if(tokHours !== h){ tokHours = h; renderStatus(); } }); return b; };
@@ -2821,7 +2936,8 @@ function drawMachines(host){
       el("span",{class:"uleg", role:"group", "aria-label":"Span of every graph"}, "Last ", span(6, "6 h"), span(12, "12 h"), span(24, "Day"))), over);
     for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
     for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
-    for(const box of over.querySelectorAll(".rbox")){ renderTokHourly(box); if(box.hidden) box.parentElement.remove(); }
+    for(const box of over.querySelectorAll(".rbox:not([data-machine])")){ renderTokHourly(box); if(box.hidden) box.parentElement.remove(); }
+    for(const box of over.querySelectorAll(".rbox[data-machine]")) renderTokHourly(box);   // HUB198: under each machine's token graph
     // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
     const per = machines.map(m => machineRows(String(m.machine), sessions.filter(s => s.machine === m.machine)));
     const loose = sessions.filter(s => !names.has(String(s.machine)));
@@ -2864,7 +2980,7 @@ function drawMachines(host){
 // ---------- the plan's token limits and the development pace (HUB128-130): status/usage.json, recorded by the coordinator
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
-  ["turbo", "Turbo", "Full speed: no limit on development streams; the machines' game slots and the ComfyUI art pool still apply"]];
+  ["turbo", "Turbo", "Full speed: no limit on development streams nor on the coordinator's hub cards; the machines' game slots, the ComfyUI art pool and the limit on art Claude draws still apply"]];
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
   let pace = u && u.pace || "moderate";
@@ -2872,16 +2988,19 @@ function usageNow(){
   return {u, pace, wins: u && Array.isArray(u.windows) ? u.windows.filter(w => w && w.label) : []};
 }
 // HUB171: the hub's limits, set here and stored beside the pace (hub/usage.py LIMITS: the same defaults and bounds),
-// sent the same way (card "hub", field "limit.<key>"); HUB173: the suggested values and why
+// sent the same way (card "hub", field "limit.<key>"); HUB173: the suggested values and why. HUB194: the ComfyUI art
+// pool is not settable (ART_POOL, shown read-only); HUB195: art Claude draws has a limit of its own (drawn)
+const ART_POOL = 3;
+const ART_POOL_WHY = "One graphics card runs ComfyUI's queue one picture at a time, so the hub keeps 3 ComfyUI art streams at once on every pace: 3 keeps the queue busy while the others pick or wait for a sign-off; more would only make the queue longer.";
 const HUB_LIMITS = [
   {k: "streams", name: "Development streams", def: 5, min: 1, max: 12,
    what: "Game development streams at once, all projects together. Conservative and Moderate may allow fewer; Turbo lifts it.",
    hint: "Suggested: 5 on Moderate, 3 on Conservative (fewer streams burn the plan's tokens more slowly). Each stream's game tests queue for the machines' game slots, so past about 5 the extra streams mostly wait for a slot."},
-  {k: "art", name: "ComfyUI art streams", def: 3, min: 1, max: 6,
-   what: "Artwork cards made with ComfyUI at once, apart from the development streams, on every pace. Art Claude draws itself counts as a development stream.",
-   hint: "Suggested: 3 on any pace. One graphics card runs ComfyUI's queue one picture at a time: 3 keeps it busy while the others pick or wait for a sign-off; more only makes the queue longer."},
+  {k: "drawn", name: "Art Claude draws", def: 2, min: 1, max: 6,
+   what: "Artwork cards Claude draws itself (SVG, pixel art or images written by code) at once, apart from the development streams and the ComfyUI art, on every pace.",
+   hint: "Suggested: 2 on Moderate and Turbo, 1 on Conservative. Drawing art by code spends the plan's tokens like a development stream, and every picture waits for the user's sign-off, so more at once mostly adds to the pictures waiting."},
   {k: "coord", name: "Coordinator's hub cards", def: 2, min: 1, max: 6,
-   what: "Hub cards the coordinator's agents work at once. Not lifted on Turbo.",
+   what: "Hub cards the coordinator's agents work at once. Turbo lifts it.",
    hint: "Suggested: 2. Hub cards change the hub's own code and documents, so more at once means more of them touch the same files and wait on each other's merge."}];
 function hubLimits(){
   const got = hubStatus && hubStatus.usage && hubStatus.usage.limits && typeof hubStatus.usage.limits === "object" ? hubStatus.usage.limits : {};
@@ -2891,6 +3010,7 @@ function hubLimits(){
     for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "limit." + L.k) v = ch.value;   // the user's choice, on its way
     out[L.k] = Number.isInteger(v) && v >= L.min && v <= L.max ? v : L.def;
   }
+  out.art = ART_POOL;   // HUB194: fixed; a value stored before is ignored
   return out;
 }
 function usageLine(w){   // "Weekly · all models 78 %: refreshes ..., runs out ..."
@@ -2940,6 +3060,7 @@ function usageSection(host){
   const {u, pace, wins} = usageNow();
   host.append(el("h2",{}, "Tokens and pace"), paceSelector(pace),
     u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null);
+  limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
   if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake."), ...creditsTable(u)); return; }
   host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, el("th",{}, "Limit"), el("th",{}, "Used"), el("th",{}, "Refreshes"), el("th",{}, "Runs out (at the present rate)"))),
@@ -2980,20 +3101,23 @@ function limitsSection(host){
     const sel = el("select",{id, "aria-describedby":id + "-what", disabled:readOnly ? true : null,
       onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits()[L.k]) change({id: "hub", upd: null}, "limit." + L.k, v); renderHubTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
     for(let v = L.min; v <= L.max; v++) sel.append(el("option",{value:String(v), selected:v === lim[L.k] ? true : null}, String(v) + (v === L.def ? " (default)" : "")));
-    const lifted = L.k === "streams" && pace === "turbo";
+    const lifted = (L.k === "streams" || L.k === "coord") && pace === "turbo";   // HUB174, HUB196
     return el("div",{class:"limrow" + (lifted ? " lifted" : "")},
       el("label",{for:id, class:"limname"}, L.name),
       el("div",{class:"limval"}, sel, lifted ? el("span",{class:"state"}, "lifted on Turbo") : null),
       el("div",{class:"limtext", id:id + "-what"}, el("div",{}, L.what), el("div",{class:"limhint"}, L.hint)));
   });
+  rows.splice(1, 0, el("div",{class:"limrow fixed"},   // HUB194: shown, not settable
+    el("span",{class:"limname", id:"limit-art"}, "ComfyUI art streams"),
+    el("div",{class:"limval"}, el("span",{class:"limfixed", "aria-describedby":"limit-art-what"}, String(ART_POOL)), el("span",{class:"state"}, "fixed")),
+    el("div",{class:"limtext", id:"limit-art-what"}, el("div",{}, "Artwork cards made with ComfyUI at once, apart from the development streams, on every pace. Not settable."), el("div",{class:"limhint"}, ART_POOL_WHY))));
   host.append(el("h3",{}, "Limits"), el("div",{class:"limits"}, ...rows),
     el("p",{class:"note"}, "A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
       + (u && u.limits_set ? " Last set " + fmtTime(u.limits_set) + "." : "")));
 }
 function renderHubTab(){
   rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits()], host => {
-    usageSection(host);      // HUB172: tokens and pace first, the limits below them
-    limitsSection(host);
+    usageSection(host);      // HUB172: tokens and pace first; HUB193: the limits inside it, right under the pace
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
     // what stops it (T50)
@@ -3014,7 +3138,7 @@ function renderHubTab(){
 
 // ---------- Releases: testing and the release line of each project
 function renderReleases(){
-  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].filter(c => cardKind(c) === "Release").map(c => [c.id, c.col])], host => {
+  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].map(c => [c.id, c.col]), ARCH.items.length], host => {   // HUB200: each card's column marks it done or planned
     const {fact} = statusFacts();
     const done = Number(fact("Done")), total = Number(fact("Total"));
     const dl = el("dl",{class:"facts"});
@@ -3041,27 +3165,50 @@ function renderReleases(){
 }
 // HUB182 (the user, 2026-11-19): each release with the cards that went out in it (its inventory, HUB116), and the
 // releases before it. A release not out yet lists the cards its description names until it has an inventory.
-function relCardEl(id, title){
-  const c = cards.get(String(id)), t = title || (c && c.t) || "";
-  return el("li",{}, c ? el("button",{type:"button", class:"rid", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : el("span",{class:"rid"}, String(id)),
-    t ? " " + t : "", c && c.col !== "done" ? el("small",{}, " · " + ((COLS.find(x => x.k === c.col) || {}).name || c.col)) : null);
+// HUB199: a release out (archived) opens from its own card, carried in the export (REL_DOCS, read-only here).
+// HUB200: a release not out yet lists its planned cards (export `planned`), each marked done or still planned.
+function relCardOpenable(id){ return cards.has(String(id)) || REL_DOCS.has(String(id)); }
+function relIdEl(id, prevent){
+  id = String(id);
+  return relCardOpenable(id) ? el("button",{type:"button", class:"rid", title:"Open " + id, onclick:ev=>{ if(prevent) ev.preventDefault(); openCard(id); }}, id) : el("span",{class:"rid"}, id);
+}
+function relCardState(id){   // "done", "rejected", "planned" or "" (the board does not know the card)
+  const c = cards.get(String(id)) || ARCH.items.find(x => x.id === String(id));
+  return !c ? "" : c.col === "done" ? "done" : c.col === "rej" ? "rejected" : "planned";
+}
+function relCardEl(id, title, tagged){
+  const c = cards.get(String(id)), t = title || (c && c.t) || "", st = tagged ? relCardState(id) : "";
+  const col = c && c.col !== "done" ? ((COLS.find(x => x.k === c.col) || {}).name || c.col) : "";
+  const tag = st === "done" ? el("span",{class:"rst done"}, "✓ Done") : st === "planned" ? el("span",{class:"rst planned"}, "Planned") : st === "rejected" ? el("span",{class:"rst"}, "Rejected") : null;
+  return el("li",{"data-state":st || null}, tag, tag ? " " : null, relIdEl(id, false), t ? " " + t : "", col ? el("small",{}, " · " + col) : null);
 }
 function releaseEl(r, open){
-  const c = cards.get(String(r.id)), list = Array.isArray(r.cards) ? r.cards.filter(x => Array.isArray(x) && x[0]) : [];
-  const named = list.length ? [] : (Array.isArray(r.named) ? r.named : []);
-  const when = r.at ? (r.col === "done" ? "out " : "planned ") + fmtTime(String(r.at)) : "";
-  const count = list.length ? list.length + (list.length === 1 ? " card" : " cards") : named.length ? named.length + " named" : "no cards listed";
-  const head = el("summary",{}, el("span",{class:"rname"}, "\u{1F4E6} ", c ? el("button",{type:"button", class:"rid", title:"Open " + r.id, onclick:ev=>{ ev.preventDefault(); openCard(String(r.id)); }}, String(r.id)) : el("span",{class:"rid"}, String(r.id)),
-    " " + String(r.t || "")), el("small",{}, [when, count].filter(Boolean).join(" · ")));
-  const body = list.length ? el("ul",{class:"rcards"}, ...list.map(x => relCardEl(x[0], String(x[1] || ""))))
-    : named.length ? el("div",{}, el("p",{class:"note"}, "No inventory yet: the cards its description names."), el("ul",{class:"rcards"}, ...named.map(id => relCardEl(id, ""))))
-    : el("p",{class:"note"}, r.col === "done" ? "Its card names no cards in an inventory." : "No cards named yet.");
+  const list = Array.isArray(r.cards) ? r.cards.filter(x => Array.isArray(x) && x[0]) : [];
+  const out = r.col === "done";
+  const planned = !out && Array.isArray(r.planned) ? r.planned.map(String) : null;   // HUB200 (an older export has none)
+  const named = planned || list.length ? [] : (Array.isArray(r.named) ? r.named : []);
+  const when = r.at ? (out ? "out " : "planned ") + fmtTime(String(r.at)) : "";
+  let count, body;
+  if(planned && (planned.length || list.length)){
+    const titles = new Map(list.map(x => [String(x[0]), String(x[1] || "")]));
+    const ids = [...new Set([...list.map(x => String(x[0])), ...planned])];
+    const nDone = ids.filter(id => relCardState(id) === "done").length;
+    count = ids.length + (ids.length === 1 ? " card" : " cards") + ": " + nDone + " done, " + (ids.length - nDone) + " planned";
+    body = el("ul",{class:"rcards"}, ...ids.map(id => relCardEl(id, titles.get(id) || "", true)));
+  } else {
+    count = list.length ? list.length + (list.length === 1 ? " card" : " cards") : named.length ? named.length + " named" : "no cards listed";
+    body = list.length ? el("ul",{class:"rcards"}, ...list.map(x => relCardEl(x[0], String(x[1] || ""), false)))
+      : named.length ? el("div",{}, el("p",{class:"note"}, "No inventory yet: the cards its description names."), el("ul",{class:"rcards"}, ...named.map(id => relCardEl(id, "", !out))))
+      : el("p",{class:"note"}, out ? "Its card names no cards in an inventory." : "No cards planned yet.");
+  }
+  const head = el("summary",{}, el("span",{class:"rname"}, "\u{1F4E6} ", relIdEl(r.id, true), " " + String(r.t || "")),
+    el("small",{}, [when, count].filter(Boolean).join(" · ")));
   return el("details",{class:"rel", open: open ? "" : null}, head, body);
 }
 function releaseLists(host){
   const mine = RELEASES.filter(r => !filt.j || !r.project || r.project === filt.j);
   const now = mine.filter(r => r.col !== "done"), past = mine.filter(r => r.col === "done");
-  if(now.length) host.append(el("h2",{}, "This release"), el("div",{class:"rels"}, ...now.map(r => releaseEl(r, true))));
+  if(now.length) host.append(el("h2",{}, "Next releases"), el("div",{class:"rels"}, ...now.map(r => releaseEl(r, true))));   // HUB201
   host.append(el("h2",{}, "Previous releases"), past.length ? el("div",{class:"rels"}, ...past.map((r, i) => releaseEl(r, i === 0 && !now.length)))
     : el("p",{class:"note"}, RELEASES.length ? "None for the project chosen." : "No release out yet, or the board's export does not list them yet."));
 }
@@ -3175,9 +3322,10 @@ function renderQueues(){
 // to fill the next 24 hours (HUB131); Artwork cards have their own art slots (HUB125),
 // as slots free up: the game projects share the stream slots, the coordinator's projects have their own, and a card
 // whose `blocked` text names another card starts after that card ends. Release cards are milestones at their eta.
-// the pools' limits are the user's, set in the Hub tab (HUB171, hubLimits(): streams 5, art 3, coord 2 by default):
-// game development streams across all game projects, ComfyUI art streams apart from them (HUB125/HUB183), and the
-// coordinator's HUB / primarch cards
+// the pools' limits are the user's, set in the Hub tab (HUB171, hubLimits(): streams 5, drawn 2, coord 2 by default):
+// game development streams across all game projects, ComfyUI art streams apart from them (HUB125/HUB183; fixed at
+// ART_POOL, HUB194), art Claude draws apart from both (HUB195), and the coordinator's HUB / primarch cards (none on
+// Turbo, HUB196)
 const GANTT_HORIZON_H = 24;               // HUB131: Next up plans this far ahead; Refined cards join only to fill it
 const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; every other project's cards are game streams
 const GANTT_DEFAULT_MIN = 240;            // the length of a card with no estimate (and, started, no eta): dashed
@@ -3192,7 +3340,8 @@ function gTime(s){   // the board's times: UTC; a time without a zone is UTC too
   else if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) v += "Z";
   return Date.parse(v);
 }
-function gPool(c){ return artTool(c) === "comfy" ? "art" : GANTT_COORD_PROJECTS.includes(cardProject(c)) ? "coord" : "stream"; }   // drawn art is a stream (HUB183)
+function gPool(c){ const t = artTool(c); return t === "comfy" ? "art" : t === "drawn" ? "drawn" : GANTT_COORD_PROJECTS.includes(cardProject(c)) ? "coord" : "stream"; }   // drawn art: its own pool (HUB195)
+function gCoordLimit(){ return usageNow().pace === "turbo" ? Infinity : hubLimits().coord; }   // HUB196: none on Turbo
 function gStreamLimit(){   // the pace's allowance (hub/usage.py: Conservative, Moderate), never above the hub's limit; none on Turbo (HUB174)
   if(usageNow().pace === "turbo") return Infinity;
   const cap = hubLimits().streams, a = Number(hubStatus?.usage?.allowed_streams);
@@ -3307,7 +3456,7 @@ function gEarliest(iv, lim, from, dur){   // the first time from `from` at which
 // the plan: id -> {c, s, e, src, pool, kind: started|waiting|planned|milestone, dashed, overdue, waits}
 function ganttPlan(list, now){
   const byId = new Map(list.map(c => [c.id, c]));
-  const out = new Map(), busy = {stream: [], coord: [], art: []}, limit = {stream: gStreamLimit(), coord: hubLimits().coord, art: hubLimits().art};
+  const out = new Map(), busy = {stream: [], coord: [], art: [], drawn: []}, limit = {stream: gStreamLimit(), coord: gCoordLimit(), art: hubLimits().art, drawn: hubLimits().drawn};
   const est = c => Number(c.estimate) > 0 ? Number(c.estimate) : 0;
   const deps = c => [...new Set(String(c.blk || "").match(/\b[A-Z]+\d+[a-z]?\b/g) || [])].filter(id => id !== c.id && byId.has(id));
   for(const c of list){   // the started cards and the releases first: they hold their place
@@ -3372,38 +3521,126 @@ function ganttPlan(list, now){
 function ganttCards(){ return [...cards.values()].filter(c => GANTT_COLS.includes(c.col)); }
 const gFold = new Set(ls("kb.gfold") || []);   // Gantt theme / epic rows folded away (HUB122, HUB123)
 let gNoEst = false;   // HUB176: the "N cards without an estimate" pill shows only those cards (every row unfolded); clicked again, the view before
-// HUB159: the Gantt's own filter, one dropdown of checkboxes in three groups (Projects, Themes, Epics); a group with
-// nothing ticked lets everything through. It is the Gantt's alone (the board's theme / epic filters no longer reach
-// it); the header's Projects dropdown still applies on top. Kept per viewer.
-const gSel = (() => { const v = ls("kb.gsel") || {}, set = x => new Set(Array.isArray(x) ? x : []); return {j: set(v.j), t: set(v.t), e: set(v.e)}; })();
+// HUB159 / HUB197: the Gantt's own filter, one dropdown holding one tree: each project, under it its themes, under
+// each its epics (the theme-less ones under "No theme"), and the project's "No epic" cards. A ticked node lets
+// through every card under it; nothing ticked lets everything through. Ticking a parent ticks its children, a partly
+// ticked parent shows indeterminate, and branches fold. The selection is kept per viewer as the ticked nodes' keys
+// (kb.gsel {v: 2, k: [...]}: a ticked parent keeps its new children too); the HUB159 shape {j, t, e} is migrated.
+// Keys: "p:P", "t:P:T", "e:P:T:E", "n:P" (the project's cards without an epic). It is the Gantt's alone (the board's
+// theme / epic filters do not reach it); the header's Projects dropdown still applies on top.
+const gSel = new Set();
+let gSelOld = null;   // the HUB159 {j, t, e} selection, until the tree can take it over (gSelReady)
+(() => {
+  const v = ls("kb.gsel") || {}, arr = x => Array.isArray(x) ? x.map(String) : [];
+  if(Array.isArray(v.k)) for(const k of v.k) gSel.add(String(k));
+  else if(arr(v.j).length || arr(v.t).length || arr(v.e).length) gSelOld = {j: new Set(arr(v.j)), t: new Set(arr(v.t)), e: new Set(arr(v.e))};
+})();
 let gFiltOpen = false;   // the dropdown stays open while its boxes are ticked (each tick redraws the tab)
-function gSelSave(){ ls("kb.gsel", {j: [...gSel.j], t: [...gSel.t], e: [...gSel.e]}); }
-function gSelCount(){ return gSel.j.size + gSel.t.size + gSel.e.size; }
-function gPass(c){   // the card passes the Gantt's checkbox filter
-  const e = c.epic || "";
-  return (!gSel.j.size || gSel.j.has(cardProject(c))) && (!gSel.t.size || gSel.t.has(epicTheme(e))) && (!gSel.e.size || gSel.e.has(e));
+const gTreeOpen = new Map(Object.entries(ls("kb.gtopen") || {}));   // a branch's key -> unfolded (projects default open, themes folded)
+function gSelSave(){ ls("kb.gsel", {v: 2, k: [...gSel]}); }
+function gSelCount(){ return gSel.size; }
+function gCardKeys(c){   // the tree nodes a card sits under, its own leaf first
+  const p = cardProject(c), e = c.epic || "";
+  if(!e) return ["n:" + p, "p:" + p];
+  const t = epicTheme(e);
+  return ["e:" + p + ":" + t + ":" + e, "t:" + p + ":" + t, "p:" + p];
+}
+function gPass(c){   // the card passes the Gantt's tree filter
+  if(gSelOld){   // not migrated yet: the HUB159 rule
+    const e = c.epic || "", o = gSelOld;
+    return (!o.j.size || o.j.has(cardProject(c))) && (!o.t.size || o.t.has(epicTheme(e))) && (!o.e.size || o.e.has(e));
+  }
+  return !gSel.size || gCardKeys(c).some(k => gSel.has(k));
+}
+function gTree(all){   // [{key, name, hue, kids}] of the projects (all: also those the header's Projects dropdown hides)
+  const byP = new Map(), noEpic = new Set();
+  const pjs = [...projects.entries()].filter(([k]) => all || !filt.j || filt.j === k).sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99));
+  for(const [p] of pjs) byP.set(p, new Set());
+  for(const [e, v] of epics) if(!v.retired && v.project && byP.has(String(v.project))) byP.get(String(v.project)).add(e);
+  for(const c of cards.values()){ const p = cardProject(c); if(!byP.has(p)) continue; if(c.epic) byP.get(p).add(c.epic); else noEpic.add(p); }
+  const eOrd = e => epics.get(e)?.order ?? 99, tOrd = t => t ? (themes.get(t)?.order ?? 99) : 1e9;
+  const eName = e => String(epics.get(e)?.name || e);
+  return pjs.map(([p, pv]) => {
+    const th = new Map();
+    for(const e of byP.get(p)){ const t = epicTheme(e); if(!th.has(t)) th.set(t, []); th.get(t).push(e); }
+    const kids = [...th.keys()].sort((a, b) => tOrd(a) - tOrd(b) || a.localeCompare(b)).map(t => ({
+      key: "t:" + p + ":" + t, name: t ? (themes.get(t)?.name || t) : "No theme", hue: themes.get(t)?.hue,
+      kids: th.get(t).sort((a, b) => eOrd(a) - eOrd(b) || eName(a).localeCompare(eName(b)))
+        .map(e => ({key: "e:" + p + ":" + t + ":" + e, name: eName(e), hue: themes.get(t)?.hue ?? epics.get(e)?.hue, kids: []}))}));
+    if(noEpic.has(p) || gSel.has("n:" + p)) kids.push({key: "n:" + p, name: "No epic", hue: null, kids: []});
+    return {key: "p:" + p, name: pv.name || p, hue: pv.hue, kids};
+  });
+}
+function gLeaves(n){ return n.kids.length ? n.kids.flatMap(gLeaves) : [n]; }
+function gSelReady(){   // the HUB159 selection becomes the tree's: every leaf it let through is ticked
+  if(!gSelOld || !loaded) return;
+  const o = gSelOld, tree = gTree(true);
+  gSelOld = null;
+  for(const pn of tree) for(const leaf of gLeaves(pn)){
+    const [kind, p, t, e] = leaf.key.split(":");
+    const lt = kind === "n" ? "" : t, le = kind === "n" ? "" : e;
+    if((!o.j.size || o.j.has(p)) && (!o.t.size || o.t.has(lt)) && (!o.e.size || o.e.has(le))) gSel.add(leaf.key);
+  }
+  for(const pn of tree) gNormalize(pn);
+  gSelSave();
+}
+function gNormalize(n){   // a parent whose children are all ticked is ticked itself (its new children come with it)
+  if(!n.kids.length) return gSel.has(n.key);
+  const all = n.kids.map(gNormalize).every(Boolean);
+  if(all && !gSel.has(n.key)){ for(const k of n.kids) gSel.delete(k.key); gSel.add(n.key); }
+  return gSel.has(n.key);
+}
+function gTick(tree, path, on){   // path: the nodes from the project down to the one (un)ticked
+  const n = path[path.length - 1], drop = x => { gSel.delete(x.key); x.kids.forEach(drop); };
+  n.kids.forEach(drop);
+  if(on) gSel.add(n.key);
+  else {
+    const top = path.findIndex(x => gSel.has(x.key));
+    if(top >= 0){   // an ancestor (or the node itself) was ticked: it gives way to the rest of its children
+      gSel.delete(path[top].key);
+      for(let i = top; i < path.length - 1; i++) for(const k of path[i].kids) if(k !== path[i + 1]) gSel.add(k.key);
+    }
+  }
+  for(const pn of tree) gNormalize(pn);
 }
 function gRedraw(){ const h = document.getElementById("gantt"); if(h) h.dataset.sig = ""; renderGantt(); }
 function ganttFilters(){
-  const changed = () => { gSelSave(); gRedraw(); };
-  const box = (grp, k, name, hue) => {
-    const cb = el("input",{type:"checkbox", value:k, onchange:ev => { ev.target.checked ? gSel[grp].add(k) : gSel[grp].delete(k); changed(); }});
-    cb.checked = gSel[grp].has(k);
-    return el("label",{title:name}, cb, hue != null ? el("i",{style:"--h:" + hue}) : null, el("span",{}, name));
+  gSelReady();
+  const tree = gTree(false);
+  const state = (n, up) => {   // "on", "mixed" or "off"
+    if(up || gSel.has(n.key)) return "on";
+    if(!n.kids.length) return "off";
+    const s = n.kids.map(k => state(k, false));
+    return s.every(x => x === "on") ? "on" : s.some(x => x !== "off") ? "mixed" : "off";
   };
-  const group = (name, rows) => rows.length ? el("fieldset",{}, el("legend",{}, name), ...rows) : null;
-  const pjs = [...projects.entries()].filter(([k]) => !filt.j || filt.j === k).sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99));
-  const inJ = k => { const p = epics.get(k)?.project; return !gSel.j.size || !p || gSel.j.has(p); };   // the ticked projects' epics
-  const ths = sortedThemes().filter(([k]) => gSel.t.has(k) || sortedEpics().some(([e]) => epicTheme(e) === k && inJ(e)));
-  const eps = sortedEpics().filter(([k]) => gSel.e.has(k) || (inJ(k) && (!gSel.t.size || gSel.t.has(epicTheme(k)))));   // and the ticked themes'
+  const changed = (key, pop) => {
+    const top = pop ? pop.scrollTop : 0;
+    gSelSave(); gRedraw();
+    const p2 = document.querySelector("#gantt .gfpop");
+    if(p2) p2.scrollTop = top;
+    const cb = [...document.querySelectorAll("#gantt .gfpop input[data-k]")].find(x => x.dataset.k === key);
+    if(cb) cb.focus({preventScroll:true});   // the keyboard stays where it was after the redraw
+  };
+  const isOpen = n => gTreeOpen.has(n.key) ? !!gTreeOpen.get(n.key) : n.key.startsWith("p:");
+  const node = (n, path, up) => {
+    const st = state(n, up), here = [...path, n];
+    const cb = el("input",{type:"checkbox", "data-k":n.key, "aria-checked":st === "mixed" ? "mixed" : null,
+      onchange:ev => { gTick(tree, here, ev.target.checked); changed(n.key, ev.target.closest(".gfpop")); }});
+    cb.checked = st === "on"; cb.indeterminate = st === "mixed";
+    const open = isOpen(n), sub = n.kids.length ? el("ul",{class:"gft", role:"group", hidden: open ? null : ""}, ...n.kids.map(k => node(k, here, st === "on"))) : null;
+    const fold = n.kids.length ? el("button",{type:"button", class:"gftog", "aria-expanded":open ? "true" : "false", "aria-label":(open ? "Fold " : "Unfold ") + n.name,
+      onclick:ev => { const b = ev.currentTarget, o = b.getAttribute("aria-expanded") !== "true";
+        b.setAttribute("aria-expanded", o ? "true" : "false"); b.setAttribute("aria-label", (o ? "Fold " : "Unfold ") + n.name);
+        sub.hidden = !o; gTreeOpen.set(n.key, o); ls("kb.gtopen", Object.fromEntries(gTreeOpen)); }}) : el("span",{class:"gftog none", "aria-hidden":"true"});
+    return el("li",{class:"gfn" + (n.kids.length ? "" : " leaf")}, el("div",{class:"gfrow"}, fold,
+      el("label",{title:n.name}, cb, n.hue != null ? el("i",{style:"--h:" + n.hue}) : null, el("span",{}, n.name))), sub);
+  };
   const n = gSelCount();
   return el("details",{class:"gfilt" + (n ? " on" : ""), open:gFiltOpen, ontoggle:ev => { gFiltOpen = ev.target.open; }},
     el("summary",{title:"Filter the Gantt by project, theme and epic (the header's Projects dropdown applies too)"}, n ? "Filter: " + n + " ticked" : "Filter: all"),
     el("div",{class:"gfpop", role:"group", "aria-label":"Projects, themes and epics"},
-      group("Projects", pjs.map(([k, v]) => box("j", k, v.name || k, v.hue))),
-      group("Themes", ths.map(([k, v]) => box("t", k, v.name || k, v.hue))),
-      group("Epics", eps.map(([k, v]) => box("e", k, v.name || k, themes.get(epicTheme(k))?.hue ?? v.hue))),
-      n ? el("button",{type:"button", class:"gfclr", onclick:() => { gSel.j.clear(); gSel.t.clear(); gSel.e.clear(); changed(); }}, "Clear all") : null));
+      tree.length ? el("ul",{class:"gft gftop"}, ...tree.map(p => node(p, [], false))) : el("p",{class:"note"}, "No projects yet."),
+      n ? el("button",{type:"button", class:"gfclr", onclick:() => { gSel.clear(); changed("", null); }}, "Clear all") : null));
 }
 document.addEventListener("click", ev => {   // a click outside the open dropdown closes it
   const d = document.querySelector("#gantt .gfilt[open]");
@@ -3462,9 +3699,10 @@ function renderGantt(){   // a fault in this tab must never stop the board from 
   catch(e){ host.replaceChildren(el("p",{class:"note"}, "The Gantt view could not be shown: " + (e && e.message || e))); }
 }
 function drawGantt(host){
+  gSelReady();   // HUB197: a HUB159 selection becomes the tree's before anything is filtered
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), past = gPast ? ganttPast(now) : [];
-  const sig = JSON.stringify([loaded, filt.j, [...gSel.j], [...gSel.t], [...gSel.e], gRel, [...gFold], gNoEst, gPast, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+  const sig = JSON.stringify([loaded, filt.j, [...gSel], !!gSelOld, gRel, [...gFold], gNoEst, gPast, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
     [...epics].map(([k, v]) => [k, v.name, v.order, v.theme, v.hue]), [...themes].map(([k, v]) => [k, v.name, v.order, v.hue]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.epic, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)]),
     past.map(it => [it.c.id, it.c.t, it.c.epic, it.s, it.e, it.done])]);
@@ -3478,7 +3716,7 @@ function drawGantt(host){
   if(gNoEst && !shownAll.some(it => it.dashed)) gNoEst = false;   // none left without an estimate: back to the view before
   const shown = gNoEst ? shownAll.filter(it => it.dashed) : shownAll;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
-  const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), sLim = plan.limit.stream, aLim = plan.limit.art, cLim = plan.limit.coord;
+  const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), dNow = nowIn("drawn"), sLim = plan.limit.stream, aLim = plan.limit.art, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   const noEst = shown.filter(it => it.dashed).length;
   const planEnd = shown.reduce((m, it) => Math.max(m, it.e), now);
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderGantt(); };
@@ -3492,8 +3730,9 @@ function drawGantt(host){
     el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
     el("button",{type:"button", class:"grel gpast", "aria-pressed":String(gPast), title:(gPast ? "Hide" : "Show") + " the cards finished in the last " + GANTT_PAST_H / 24 + " days (the work streams and the coordinator did)", onclick:gPastToggle}, "✓ Past work"),
     el("span",{class:"pill" + (sNow > sLim ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")}, "Streams: " + sNow + (sLim === Infinity ? " now, no limit (Turbo)" : " of " + sLim + " now")),
-    el("span",{class:"pill" + (aNow > aLim ? " over" : ""), title:"ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; art Claude draws counts as a stream"}, "Art: " + aNow + " of " + aLim + " now"),
-    el("span",{class:"pill" + (cNow > cLim ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit"}, "Coordinator: " + cNow + " of " + cLim + " now"),
+    el("span",{class:"pill" + (aNow > aLim ? " over" : ""), title:"ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; the pool is fixed at " + ART_POOL + " (one GPU, one ComfyUI queue)"}, "Art: " + aNow + " of " + aLim + " now"),
+    el("span",{class:"pill" + (dNow > dLim ? " over" : ""), title:"Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"}, "Drawn art: " + dNow + " of " + dLim + " now"),
+    el("span",{class:"pill" + (cNow > cLim ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")}, "Coordinator: " + cNow + (cLim === Infinity ? " now, no limit (Turbo)" : " of " + cLim + " now")),
     noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
       title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
       noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
@@ -3534,12 +3773,12 @@ function drawGantt(host){
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gt", style:"color:var(--muted)"}, sc.label + " scale")), ticks));
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
-  const ran = {stream: [], coord: [], art: []};
+  const ran = {stream: [], coord: [], art: [], drawn: []};
   if(gPast) for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
   for(const [pool, name] of [["stream", "Streams"], ["coord", "Coordinator"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
-    let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174)
-    const limTxt = isFinite(lim) ? String(lim) : "no limit", slices = [];
+    let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
+    const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
     for(let t = t0; t < t1; t += step){
       if(t < now && ran[pool].length){ const n = gPeak(ran[pool], t, Math.min(t + step, now)); slices.push([t, n, true]); peak = Math.max(peak, n); }
       if(t + step <= now) continue;
@@ -4310,7 +4549,12 @@ async function load(sha){
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
   RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
-  RELEASES.length = 0; for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id) RELEASES.push(r);
+  RELEASES.length = 0; REL_DOCS.clear();
+  for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id){
+    const {doc, ...row} = r;   // HUB199: the archived card is kept apart (and out of the tab's redraw signature)
+    if (doc && typeof doc === "object" && !raw.has(String(r.id))) REL_DOCS.set(String(r.id), Object.assign({}, doc, {id: String(r.id), col: doc.col || "done", arch: true}));
+    RELEASES.push(row);
+  }
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
   snapMeta();   // HUB188: the exported epics and themes, under this page's edits on their way (overlayMeta)
   ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
@@ -4388,7 +4632,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
   }
 });
 document.getElementById("signout").addEventListener("click", () => {
-  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = [];
+  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
   tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
