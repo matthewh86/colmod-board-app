@@ -2459,9 +2459,39 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   if(!u || !wins.length) return [el("span",{class:"pill", title:"The coordinator records the plan's limits on each wake (hub/usage.py)"}, "Tokens: no reading yet")];
   const out = wins.filter(w => w.runs_out_at).sort((a, b) => String(a.runs_out_at).localeCompare(String(b.runs_out_at)));
   const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
+  const c = usageCredits(u), cp = c && (u.plan_used_up || c.spent || c.held)
+    ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API $" + c.spent.toFixed(0) + " of $" + c.cap.toFixed(0))] : [];
   return [el("span",{class:"pill" + (w.runs_out_at ? " over" : ""), title:wins.map(usageLine).join("\n") + "\nRecorded " + fmtTime(u.recorded)},
     "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
-    + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : " · lasts"))];
+    + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : " · lasts")), ...cp];
+}
+// the API credit side of the budget (HUB161): the overflow streams' month spend against the cap (hub/overflow.py),
+// aggregate numbers only
+function usageCredits(u){
+  const c = u && u.credits && typeof u.credits === "object" ? u.credits : null;
+  if(!c) return null;
+  const n = k => Math.max(0, Number(c[k]) || 0);
+  return {on: !!c.on, month: String(c.month || ""), cap: n("cap_usd"), spent: n("spent_usd"), held: n("reserved_usd"),
+    left: n("left_usd"), running: n("runs_running"), runs: n("runs_month")};
+}
+function creditLine(c){   // "API credits 2026-11: $12.30 spent, $25.00 held by running runs, $162.70 left of $200"
+  return "API credits " + c.month + ": $" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by running runs, $"
+    + c.left.toFixed(2) + " left of $" + c.cap.toFixed(0) + (c.on ? "" : " (overflow off: no key file)");
+}
+function creditsTable(u){
+  const c = usageCredits(u);
+  if(!c) return [el("p",{class:"note"}, "API credits: no reading yet (hub/overflow.py).")];
+  const pct = c.cap ? Math.round(100 * (c.spent + c.held) / c.cap) : 0;
+  const state = !c.on ? "Overflow off: no key file on the hub's machine."
+    : u.plan_used_up ? (c.left >= 1 ? "The plan is used up: overflow streams on the paid API may run while the cap has room." : "The plan is used up and the cap has no room: no overflow runs until next month.")
+    : "Overflow streams start only once a plan limit is used up.";
+  return [el("h3",{}, "API credits (overflow streams)"),
+    el("div",{class:"tblwrap"}, el("table",{class:"st"},
+      el("thead",{}, el("tr",{}, el("th",{}, "Month"), el("th",{}, "Spent"), el("th",{}, "Held by running runs"), el("th",{}, "Left"), el("th",{}, "Cap"))),
+      el("tbody",{}, el("tr",{}, el("td",{}, c.month), el("td",{}, "$" + c.spent.toFixed(2)),
+        el("td",{}, "$" + c.held.toFixed(2) + (c.running ? " (" + c.running + " run" + (c.running === 1 ? "" : "s") + ")" : "")),
+        el("td",{}, "$" + c.left.toFixed(2)), el("td",{}, "$" + c.cap.toFixed(0) + " (" + pct + " % used)"))))),
+    el("p",{class:"note"}, state + " " + c.runs + " run" + (c.runs === 1 ? "" : "s") + " this month.")];
 }
 function usageSection(host){
   const {u, pace, wins} = usageNow();
@@ -2471,13 +2501,13 @@ function usageSection(host){
       el("button",{type:"button", "aria-pressed":String(k === pace), title:tip, onclick:()=>setPace(k)}, name))),
     el("p",{class:"note"}, (PACES.find(x => x[0] === pace) || PACES[1])[2] + ". P1 cards always go first, whatever the pace."
       + (u && u.allowance ? " Now: " + u.allowance + "." : "")));
-  if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake.")); return; }
-  host.append(el("div",{class:"tblwrap"}, el("table",{class:"st"},
+  if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake."), ...creditsTable(u)); return; }
+  host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, el("th",{}, "Limit"), el("th",{}, "Used"), el("th",{}, "Refreshes"), el("th",{}, "Runs out (at the present rate)"))),
     el("tbody",{}, wins.map(w => el("tr",{}, el("td",{}, w.label), el("td",{}, Math.round(Number(w.pct) || 0) + " %"),
       el("td",{}, w.resets_at ? fmtTime(w.resets_at) : "-"),
       el("td",{}, w.runs_out_at ? fmtTime(w.runs_out_at) + (w.before_reset_h != null ? " (" + w.before_reset_h + " h before its refresh)" : "") : "lasts to the refresh")))))),
-    el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + "."));
+    el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + "."), ...creditsTable(u));
 }
 function renderHubTab(){
   rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace], host => {
