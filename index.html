@@ -651,7 +651,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
       <span class="qwrap"><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
-      <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Big feature</option><option value="0">No priority</option></select>
+      <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Low</option><option value="0">No priority</option></select>
       <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="fq" style="flex:none"> Open questions</label>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center" title="Cards that are blocked, not synced, refused by the board, or idle"><input type="checkbox" id="fx" style="flex:none"> Blocked or issue</label>
@@ -1617,7 +1617,7 @@ function renderSelBar(){
     title:n && !targets.length ? "No column takes every selected card (open questions, a step of the user, or a card still in refinement)" : null,
     onchange:ev=>{ const k = ev.target.value; ev.target.value = ""; if(k) moveMany(selOrder(), k, 0); }},
     el("option",{value:""}, "Move to…"), ...COLS.filter(col => targets.includes(col.k)).map(col=>el("option",{value:col.k}, col.name)));
-  bar.append(el("b",{}, n + " selected"),
+  bar.append(...[el("b",{}, n + " selected"),
     btn("⤒ Top", place("Move the selected cards to the top of their column"), ()=>selMove("top"), several),
     btn("↑ Up", place("Move the selected cards up one place, together"), ()=>selMove("up"), several),
     btn("↓ Down", place("Move the selected cards down one place, together"), ()=>selMove("down"), several),
@@ -1628,7 +1628,7 @@ function renderSelBar(){
     selEpicsEl(),
     btn("Clear","Clear the selection", ()=>{ picked.clear(); selAnchor = null; render(); }),
     el("button",{type:"button", class:"seldone", title:"Finish selecting (Esc)", onclick:()=>setSelMode(false)}, "Done"),
-    el("span",{class:"hint"}, n > 1 ? "Drag any selected card to move them all" : "Click cards to select; Shift+click for a range"));
+    el("span",{class:"hint"}, n > 1 ? "Drag any selected card to move them all" : "Click cards to select; Shift+click for a range")].filter(Boolean));   // native append writes null as text
   bar.hidden = false;
 }
 function nudge(id, dir){
@@ -2036,7 +2036,7 @@ function renderNew(){
     };
     pj.addEventListener("change", fillEps); fillEps();
     const ty = el("select",{id:"nType"}, ...KINDS.map(k => opt(k, k, k === "Feature")));
-    const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Big feature"]].map(([k, t]) => opt(k, t, k === 3)));
+    const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Low"]].map(([k, t]) => opt(k, t, k === 3)));
     const co = el("select",{id:"nCol"}, ...CREATE_COLS.map(k => opt(k, COL_NAME[k], k === "back")));
     const ti = el("input",{id:"nTitle", maxlength:"200", autocomplete:"off", required:true});
     const de = el("textarea",{id:"nDesc", maxlength:"8000", placeholder:"What it is and why (optional)"});
