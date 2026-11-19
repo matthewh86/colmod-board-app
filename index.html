@@ -3569,7 +3569,10 @@ function drawGantt(host){
     const ep = th.get(t); if(!ep.has(e)) ep.set(e, []);
     ep.get(e).push(it);
   }
-  const span = its => [Math.min(...its.map(i => i.s)), Math.max(...its.map(i => i.e))];
+  // HUB186: an epic's or theme's bar spans its deliverable cards only (Plan and Spike cards are drawn, not counted);
+  // a group of nothing but Plan / Spike cards spans those
+  const span = all => { const d = all.filter(i => countsForEpic(i.c)), its = d.length ? d : all;
+    return [Math.min(...its.map(i => i.s)), Math.max(...its.map(i => i.e))]; };
   const fold = key => !gNoEst && gFold.has(key);   // HUB176: the no-estimate view opens every row, the folds are kept for after
   const toggle = key => { gFold.has(key) ? gFold.delete(key) : gFold.add(key); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
   const hueOf = e => themes.get(epicTheme(e))?.hue ?? epics.get(e)?.hue;   // HUB165, HUB166: the theme's hue, else the epic's
