@@ -13,6 +13,7 @@
 :root{
   --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
   --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
+  --pace-conservative:#1f4e8c; --pace-moderate:#1b6e3a; --pace-turbo:#6a2fb0; --on-pace:#ffffff;
   --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
   --pri-ink:#ffffff; --sheen:rgba(255,255,255,.85); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6; --t-rel:#c25e00; --t-rel-bg:#fdeedd; --t-test:#ad1457; --t-test-bg:#fce4ec; --t-plan:#6a3fb5; --t-plan-bg:#efe8fa; --t-spike:#795548; --t-spike-bg:#f3ece9;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
@@ -26,6 +27,7 @@
     color-scheme:dark;
     --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
     --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
+    --pace-conservative:#7fa9e6; --pace-moderate:#6fcf8a; --pace-turbo:#b58cf0; --on-pace:#0e131b;
     --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
   --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c; --t-rel:#f0a35e; --t-rel-bg:#3a2612; --t-test:#f48fb1; --t-test-bg:#3a1a28; --t-plan:#b39ddb; --t-plan-bg:#2a2138; --t-spike:#c8a99a; --t-spike-bg:#33261f;
     --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
@@ -36,6 +38,7 @@
   color-scheme:dark;
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
   --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
+  --pace-conservative:#7fa9e6; --pace-moderate:#6fcf8a; --pace-turbo:#b58cf0; --on-pace:#0e131b;
   --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
   --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c; --t-rel:#f0a35e; --t-rel-bg:#3a2612; --t-test:#f48fb1; --t-test-bg:#3a1a28; --t-plan:#b39ddb; --t-plan-bg:#2a2138; --t-spike:#c8a99a; --t-spike-bg:#33261f;
   --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
@@ -91,7 +94,7 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .fpop input[type=checkbox]{margin:0; flex:none; width:15px; height:15px; accent-color:var(--accent)}
 .fpop label{display:flex; gap:8px; align-items:center; line-height:1.2; font-size:.85rem; cursor:pointer; white-space:nowrap}
 .savest{font-size:.8rem; color:var(--muted)}   /* HUB255: beside the sync indicator */
-.savest.ok{color:var(--p3); font-weight:700; font-size:.95rem; line-height:1}
+.savest.ok{color:var(--p3); font-weight:600; font-size:.78rem; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--p3) 14%, transparent); font-variant-numeric:tabular-nums}   /* HUB265: "✓ Synced" in a chip like the syncing one */
 .note{font-size:.82rem; color:var(--muted); margin:10px 0 0}
 .linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; font-size:.82rem; text-decoration:underline}
 .main{position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
@@ -388,6 +391,15 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 .mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
 .mach.rows{grid-template-columns:1fr}
 .mcard h3{font-size:.9rem; margin:6px 0 0; color:var(--muted); font-weight:600}
+/* HUB263: the Decisions tab's headings step down in size, weight and colour: the page's title, then each section
+   (Manual actions, Decisions, Past manual actions), then its parts (Active, Snoozed, Your steps), then a project's
+   group; a rule between the sections */
+#decisions > h2:first-child{font:400 1.4rem/1.2 var(--f-display); text-transform:none; letter-spacing:0; color:var(--ink)}
+#decisions h2{font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink); margin:0}
+#decisions h3{font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:4px 0 0}
+#decisions h4{font:500 .8rem/1.3 var(--f-body); color:var(--muted); margin:6px 0 0}
+#decisions hr.secrule{border:0; border-top:1px solid var(--line); margin:8px 0; width:100%}
+#decisions .mansec:empty + hr.secrule, #decisions hr.secrule:has(+ .mansec:empty){display:none}
 table.st td.num, table.st th.num{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
 table.st tr.heat td.num:first-of-type{font-weight:600}
 .qmove{display:flex; gap:4px}
@@ -442,17 +454,26 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.86rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
 .pacesel button:first-child{border-left:0}
-.pacesel button:hover,.pacesel button.hov{background:var(--accent-soft); color:var(--accent); box-shadow:inset 0 -3px 0 var(--accent)}   /* HUB257: coloured on hover */
-.pacesel button[aria-pressed=true]:hover{filter:brightness(1.12)}
-.pacesel button:focus-visible{outline:2px solid var(--accent); outline-offset:-3px}
-.pacesel button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
+.pacesel{position:relative}
+.pacesel button[data-k=conservative]{--pc:var(--pace-conservative)}
+.pacesel button[data-k=moderate]{--pc:var(--pace-moderate)}
+.pacesel button[data-k=turbo]{--pc:var(--pace-turbo)}
+/* HUB241: each pace in its own colour on hover, focus or when chosen (HUB257: .hov keeps it while its help shows) */
+.pacesel button:hover,.pacesel button.hov,.pacesel button:focus-visible,.pacesel button[aria-pressed=true]{background:var(--pc); color:var(--on-pace)}
+.pacesel button:focus-visible{outline:2px solid var(--pc); outline-offset:-3px}
+.pacesel button[data-k=turbo]:hover,.pacesel button[data-k=turbo].hov,.pacesel button[data-k=turbo]:focus-visible,.pacesel button[data-k=turbo][aria-pressed=true]{box-shadow:inset 0 -14px 18px -8px var(--pace-turbo), inset 0 0 12px rgba(255,255,255,.25)}
+.pacebox{position:relative}
+.paceflame{position:absolute; top:0; right:0; width:33.333%; pointer-events:none; mix-blend-mode:screen; border-radius:0 8px 8px 0}
 .pacehelp{margin:0; padding:6px 10px; border-left:3px solid var(--accent); background:var(--surface); border-radius:0 6px 6px 0; display:grid}
 /* HUB257: every pace's text in the same cell, only one shown: the box keeps the tallest one's height, so the page never moves */
 .pacehelp > span{grid-area:1/1; visibility:hidden}
 .pacehelp > span.on{visibility:visible}
+.pacehelp[data-k=conservative]{border-left-color:var(--pace-conservative)}
+.pacehelp[data-k=moderate]{border-left-color:var(--pace-moderate)}
+.pacehelp[data-k=turbo]{border-left-color:var(--pace-turbo)}
 .pacehelp b{color:var(--ink)}
 .pacehelp.preview{border-left-style:dashed}
-.pacehelp.preview b{color:var(--accent)}
+.pacehelp.preview b{color:var(--pc, var(--accent))}
 /* HUB171/HUB173: the settable limits, each with what it caps and the suggested value */
 .limits{display:grid; gap:8px; max-width:860px}
 .limrow{display:grid; grid-template-columns:minmax(150px,200px) auto 1fr; gap:6px 14px; align-items:start; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px}
@@ -1027,12 +1048,11 @@ async function send(id){
 function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
 function saveState(){
   const n = changes.size, unsent = [...changes.keys()].filter(k => !sentAt.has(k)).length, s = $("#savest");
-  s.textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : sending ? "Saving…"
-    : unsent ? unsent + (unsent===1?" change":" changes") + " not sent yet"
-    : n ? n + (n===1?" change":" changes") + " sent, waiting for the board" : loaded ? "Saved" : "";
-  const ok = s.textContent === "Saved";   // HUB255: everything is on the board: a check icon, the words in its tip
-  s.classList.toggle("ok", ok); if(ok) s.textContent = "✓";
-  s.title = ok ? "Saved: every change is on the board" : ""; ok ? s.setAttribute("aria-label", "Saved") : s.removeAttribute("aria-label");
+  // HUB264: changes on their way are said once, by the sync chip beside this ("N changes syncing to the desktop")
+  s.textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : n ? "" : loaded ? "Synced" : "";
+  const ok = s.textContent === "Synced";   // HUB255/HUB265: everything is on the board: "✓ Synced" in one chip
+  s.classList.toggle("ok", ok); if(ok) s.textContent = "✓ Synced";
+  s.title = ok ? "Synced: every change is on the board" : "";
 }
 // how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
 function openCount(c, col){
@@ -3358,8 +3378,9 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   if(!u || !wins.length) return [el("span",{class:"pill", title:"The coordinator records the plan's limits on each wake (hub/usage.py)"}, "Tokens: no reading yet")];
   const out = wins.filter(w => w.runs_out_at).sort((a, b) => String(a.runs_out_at).localeCompare(String(b.runs_out_at)));
   const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
-  const c = usageCredits(u), cp = c && (u.plan_used_up || c.spent || c.held)
-    ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API $" + c.spent.toFixed(0) + " of $" + c.cap.toFixed(0))] : [];
+  // HUB267: the top-up (API) credits left, always shown once there is a reading
+  const c = usageCredits(u), cp = c
+    ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API credits $" + c.left.toFixed(0) + " left of $" + c.cap.toFixed(0))] : [];
   const rw = usageRunway(u), over = rw ? !!rw.out : !!w.runs_out_at;   // HUB206: runs out = the plan and the API credits
   return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + (rw && rw.why ? "\nRuns out (the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
     "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
@@ -3423,7 +3444,10 @@ function creditsTable(u){
 function usageSection(host){
   const {u, pace, wins} = usageNow();
   const rw = usageRunway(u);
-  host.append(el("h2",{}, "Tokens and pace"), paceSelector(pace), paceAutoHint(u, pace),
+  const cr = usageCredits(u);   // HUB267: the top-up (API) credits left, up top beside the pace
+  host.append(el("h2",{}, "Tokens and pace"),
+    cr ? el("p",{class:"note credleft", title:creditLine(cr)}, "API top-up credits: ", el("b",{}, "$" + cr.left.toFixed(2) + " left"), " of $" + cr.cap.toFixed(0) + " this month (" + cr.month + ").") : null,
+    paceSelector(pace), paceAutoHint(u, pace),
     u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
     rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null);
   limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
@@ -3444,6 +3468,54 @@ function paceAutoHint(u, pace){
   return el("p",{class:"note pauto", role:"status"}, "ℹ️ The pace dropped to " + name(a.to) + " by itself " + fmtTime(a.at)
     + " (it was " + name(a.from) + "): the overflow streams started using the Claude API credits. Pick a pace to change it; the hub drops it at most once a month.");
 }
+// HUB241: Turbo's flame (a canvas over its button, drawn only while it is hovered, focused or chosen, and only while the page is
+// visible) and the sparks of a click on it; neither runs under prefers-reduced-motion (the button's static glow stays)
+const paceCalm = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function paceFlame(cv, btn){
+  const ctx = cv.getContext && cv.getContext("2d"); if(!ctx || !btn) return;
+  const N = 300, ps = []; let raf = 0, over = false;
+  const want = () => cv.isConnected && !document.hidden && !paceCalm() && (over || btn.matches(":focus-visible") || btn.getAttribute("aria-pressed") === "true");
+  const spawn = (p, w, h, fresh) => { p.x = Math.random() * w; p.y = h - Math.random() * (fresh ? 4 : h * .5); p.v = .5 + Math.random() * 1.4; p.l = fresh ? 0 : Math.random(); p.d = .012 + Math.random() * .02; p.s = 1 + Math.random() * 2; };
+  const frame = () => {
+    raf = 0;
+    if(!want()){ if(cv.isConnected) ctx.clearRect(0, 0, cv.width, cv.height); return; }
+    const r = btn.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+    if(cv.width !== w * dpr || cv.height !== h * dpr){ cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + "px"; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h); ctx.globalCompositeOperation = "lighter";
+    while(ps.length < N){ const q = {}; spawn(q, w, h, false); ps.push(q); }
+    for(const p of ps){
+      if(p.l >= 1) spawn(p, w, h, true);
+      p.l += p.d; p.y -= p.v; p.x += (Math.random() - .5) * 1.2 + Math.sin(p.y * .15 + p.x) * .25;
+      const t = p.l, a = (1 - t) * (.35 + .35 * Math.min(1, (h - p.y) / h * 2));
+      ctx.fillStyle = "rgba(" + Math.round(110 + 145 * t) + "," + Math.round(40 + 200 * t * t) + "," + Math.round(190 + 65 * t) + "," + a.toFixed(3) + ")";
+      ctx.fillRect(p.x, p.y, p.s, p.s * 1.8);
+    }
+    raf = requestAnimationFrame(frame);
+  };
+  const go = () => { if(!raf && want()) raf = requestAnimationFrame(frame); };
+  btn.addEventListener("pointerenter", () => { over = true; go(); });
+  btn.addEventListener("pointerleave", () => { over = false; });
+  btn.addEventListener("focus", go);
+  document.addEventListener("visibilitychange", function vis(){ if(!cv.isConnected) document.removeEventListener("visibilitychange", vis); else go(); });
+  setTimeout(go, 0);
+}
+function paceSparks(x, y){
+  if(paceCalm() || !x && !y) return;
+  const cv = el("canvas",{"aria-hidden":"true", style:"position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9999"});
+  const dpr = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d"); if(!ctx) return;
+  const ps = Array.from({length: 30}, () => { const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 5; return {x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, s: 1.5 + Math.random() * 2, c: Math.random() < .4 ? "255,255,255" : Math.random() < .5 ? "200,150,255" : "150,90,235"}; });
+  document.body.append(cv); const t0 = performance.now();
+  const step = now => {
+    const t = (now - t0) / 600;
+    if(t >= 1 || document.hidden){ cv.remove(); return; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    for(const p of ps){ p.x += p.vx; p.y += p.vy; p.vy += .22; p.vx *= .98;
+      ctx.fillStyle = "rgba(" + p.c + "," + (1 - t).toFixed(3) + ")"; ctx.fillRect(p.x, p.y, p.s, p.s); }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 // HUB175: the pace as one segmented control; the help below it says what the hovered (or focused) pace does, and goes
 // back to the chosen one's when the pointer or focus leaves
 function paceSelector(pace){
@@ -3455,12 +3527,12 @@ function paceSelector(pace){
     const key = desc(k)[0];
     for(const s of help.children){ const on = s.dataset.k === key; s.classList.toggle("on", on); s.setAttribute("aria-hidden", String(!on)); }
     for(const b of group.children) b.classList.toggle("hov", b.dataset.k === key && key !== pace);
-    help.classList.toggle("preview", key !== pace);
+    help.classList.toggle("preview", key !== pace); help.dataset.k = key;
   };
   const back = () => say(pace);
   const group = el("div",{class:"pacesel", role:"group", "aria-label":"Development pace"}, ...PACES.map(([k, name]) => {
     const b = el("button",{type:"button", "data-k":k, "aria-pressed":String(k === pace), "aria-describedby":"pace-help",
-      onclick:()=>{ if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderHubTab();
+      onclick:(e)=>{ if(k === "turbo") paceSparks(e.clientX, e.clientY); if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderHubTab();
         const again = document.querySelector('#hub .pacesel button[data-k="' + k + '"]'); if(again) again.focus({preventScroll:true}); }}, name);
     b.addEventListener("pointerenter", () => say(k));
     b.addEventListener("focus", () => say(k));
@@ -3469,7 +3541,9 @@ function paceSelector(pace){
   }));
   group.addEventListener("pointerleave", () => { const f = document.activeElement; say(group.contains(f) && f.dataset.k || pace); });
   back();
-  return el("div",{class:"pacebox"}, group, help);
+  const flame = el("canvas",{class:"paceflame", "aria-hidden":"true"});
+  paceFlame(flame, group.querySelector('button[data-k="turbo"]'));
+  return el("div",{class:"pacebox"}, group, flame, help);
 }
 // HUB171/HUB173: the limits, settable here, each with what it caps and the suggested value
 function limitsSection(host){
@@ -4175,13 +4249,13 @@ function drawGantt(host){
   const allFolded = epicKeys.length > 0 && epicKeys.every(k => gFold.has(k));
   const foldAll = () => { for(const k of epicKeys) allFolded ? gFold.delete(k) : gFold.add(k); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
   host.append(el("div",{class:"ghead"},
+    ganttKey(shown),   // HUB203: the key, folded into an info icon; HUB266: left of the Gantt title
     el("h2",{}, "Gantt"),
     ganttFilters(),   // the controls first: the pills after them change in number, so these stay put
     el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
     noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
       title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
       noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
-    ganttKey(shown),   // HUB203: the key, folded into an info icon left of the Tokens pill
     ...usagePills(),
     el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
       el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
@@ -4814,7 +4888,7 @@ function drawDecisions(){
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
   host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : "", nMan ? nMan+(nMan===1?" manual action":" manual actions") : ""].filter(Boolean).join(", ")
     : "Nothing is waiting for you"));
-  host.append(manHost);   // HUB238: 1. Manual actions (Active, Snoozed), kept between redraws (renderManual fills it)
+  host.append(manHost, el("hr",{class:"secrule"}));   // HUB238: 1. Manual actions (Active, Snoozed), kept between redraws (renderManual fills it); HUB263: a rule after it
   host.append(el("h2",{id:"decsec"}, "Decisions"), el("h3",{}, "Active"));
   if(!nSteps && !sess.length && !list.length && !nParked) host.append(el("p",{class:"note"}, "No decision is waiting on you."));
   if(nSteps) host.append(el("h3",{}, "Your steps"),
@@ -4834,6 +4908,7 @@ function drawDecisions(){
     host.append(d);
   }
   host.append(pastDecisionsEl());   // 2. Decisions: Past decisions
+  host.append(el("hr",{class:"secrule"}));   // HUB263: hidden while the section after it is empty
   host.append(manPastHost);         // 3. Past manual actions
 }
 // the decisions already made: the sessions' and the live cards' (an archived card keeps its own on the desktop)
