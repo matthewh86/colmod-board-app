@@ -557,6 +557,10 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gline.rel span{color:var(--t-rel); top:auto; bottom:2px}
 /* HUB208: a release's name at the top of its line too; HUB204/HUB205: the token run-out lines, named at the top */
 .gline.rel span.gltop, .gline span.gltop{top:17px; bottom:auto; pointer-events:auto; cursor:default}
+.gline.rel span.rlink{pointer-events:auto; cursor:pointer; text-decoration:underline dotted}
+.gline.rel span.rlink:hover, .gline.rel span.rlink:focus-visible{text-decoration:underline; outline:none}
+.rlinks{margin:6px 0; font-size:.88rem}
+.rlinks .rcards{margin:4px 0 0}
 .gline.tok{border-left:2px dotted var(--gtok); z-index:1} .gline.tok span{color:var(--gtok)}
 .gline.tok.plan, .gtoksw.plan{--gtok:var(--p2)} .gline.tok.credits, .gtoksw.credits{--gtok:var(--p1)}
 .glegend i.gtoksw{width:0; height:12px; border-radius:0; background:none; border-left:2px dotted var(--gtok)}
@@ -577,6 +581,9 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .g-t-plan{--tc:var(--t-plan)} .g-t-spike{--tc:var(--t-spike)}
 @media (max-width:640px){ #gantt{--glw:104px} .glab.gcard .gt{display:none} .gscale{margin-left:0} .gepic .glab, .glab.gcard{padding-left:6px} }
 table.st{border-collapse:collapse; width:100%; font-size:.82rem}
+table.st th button.sorth{all:unset; cursor:pointer; font-weight:600; color:inherit}
+table.st th button.sorth:hover, table.st th button.sorth.on{color:var(--fg, inherit); text-decoration:underline}
+table.st th button.sorth:focus-visible{outline:2px solid currentColor; outline-offset:2px}
 table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
 table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
 table.st td small{color:var(--muted)}
@@ -584,8 +591,8 @@ table.st td small{color:var(--muted)}
 :root{--u-cpu:#2a78d6; --u-mem:#eb6834; --u-games:#1baf7a}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70} }
 :root[data-theme="dark"]{--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70}
-.ubox, .rbox{min-width:0}
-@media (min-width:760px){ .mach > .mcard.rate{grid-column:span 2} }   /* HUB179: the tokens per hour graph, two cards wide */
+.ubox, .rbox, .cbox{min-width:0}
+@media (min-width:760px){ .mach > .mcard.allm{grid-column:span 2} }   /* HUB179: the All machines frame, two cards wide */
 .tbox{margin-top:10px}
 table.arts tr.doomed td:first-child a, table.arts tr.doomed td:first-child span{text-decoration:line-through; color:var(--muted)}
 table.arts td:last-child{white-space:nowrap; text-align:right}
@@ -609,7 +616,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .usage .ukey{display:inline-block; width:12px; height:2px; border-radius:1px; vertical-align:middle; margin-right:5px}
 .usage .ukey.box{height:8px; opacity:.55}
 .usage .ukey.thin{height:1px}
-.rbox.mrate{margin-top:10px}   /* HUB198: a machine's streams per hour, one line each, under its token graph */
+.rbox.srate, .cbox{margin-top:10px}   /* HUB233: the sessions' tokens per hour; HUB234: a machine's context graph, under its token graph */
 .usage .tleg .tmach{font-weight:600; color:var(--ink)}
 .usage .uplot{position:relative; line-height:0; border-radius:4px}
 .usage .uplot:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -1264,6 +1271,7 @@ function cardEl(c, full=false){
         try{ navigator.clipboard.writeText(why).then(()=>{ ev.target.textContent = "Copied"; }, ()=>{}); }catch(e){} }}, "Copy"))); }
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
+  if(full){ const rl = releaseLinksEl(c); if(rl) e.append(rl); }   // HUB231
   if(!full && flags.length) e.append(el("div",{class:"flags"}, ...flags));   // HUB215
   const ep = epics.get(c.epic);
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
@@ -1620,7 +1628,7 @@ function renderSelBar(){
     selEpicsEl(),
     btn("Clear","Clear the selection", ()=>{ picked.clear(); selAnchor = null; render(); }),
     el("button",{type:"button", class:"seldone", title:"Finish selecting (Esc)", onclick:()=>setSelMode(false)}, "Done"),
-    el("span",{class:"hint"}, n > 1 ? "Dragging is off while several cards are selected" : "Click cards to select; Shift+click for a range"));
+    el("span",{class:"hint"}, n > 1 ? "Drag any selected card to move them all" : "Click cards to select; Shift+click for a range"));
   bar.hidden = false;
 }
 function nudge(id, dir){
@@ -2194,7 +2202,7 @@ function cardPress(ev, id, e){
   if(drag || readOnly || ev.isPrimary === false) return;
   if(ev.pointerType === "mouse" && ev.button !== 0) return;
   if(ev.target.closest("button, select, input, textarea, a, .hov")) return;
-  if(selMode && selOrder().length > 1) return;   // HUB223: several cards selected: no dragging, the Select bar moves them
+  // HUB246 (the user): several selected cards drag as a group again (HUB223 had turned dragging off)
   drag = {id, src:e, pid:ev.pointerId, type:ev.pointerType, x0:ev.clientX, y0:ev.clientY, x:ev.clientX, y:ev.clientY, active:false};
   if(ev.pointerType !== "mouse") drag.timer = setTimeout(()=>{ if(drag && !drag.active) dragStart(); }, 350);
   addEventListener("pointermove", dragMove, true); addEventListener("pointerup", dragUp, true); addEventListener("pointercancel", dragCancel, true);
@@ -2298,7 +2306,11 @@ function dragUp(ev){
     idx = before ? full.findIndex(c=>c.id===before.dataset.id) : full.length;
   }
   dragEnd(true);
-  if(t) group ? moveMany(group, t.col, idx) : moveTo(id, t.col, idx);
+  if(t && group){   // HUB246: a group drop moves the cards the board's move rules allow there; the rest stay put
+    const ok = group.filter(g => cards.has(g) && !moveProblem(cards.get(g), t.col)), left = group.length - ok.length;
+    if(ok.length) moveMany(ok, t.col, idx);
+    if(left) toast(left + (left === 1 ? " selected card" : " selected cards") + " can't move there and stayed put.");
+  } else if(t) moveTo(id, t.col, idx);
 }
 function dragCancel(){ if(drag) dragEnd(drag.active); }
 function dragKey(ev){ if(ev.key === "Escape" && drag && drag.active){ ev.preventDefault(); ev.stopImmediatePropagation(); dragCancel(); } }
@@ -2786,6 +2798,7 @@ function tokRate(r, step){   // tokens per hour over the last hour of the series
 // At most TOK_HOURLY_LINES lines a machine; the rest are summed as "other".
 const TOK_HOURLY_LINES = 6;
 // >>> tok-hourly (tests/test_app.py runs this block in node)
+const TOK_SESS = "all sessions", CTX_LIVE_S = 7200;   // the sessions graph's box key (a machine's name has no space); a context line is live for two hours after its last reply
 function tokHourly(){
   const docs = [...tokens.entries()].filter(([, d]) => d && d.end && Array.isArray(d.series) && d.series.length);
   if(!docs.length) return null;
@@ -2795,6 +2808,7 @@ function tokHourly(){
   const full = Math.max(...docs.flatMap(([, d]) => d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0)));
   const n = Math.max(1, Math.min(full, Math.round(tokHours * 3600 / step)));
   const per = step / 3600, parts = tokMode === "all" ? ["in", "write", "read", "out"] : ["in", "write", "out"], machines = [];
+  const bySess = new Map();   // HUB233: every session and agent of every machine by name, summed over the machines it ran on
   for(const [name, d] of docs){
     const off = Math.round((end - d.end) / step), lines = [];
     for(const s of d.series){
@@ -2808,6 +2822,10 @@ function tokHourly(){
       if(sum > 0) lines.push({name: String(s.name || "unnamed").slice(0, 48), kind: String(s.kind || ""), v, sum});
     }
     lines.sort((a, b) => b.sum - a.sum || a.name.localeCompare(b.name));
+    for(const l of lines){
+      const e = bySess.get(l.name);
+      if(e){ e.v = e.v.map((x, i) => x + l.v[i]); e.sum += l.sum; } else bySess.set(l.name, {name: l.name, kind: l.kind, v: l.v.slice(), sum: l.sum});
+    }
     if(lines.length > TOK_HOURLY_LINES){   // the smallest folded into one line, so a phone's legend stays short
       const rest = lines.splice(TOK_HOURLY_LINES - 1);
       lines.push({name: "other (" + rest.length + ")", kind: "other", v: Array.from({length: n}, (_, i) => rest.reduce((t, l) => t + l.v[i], 0)), sum: rest.reduce((t, l) => t + l.sum, 0)});
@@ -2818,18 +2836,57 @@ function tokHourly(){
   machines.sort((a, b) => a.name.localeCompare(b.name));
   const total = Array.from({length: n}, (_, i) => machines.reduce((t, m) => t + m.total[i], 0));
   const lines = machines.length > 1 ? machines.map(m => ({name: m.name, v: m.total})) : [];   // HUB179's dashed lines
-  return {step, end, n, total, lines, machines};
+  const sl = [...bySess.values()].sort((a, b) => b.sum - a.sum || a.name.localeCompare(b.name));
+  if(sl.length > TOK_HOURLY_LINES){
+    const rest = sl.splice(TOK_HOURLY_LINES - 1);
+    sl.push({name: "other (" + rest.length + ")", kind: "other", v: Array.from({length: n}, (_, i) => rest.reduce((t, l) => t + l.v[i], 0)), sum: rest.reduce((t, l) => t + l.sum, 0)});
+  }
+  const sess = {key: TOK_SESS, name: "All machines, by session", total, lines: sl};
+  return {step, end, n, total, lines, machines, sess};
+}
+// HUB234: context size over time of a machine's live sessions and agents (their `cx` series: the context at each
+// step's last reply, held across steps with no reply), one line each, the largest now first; never summed.
+function tokContext(machine){
+  const d = tokens.get(machine);
+  if(!d || !d.end || !Array.isArray(d.series)) return null;
+  const step = d.step || 1800, full = Math.max(0, ...d.series.map(s => s && Array.isArray(s.cx) ? s.cx.length : 0));
+  const n = Math.max(1, Math.min(full, Math.round(tokHours * 3600 / step)));
+  const lines = [];
+  for(const s of d.series){
+    if(!s || (s.kind !== "session" && s.kind !== "agent") || !Array.isArray(s.cx)) continue;
+    if(typeof s.ctx_at === "number" && d.end - s.ctx_at > CTX_LIVE_S) continue;   // finished: not live
+    const v = Array(n).fill(0); let last = 0;
+    for(let i = 0; i < n; i++){
+      const x = s.cx[s.cx.length - n + i];
+      if(typeof x === "number" && x > 0) last = x;
+      v[i] = last;
+    }
+    if(last > 0) lines.push({name: String(s.name || "unnamed").slice(0, 48), kind: s.kind, v, sum: last});
+  }
+  if(!lines.length) return null;
+  lines.sort((a, b) => b.sum - a.sum || a.name.localeCompare(b.name));
+  lines.splice(TOK_HOURLY_LINES);
+  const total = Array.from({length: n}, (_, i) => Math.max(...lines.map(l => l.v[i])));
+  return {step, end: d.end, n, key: machine, name: machine + " context", total, lines, unit: "", words: "context size (tokens) of each live session or agent"};
 }
 // <<< tok-hourly
 function renderTokHourly(box){   // a fault in the graph must never stop the rest of the page from drawing
   try {
     const h = tokHourly(), one = box.dataset.machine;   // HUB198: a machine's box shows that machine's streams
-    const m = h && one != null ? h.machines.find(x => x.key === one) : null;
+    const m = h && one != null ? (one === TOK_SESS ? h.sess : h.machines.find(x => x.key === one)) : null;
     if(!h || (one != null ? !m || !m.total.some(v => v > 0) : !h.total.some(v => v > 0))){ box.hidden = true; return; }
     box.hidden = false;
     const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
     box.replaceChildren(m ? tokHourlyMachine(m, h, w) : buildTokHourly(h, w));
   } catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The tokens per hour graph could not be shown: " + (e && e.message || e))); }
+}
+function renderContext(box){   // HUB234: a machine's context graph; a fault never stops the rest of the page from drawing
+  try {
+    const c = tokContext(box.dataset.machine);
+    if(!c){ box.hidden = true; return; }
+    box.hidden = false;
+    box.replaceChildren(tokHourlyMachine(c, c, Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)))));
+  } catch(e){ box.hidden = false; box.replaceChildren(el("p",{class:"note"}, "The context graph could not be shown: " + (e && e.message || e))); }
 }
 function buildTokHourly(h, w){
   const {n, total, lines} = h, step = h.step * 1000, end = h.end * 1000, t0 = end - n * step;
@@ -2890,19 +2947,19 @@ function buildTokHourly(h, w){
   const legend = lines.length ? el("div",{class:"uleg"}, el("span",{}, key("--accent"), "All machines"),
     ...lines.map((l, k) => el("span",{}, key(TOK_COL[(k + 1) % TOK_COL.length], true), l.name))) : null;
   return el("div",{class:"usage"}, head, legend, plot,
-    el("p",{class:"note"}, `Claude ${view} per hour, every machine's sessions and agents together, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min. The span and the view follow the token graphs below.`));
+    el("p",{class:"note"}, `Claude ${view} per hour, every machine's sessions and agents together, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min. The span and the view follow the token graphs.`));
 }
 function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own scale, a legend naming each
-  const {n} = h, step = h.step * 1000, end = h.end * 1000, t0 = end - n * step, {total, lines} = m;
+  const {n} = h, step = h.step * 1000, end = h.end * 1000, t0 = end - n * step, {total, lines} = m, U = m.unit == null ? "/h" : m.unit, what = m.words || "Claude tokens per hour by session or agent";
   const most = Math.max(1, ...lines.flatMap(l => l.v)), L = 52, R = 8, pw = w - L - R, T = 6, Hh = 90, H = T + Hh + 16;
   const f = v => v.toFixed(1), x = i => L + pw * (i + .5) / n, y = v => T + Hh * (1 - v / most);
   const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
   const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
   const col = k => TOK_COL[k % TOK_COL.length];
-  const words = `${m.name}, Claude tokens per hour by session or agent: ` + lines.map(l => `${l.name} now ${fmtTok(l.v[n - 1])}/h, peak ${fmtTok(Math.max(...l.v))}/h`).join("; ") + ".";
+  const words = `${m.name}, ${what}: ` + lines.map(l => `${l.name} now ${fmtTok(l.v[n - 1])}${U}, peak ${fmtTok(Math.max(...l.v))}${U}`).join("; ") + ".";
   const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":words});
   for(const v of [most, most / 2, 0])
-    svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, v ? fmtTok(v) + "/h" : "0"));
+    svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, v ? fmtTok(v) + U : "0"));
   const hours = n * step / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
   tick.setMinutes(0, 0, 0);
   for(let k = 0; k < 30; k++){
@@ -2925,8 +2982,8 @@ function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own
     at = Math.min(n - 1, Math.max(0, i));
     const px = x(at), t = t0 + at * step;
     mark.setAttribute("x1", f(px)); mark.setAttribute("x2", f(px)); mark.setAttribute("visibility", "visible");
-    tipEl.replaceChildren(el("div",{class:"ut"}, `${m.name}, ${day(t)} ${hm(t)} to ${hm(t + step)}: `, el("b",{}, fmtTok(total[at]) + "/h")),
-      ...lines.map((l, k) => l.v[at] ? el("div",{}, key(col(k)), el("b",{}, fmtTok(l.v[at]) + "/h"), " " + l.name) : null).filter(Boolean));
+    tipEl.replaceChildren(el("div",{class:"ut"}, `${m.name}, ${day(t)} ${hm(t)} to ${hm(t + step)}: `, el("b",{}, fmtTok(total[at]) + U)),
+      ...lines.map((l, k) => l.v[at] ? el("div",{}, key(col(k)), el("b",{}, fmtTok(l.v[at]) + U), " " + l.name) : null).filter(Boolean));
     tipEl.hidden = false;
     tipEl.style.left = px < w / 2 ? (px + 10) + "px" : "auto";
     tipEl.style.right = px < w / 2 ? "auto" : (w - px + 10) + "px";
@@ -2935,7 +2992,7 @@ function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own
   svg.addEventListener("pointermove", point);
   svg.addEventListener("pointerdown", point);
   svg.addEventListener("pointerleave", hide);
-  const plot = el("div",{class:"uplot", tabindex:"0", role:"group", "aria-label":"Tokens per hour graph of " + m.name + ": the left and right arrow keys read each point"}, svg, tipEl);
+  const plot = el("div",{class:"uplot", tabindex:"0", role:"group", "aria-label":(m.unit == null ? "Tokens per hour graph of " : "Graph of ") + m.name + ": the left and right arrow keys read each point"}, svg, tipEl);
   plot.style.width = w + "px";
   plot.addEventListener("keydown", ev => {
     const to = {ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: n - 1}[ev.key];
@@ -2943,11 +3000,11 @@ function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own
     else if(to !== undefined){ ev.preventDefault(); show(at < 0 ? n - 1 : to); }
   });
   plot.addEventListener("blur", hide);
-  const legend = el("div",{class:"uleg tleg"}, el("span",{class:"tmach"}, m.name, " ", el("b",{}, fmtTok(total[n - 1]) + "/h now")),
+  const legend = el("div",{class:"uleg tleg"}, el("span",{class:"tmach"}, m.name, " ", el("b",{}, fmtTok(total[n - 1]) + U + " now")),
     ...lines.map((l, k) => el("span",{}, key(col(k)), l.name)));
   const view = tokMode === "all" ? "all tokens" : "tokens without cache reads";
   return el("div",{class:"usage tmachblock"}, legend, plot,
-    el("p",{class:"note"}, `Claude ${view} per hour on ${m.name}, one line per session or agent, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min.`));
+    el("p",{class:"note"}, (m.unit == null ? `Claude ${view} per hour on ${m.name}, one line per session or agent` : `${m.name}: the ${what}, held between replies; the largest now first`) + `, up to ${hm(end)}; one point per ${Math.round(step / 60000)} min.`));
 }
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
@@ -2986,10 +3043,40 @@ function statusFacts(){
   const facts = hubStatus && Array.isArray(hubStatus.facts) ? hubStatus.facts : [];
   return {facts, fact: l => (facts.find(f => f.label === l) || {}).value};
 }
-function stTable(heads, rows, nums){   // nums: the columns that hold figures (right-aligned)
+function stTable(heads, rows, nums, sort){   // nums: the columns that hold figures (right-aligned)
+  // HUB236: sort = {keys, cur: {key, dir} | null, on(key)}: a column with a key is a button that sorts by it
+  const head = (h, i) => {
+    const key = sort && sort.keys[i], cur = key && sort.cur && sort.cur.key === key ? sort.cur.dir : "";
+    const th = el("th",{class:(nums || []).includes(i) ? "num" : ""});
+    if(!key){ th.append(h); return th; }
+    th.setAttribute("aria-sort", cur === "asc" ? "ascending" : cur === "desc" ? "descending" : "none");
+    th.append(el("button",{type:"button", class:"sorth" + (cur ? " on" : ""), title:"Sort by " + h, onclick:() => sort.on(key)},
+      h, cur ? el("span",{class:"sarrow"}, cur === "asc" ? " ▲" : " ▼") : null));
+    return th;
+  };
   return el("div",{class:"tblwrap"}, el("table",{class:"st"},
-    el("thead",{}, el("tr",{}, ...heads.map((h, i) => el("th",{class:(nums || []).includes(i) ? "num" : ""}, h)))), el("tbody",{}, rows)));
+    el("thead",{}, el("tr",{}, ...heads.map(head))), el("tbody",{}, rows)));
 }
+// HUB236: the Sessions and agents tables' sort, kept per viewer (every storage access is in ls(), try/catch)
+const SESS_SORT_KEY = "sessSort", SESS_TEXT_COLS = ["name", "role", "cards", "note"];
+let sessSort = (() => { const v = ls(SESS_SORT_KEY); return v && typeof v.key === "string" ? {key: v.key, dir: v.dir === "asc" ? "asc" : "desc"} : null; })();
+function setSessSort(key){   // a click: a new column sorts (text A-Z, figures highest first); the same column again reverses
+  const was = sessSort && sessSort.key === key ? sessSort.dir : null;
+  sessSort = {key, dir: was ? (was === "asc" ? "desc" : "asc") : SESS_TEXT_COLS.includes(key) ? "asc" : "desc"};
+  ls(SESS_SORT_KEY, sessSort);
+  renderStatus();
+}
+function sortSessRows(list){   // list: [{v: {key: value}, ...}]: numbers numerically, text by locale, rows with no figure last
+  if(!sessSort) return list;
+  const k = sessSort.key, sign = sessSort.dir === "asc" ? 1 : -1;
+  return list.map((x, i) => [x, i]).sort(([a, i], [b, j]) => {
+    const x = a.v[k], y = b.v[k], nx = typeof x === "number", ny = typeof y === "number";
+    if(nx && ny) return x === y ? i - j : sign * (x - y);
+    if(nx !== ny) return nx ? -1 : 1;
+    return String(x || "").localeCompare(String(y || "")) * sign || i - j;
+  }).map(([x]) => x);
+}
+function ctxShort(v){ return v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "k" : String(Math.round(v)); }   // HUB235: 84k
 function heatOf(v, most){   // the tokens/hr cell's row colour: from none to a strong orange-red as the rate nears the highest
   if(!(v > 0) || !(most > 0)) return "";
   return `rgba(232, 89, 12, ${(0.08 + 0.5 * Math.min(1, v / most)).toFixed(3)})`;
@@ -3021,8 +3108,16 @@ const NO_TOK = "No Claude token history under this name: the node counts a sessi
 function noData(why){ return el("span",{class:"nodata", title:why, "aria-label":"no data: " + why}, "\u2014"); }
 function sessionTable(rows, most){
   const hours = Math.round(tokHours);
-  const out = rows.map(r => {
-    const s = r.s || {}, lc = longCtx(r.tok && r.tok.ctx ? r.tok : ctxOf(r.name), s.started);
+  // HUB236: each row's sortable figures, then the order the viewer chose
+  const withV = rows.map(r => {
+    const s = r.s || {}, info = r.tok && r.tok.ctx ? r.tok : ctxOf(r.name);
+    const beat = Date.parse(s.seen), last = r.tok && r.tok.last > 0 ? r.tok.last : NaN;
+    const seen = Math.max(isNaN(beat) ? 0 : beat, isNaN(last) ? 0 : last);
+    return {r, info, v: {name: r.name, role: s.role || r.what || "", cards: (s.cards || []).join(", "), note: s.note || "",
+      seen: seen > 0 ? seen : null, ctx: info && info.ctx > 0 ? info.ctx : null, rate: r.tok ? r.rate : null, total: r.tok ? r.tok.total : null}};
+  });
+  const out = sortSessRows(withV).map(({r, info, v}) => {
+    const s = r.s || {}, lc = longCtx(info, s.started);
     const g = r.graph && tokens.has(r.graph) ? r.graph : TOK_ALL, on = tokPickOf(g) === r.name;
     const name = r.tok ? el("button",{type:"button", class:"tname" + (on ? " on" : ""), title:"Show " + r.name + " alone in the Overview's token graph" + (g === TOK_ALL ? "" : " of " + g),
       onclick:()=>{ setTokPick(g, on ? "" : r.name); renderStatus(); }}, r.name) : r.name;
@@ -3039,11 +3134,13 @@ function sessionTable(rows, most){
       el("td",{}, name, lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || r.what || "-"),
       el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
       el("td",{}, seenEl),
+      info && info.ctx > 0 ? el("td",{class:"num ctxc", title:lc.text}, ctxShort(info.ctx)) : el("td",{class:"num ctxc"}, noData("No context size recorded for this name in the token files of the last day")),
       el("td",{class:"num"}, rateEl), tot);
     const bg = heatOf(r.rate, most); if(bg) tr.style.background = bg;
     return tr;
   });
-  return stTable(["Name", "Role", "Working on", "Note", "Last seen", "Tokens/hr", `Tokens, ${hours} h`], out, [5, 6]);
+  return stTable(["Name", "Role", "Working on", "Note", "Last seen", "Context", "Tokens/hr", `Tokens, ${hours} h`], out, [5, 6, 7],
+    {keys: ["name", "role", "cards", "note", "seen", "ctx", "rate", "total"], cur: sessSort, on: setSessSort});
 }
 function workTable(list){
   const when = w => String(w.ended || w.started || "");
@@ -3065,6 +3162,7 @@ function renderMachines(){
     [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
+    sessSort, hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => (ctxOf(s.name) || {}).ctx || 0) : 0,
     Math.floor(now / 600000)], host => {
     graphWin = null; graphWin = graphWindow();   // HUB177: one window for every graph and rate drawn now
     try { drawMachines(host); } finally { graphWin = null; }
@@ -3077,13 +3175,16 @@ function drawMachines(host){
     const names = new Set(machines.map(m => String(m.machine)));
     // Overview: every graph in one place, the total of all machines first
     const over = el("div",{class:"mach"});
-    over.append(el("div",{class:"mcard rate"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "Tokens per hour")), el("div",{class:"rbox", hidden:true})));   // HUB179
-    if(tokMerged()) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "All machines")),
-      el("div",{class:"ubox tbox", "data-machine":TOK_ALL, hidden:true})));
+    // HUB232 / HUB233: the All machines frame holds the machines' tokens per hour (one line a machine, was a card of its own and
+    // a graph in each machine's card) and the same per session or agent; the token bars are there when two machines report
+    over.append(el("div",{class:"mcard allm"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "All machines")),
+      tokMerged() ? el("div",{class:"ubox tbox", "data-machine":TOK_ALL, hidden:true}) : null,
+      el("div",{class:"rbox", hidden:true}),
+      el("div",{class:"rbox srate", "data-machine":TOK_SESS, hidden:true})));
     for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine)),
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true}),
-      el("div",{class:"rbox mrate", "data-machine":String(m.machine), hidden:true})));   // HUB198: its streams per hour
+      el("div",{class:"cbox", "data-machine":String(m.machine), hidden:true})));   // HUB234: its sessions' context size
     // HUB177: the span is chosen once for every graph here (it was on each token graph only)
     const span = (h, label) => { const b = el("button",{type:"button", class:"tmode" + (tokHours === h ? " on" : ""), "aria-pressed":String(tokHours === h)}, label);
       b.addEventListener("click", () => { if(tokHours !== h){ tokHours = h; renderStatus(); } }); return b; };
@@ -3091,8 +3192,10 @@ function drawMachines(host){
       el("span",{class:"uleg", role:"group", "aria-label":"Span of every graph"}, "Last ", span(6, "6 h"), span(12, "12 h"), span(24, "Day"))), over);
     for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
     for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
-    for(const box of over.querySelectorAll(".rbox:not([data-machine])")){ renderTokHourly(box); if(box.hidden) box.parentElement.remove(); }
-    for(const box of over.querySelectorAll(".rbox[data-machine]")) renderTokHourly(box);   // HUB198: under each machine's token graph
+    for(const box of over.querySelectorAll(".rbox")) renderTokHourly(box);
+    for(const box of over.querySelectorAll(".cbox")) renderContext(box);
+    const allm = over.querySelector(".allm");
+    if(allm && ![...allm.querySelectorAll(".ubox, .rbox")].some(b => !b.hidden)) allm.remove();   // no token file yet: no empty frame
     // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
     const per = machines.map(m => machineRows(String(m.machine), sessions.filter(s => s.machine === m.machine)));
     const loose = sessions.filter(s => !names.has(String(s.machine)));
@@ -3378,6 +3481,29 @@ function relCardEl(id, title, tagged){
   const col = c && c.col !== "done" ? ((COLS.find(x => x.k === c.col) || {}).name || c.col) : "";
   const tag = st === "done" ? el("span",{class:"rst done"}, "✓ Done") : st === "planned" ? el("span",{class:"rst planned"}, "Planned") : st === "rejected" ? el("span",{class:"rst"}, "Rejected") : null;
   return el("li",{"data-state":st || null}, tag, tag ? " " : null, relIdEl(id, false), t ? " " + t : "", col ? el("small",{}, " · " + col) : null);
+}
+// HUB231 (the user, 2026-11-19): a Release card and its planned and packaged cards are linked both ways in the card view,
+// from the releases the export already carries (RELEASES: cards = the inventory, planned, named)
+function relIds(r){
+  const ids = [];
+  const add = id => { id = String(id || ""); if(id && id !== String(r.id) && !ids.includes(id)) ids.push(id); };
+  for(const x of Array.isArray(r.cards) ? r.cards : []) if(Array.isArray(x)) add(x[0]);
+  for(const id of Array.isArray(r.planned) ? r.planned : []) add(id);
+  for(const id of Array.isArray(r.named) ? r.named : []) add(id);
+  return ids;
+}
+function releaseLinksEl(c){   // a Release card: its cards as links; any other card: its Release card(s), as links
+  const id = String(c.id), own = RELEASES.find(r => String(r.id) === id);
+  if(own || cardKind(c) === "Release"){
+    const ids = own ? relIds(own) : [], titles = new Map(own && Array.isArray(own.cards) ? own.cards.filter(Array.isArray).map(x => [String(x[0]), String(x[1] || "")]) : []);
+    return el("div",{class:"rlinks", "data-rel":id}, el("b",{}, "Planned and packaged cards" + (ids.length ? " (" + ids.length + ")" : "") + ": "),
+      ids.length ? el("ul",{class:"rcards"}, ...ids.map(x => relCardEl(x, titles.get(x) || "", true)))
+        : el("span",{class:"note"}, "none listed yet"));
+  }
+  const mine = RELEASES.filter(r => relIds(r).includes(id));
+  if(!mine.length) return null;
+  return el("div",{class:"rlinks", "data-in-rel":id}, el("b",{}, "In release" + (mine.length === 1 ? "" : "s") + ": "),
+    ...mine.flatMap(r => [relIdEl(r.id, false), el("small",{}, " " + String(r.t || "") + (r.col === "done" ? " (out)" : " (planned)") + " ")]));
 }
 function releaseEl(r, open){
   const list = Array.isArray(r.cards) ? r.cards.filter(x => Array.isArray(x) && x[0]) : [];
@@ -4094,13 +4220,16 @@ function drawGantt(host){
   // (Done release cards of the last weeks, export releases_out), whatever is folded or filtered below
   const relName = c => (String(c.t || "").match(/\brel\d+\b/) || [c.id])[0];   // "rel72", else the card id
   // HUB208: the release's name at the top of its line too (in the axis row), where hovering it shows what it is
-  const relLine = (t, label, tip) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"},
-    el("span",{class:"gltop", title:tip}, "\u{1F4E6} " + label), el("span",{}, "\u{1F4E6} " + label))); };
+  // HUB239: the labels at both ends of the line open that release's card (an archived release card opens read-only)
+  const relLink = (cls, id, tip, label) => el("span",{class:cls + " rlink", role:"link", tabindex:"0", title:tip + " (open " + id + ")", "data-card":id,
+    onclick:ev => { ev.stopPropagation(); openCard(id); }, onkeydown:ev => { if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); openCard(id); } }}, label);
+  const relLine = (t, label, tip, id) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(t) + "px)"},
+    relLink("gltop", id, tip, "\u{1F4E6} " + label), relLink("", id, tip, "\u{1F4E6} " + label))); };
   // HUB204, HUB205: where the plan's tokens, then the Claude API credits, are estimated to run out
   for(const x of tok) if(x.t >= t0 && x.t <= t1) lines.push(el("span",{class:"gline tok " + x.k, style:"left:calc(var(--glw) + " + X(x.t) + "px)"},
     el("span",{class:"gltop", title:x.tip + ": " + fmtTime(new Date(x.t).toISOString())}, x.label)));
-  for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)");
-  for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")");
+  for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)", it.c.id);
+  for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")", r.id);
   const cardRow = (it, data) => {
     const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", hue = hueOf(c.epic || "");
     const movable = !readOnly && it.kind !== "past" && it.kind !== "milestone";   // HUB163, HUB191: drag the label
@@ -4416,12 +4545,17 @@ function tabBadge(id, label, n){   // a tab's count: a red circle with the numbe
 // before the past decisions; the Manual actions tab is gone. The cards' steps for the user (HUB139 listed them here
 // too) are on the same page under "Your steps", so this section holds the manual actions alone. Its open count is
 // part of the Decisions tab's badge.
+// HUB238 (the user, 2026-11-19): the page's order is Manual actions (Active, Snoozed), Decisions (Active, Past decisions),
+// Past manual actions: two hosts, the last one kept apart from the first
 const manHost = el("section",{id:"manual", class:"mansec", "aria-label":"Manual actions"});
+const manPastHost = el("section",{id:"manualpast", class:"mansec", "aria-label":"Past manual actions"});
 function manOpen(){ return [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length; }
 function renderManual(){   // a fault in this section must never stop the board from drawing
   if(filt.tab !== "decisions") return;
-  try { drawManual(manHost); }
-  catch(e){ manHost.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
+  for(const [h, past] of [[manHost, false], [manPastHost, true]]){
+    try { drawManual(h, past); }
+    catch(e){ h.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
+  }
 }
 function manDay(iso){
   const when = iso ? new Date(iso) : null;
@@ -4429,24 +4563,28 @@ function manDay(iso){
 }
 function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
 function manCardBtn(id){ return id && cards.has(String(id)) ? el("button",{type:"button", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : String(id || ""); }
-function drawManual(host){
+function drawManual(host, past){   // past: the done ones (Past manual actions); else the Active and Snoozed ones
   const all = [...manDocs.values()];
-  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
+  const sig = JSON.stringify([past, readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
   host.replaceChildren();
   if(!all.length) return;   // nothing recorded: no section
-  host.append(el("h2",{}, "Manual actions"));
   const open = all.filter(d => !manDone(d) && !manSnoozed(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
   const snoozed = all.filter(manSnoozed).sort((a, b) => String(b.snoozed_at || "").localeCompare(String(a.snoozed_at || "")) || String(a.id).localeCompare(String(b.id)));
   const done = all.filter(manDone).sort((a, b) => String(b.done_at || "").localeCompare(String(a.done_at || "")));
+  if(past){
+    if(done.length) host.append(el("h2",{}, "Past manual actions"), doneManualEl(done));
+    return;
+  }
+  host.append(el("h2",{}, "Manual actions"), el("h3",{}, "Active"));
   host.append(el("p",{class:"note"}, (open.length ? `${open.length} manual action${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done, or Snooze it to put it aside without a notification.`
     : "No manual action is waiting on you.") + (snoozed.length ? ` ${snoozed.length} snoozed.` : "")));
   const groups = new Map();
   for(const d of open){ const k = String(d.project || ""); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
   const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
   for(const k of keys){
-    host.append(el("h3",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
+    host.append(el("h4",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
     const rows = groups.get(k).map(d => {
       const btn = el("button",{type:"button", class:"artbtn"}, "Done");
       btn.disabled = readOnly;
@@ -4474,17 +4612,17 @@ function drawManual(host){
     host.append(el("details",{class:"snoozed"}, el("summary",{}, `Snoozed (${snoozed.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
   }
-  if(done.length){
-    const rows = done.map(d => {
-      const btn = el("button",{type:"button", class:"artbtn"}, "Open again");
-      btn.disabled = readOnly;
-      btn.addEventListener("click", () => { change(d, "done", false); renderManual(); renderDecisions(); });
-      return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.note ? " · " + String(d.note) : ""))),
-        el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
-    });
-    host.append(el("details",{}, el("summary",{}, `Done manual actions (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
-      el("thead",{}, el("tr",{}, ...["Action", "Card", "Done", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
-  }
+}
+function doneManualEl(done){   // the done manual actions, each can be opened again
+  const rows = done.map(d => {
+    const btn = el("button",{type:"button", class:"artbtn"}, "Open again");
+    btn.disabled = readOnly;
+    btn.addEventListener("click", () => { change(d, "done", false); renderManual(); renderDecisions(); });
+    return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.note ? " · " + String(d.note) : ""))),
+      el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
+  });
+  return el("details",{}, el("summary",{}, `Done manual actions (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+    el("thead",{}, el("tr",{}, ...["Action", "Card", "Done", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
 }
 // every decision waiting on the user, in one place: the open questions of all cards (a decision that comes up in a
 // Claude session is put on a card as a question, so it is here too). Opening a row opens the card, where it is answered.
@@ -4596,12 +4734,15 @@ function drawDecisions(){
   window.requestAnimationFrame(() => { host.style.minHeight = ""; if(!host.hidden) window.scrollTo(keepX, keepY); });
   host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : "", nMan ? nMan+(nMan===1?" manual action":" manual actions") : ""].filter(Boolean).join(", ")
     : "Nothing is waiting for you"));
-  if(nSteps) host.append(el("h2",{}, "Your steps"),
+  host.append(manHost);   // HUB238: 1. Manual actions (Active, Snoozed), kept between redraws (renderManual fills it)
+  host.append(el("h2",{id:"decsec"}, "Decisions"), el("h3",{}, "Active"));
+  if(!nSteps && !sess.length && !list.length && !nParked) host.append(el("p",{class:"note"}, "No decision is waiting on you."));
+  if(nSteps) host.append(el("h3",{}, "Your steps"),
     el("p",{}, readOnly ? "This view is read-only: mark a step done on the desktop." : "Something only you can do; a card waits on it. Press Done when it is done."), stepsEl(stepCards));
-  for(const d of sess) host.append(el("h2",{}, "Claude session " + (d.session || d.id)),
+  for(const d of sess) host.append(el("h3",{}, "Claude session " + (d.session || d.id)),
     el("p",{}, readOnly ? "This view is read-only: answer on the desktop." : "Your answer is sent to this session."), sessEl(d));
   if(list.length){
-    if(sess.length || nSteps) host.append(el("h2",{}, "Questions on cards"));
+    if(sess.length || nSteps) host.append(el("h3",{}, "Questions on cards"));
     host.append(cardDecisionsEl(list));
   }
   if(nParked){
@@ -4612,8 +4753,8 @@ function drawDecisions(){
     if(parkedQs.length) d.append(cardDecisionsEl(parkedQs));
     host.append(d);
   }
-  host.append(manHost);   // HUB220: the manual actions, kept between redraws (renderManual fills it)
-  host.append(pastDecisionsEl());
+  host.append(pastDecisionsEl());   // 2. Decisions: Past decisions
+  host.append(manPastHost);         // 3. Past manual actions
 }
 // the decisions already made: the sessions' and the live cards' (an archived card keeps its own on the desktop)
 function answerText(o, a){
