@@ -3028,9 +3028,22 @@ function tabBadge(id, label, n){   // a tab's count: a red circle with the numbe
   tab.dataset.badge = sig;
   tab.replaceChildren(label, n ? el("span",{class:"badge", "aria-label":n + " open"}, n > 99 ? "99+" : String(n)) : "");
 }
+// HUB139: one list of what only the user can do. The cards' steps (pm.py step, HUB27) are listed here too, beside
+// the manual actions, in their card's project group; Done / Open again marks the step (a change file `step.<id>`,
+// like on Decisions, where they stay listed). A Parked card's steps are left out (HUB112), and so are a Done or
+// Rejected card's. A step has no snooze: it is the card's, and the card waits on it.
+function manSteps(){
+  const out = [];
+  for(const c of cards.values()){
+    if(c.col === "done" || c.col === "rej" || c.col === "park") continue;
+    for(const s of cardSteps(c)) out.push({c, s, done: stepDone(c, s.id)});
+  }
+  return out;
+}
+function manStepAt(x){ return x.done ? String((ansAt[x.c.id] || {})["step." + x.s.id] || "") : String(x.s.asked || ""); }
 function renderManual(){   // a fault in this tab must never stop the board from drawing
   const host = document.getElementById("manual");
-  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length); } catch { /* the count is an extra */ }
+  try { tabBadge("tab-manual", "Manual actions", [...manDocs.values()].filter(d => !manDone(d) && !manSnoozed(d)).length + manSteps().filter(x => !x.done).length); } catch { /* the count is an extra */ }
   if(!host || host.hidden) return;
   try { drawManual(host); }
   catch(e){ host.replaceChildren(el("p",{class:"note"}, "The manual actions could not be shown: " + (e && e.message || e))); }
@@ -3040,27 +3053,45 @@ function manDay(iso){
   return when && !isNaN(when) ? when.toLocaleDateString([], {day:"numeric", month:"short"}) : "";
 }
 function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
+function manCardBtn(id){ return id && cards.has(String(id)) ? el("button",{type:"button", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : String(id || ""); }
 function drawManual(host){
-  const all = [...manDocs.values()];
-  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
+  const all = [...manDocs.values()], steps = manSteps();
+  const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)]),
+    steps.map(x => [x.c.id, x.c.t, cardProject(x.c), x.s.id, x.s.step, x.s.asked, x.done, manStepAt(x)]),
+    [...changes.entries()].filter(([, ch]) => String(ch.field).startsWith("step.")).map(([k]) => [k, sentAt.has(k)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
   host.replaceChildren(el("h2",{}, "Manual actions"));
-  const open = all.filter(d => !manDone(d) && !manSnoozed(d)).sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")) || String(a.id).localeCompare(String(b.id)));
+  const open = all.filter(d => !manDone(d) && !manSnoozed(d)).map(d => ({d, at: String(d.added || "")}))
+    .concat(steps.filter(x => !x.done).map(x => Object.assign({at: manStepAt(x)}, x)))
+    .sort((a, b) => b.at.localeCompare(a.at) || String(a.d ? a.d.id : a.c.id).localeCompare(String(b.d ? b.d.id : b.c.id)));
   const snoozed = all.filter(manSnoozed).sort((a, b) => String(b.snoozed_at || "").localeCompare(String(a.snoozed_at || "")) || String(a.id).localeCompare(String(b.id)));
-  const done = all.filter(manDone).sort((a, b) => String(b.done_at || "").localeCompare(String(a.done_at || "")));
-  if(!all.length){
+  const done = all.filter(manDone).map(d => ({d, at: String(d.done_at || "")}))
+    .concat(steps.filter(x => x.done).map(x => Object.assign({at: manStepAt(x)}, x)))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  if(!all.length && !steps.length){
     host.append(el("p",{class:"note"}, loaded ? "No manual actions are recorded. A session that needs a step only you can do records it here." : "Loading…"));
     return;
   }
-  host.append(el("p",{class:"note"}, (open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do. Tick one off with Done once it is done, or Snooze it to put it aside without a notification.` : "Nothing is waiting on you here.")
+  const nSteps = open.filter(x => !x.d).length;
+  host.append(el("p",{class:"note"}, (open.length ? `${open.length} step${open.length === 1 ? "" : "s"} only you can do` + (nSteps ? ` (${nSteps} a card waits on, also on Decisions)` : "")
+    + ". Tick one off with Done once it is done, or Snooze a manual action to put it aside without a notification." : "Nothing is waiting on you here.")
     + (snoozed.length ? ` ${snoozed.length} snoozed.` : "")));
   const groups = new Map();
-  for(const d of open){ const k = String(d.project || ""); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
+  for(const x of open){ const k = x.d ? String(x.d.project || "") : cardProject(x.c); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
   const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
   for(const k of keys){
     host.append(el("h3",{}, k ? String((projects.get(k) || {}).name || k) : "No project"));
-    const rows = groups.get(k).map(d => {
+    const rows = groups.get(k).map(x => {
+      if(!x.d){   // a card's step (HUB139)
+        const {c, s} = x;
+        const btn = el("button",{type:"button", class:"artbtn", title:"Mark this step done"}, "Done");
+        btn.disabled = readOnly;
+        btn.addEventListener("click", () => markStep(c, s.id, true));
+        return el("tr",{}, el("td",{}, el("span",{}, "🧑 " + s.step), el("div",{class:"note"}, "Step " + s.id + " of " + c.id + (c.t ? " · " + c.t : ""))),
+          el("td",{}, manCardBtn(c.id)), el("td",{}, ""), el("td",{}, manDay(s.asked)), el("td",{}, btn, " ", pendNote(c.id, s.id, "step.") || ""));
+      }
+      const d = x.d;
       const btn = el("button",{type:"button", class:"artbtn"}, "Done");
       btn.disabled = readOnly;
       btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
@@ -3068,7 +3099,7 @@ function drawManual(host){
       zz.disabled = readOnly;
       zz.addEventListener("click", () => { change(d, "snooze", true); renderManual(); });
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id)), d.d ? el("div",{}, String(d.d)) : null),
-        el("td",{}, String(d.card || "")), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn, " ", zz));
+        el("td",{}, manCardBtn(d.card)), el("td",{}, String(d.machine || "")), el("td",{}, manDay(d.added)), el("td",{}, btn, " ", zz));
     });
     host.append(el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Machine", "Added", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
@@ -3082,18 +3113,28 @@ function drawManual(host){
       btn.disabled = readOnly;
       btn.addEventListener("click", () => { change(d, "done", true); renderManual(); });
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.project ? " · " + String((projects.get(d.project) || {}).name || d.project) : "")), d.d ? el("div",{}, String(d.d)) : null),
-        el("td",{}, String(d.card || "")), el("td",{}, manDay(d.snoozed_at)), el("td",{}, wake, " ", btn));
+        el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.snoozed_at)), el("td",{}, wake, " ", btn));
     });
     host.append(el("details",{class:"snoozed"}, el("summary",{}, `Snoozed (${snoozed.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
   }
   if(done.length){
-    const rows = done.map(d => {
+    const rows = done.map(x => {
+      if(!x.d){   // a card's step marked done (HUB139): Open again reopens it, as Reopen does on Decisions
+        const {c, s} = x;
+        const btn = el("button",{type:"button", class:"artbtn", title:"Not done after all: the card waits on it again"}, "Open again");
+        btn.disabled = readOnly;
+        btn.addEventListener("click", () => markStep(c, s.id, false));
+        const by = s.done_by ? " · done by session " + s.done_by : "", note = s.done_note ? " · " + s.done_note : "";
+        return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, "🧑 " + s.step), el("div",{class:"note"}, "Step " + s.id + " of " + c.id + by + note)),
+          el("td",{}, manCardBtn(c.id)), el("td",{}, manDay(x.at)), el("td",{}, btn, " ", pendNote(c.id, s.id, "step.") || ""));
+      }
+      const d = x.d;
       const btn = el("button",{type:"button", class:"artbtn"}, "Open again");
       btn.disabled = readOnly;
       btn.addEventListener("click", () => { change(d, "done", false); renderManual(); });
       return el("tr",{class:"doomed"}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.note ? " · " + String(d.note) : ""))),
-        el("td",{}, String(d.card || "")), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
+        el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.done_at)), el("td",{}, btn));
     });
     host.append(el("details",{}, el("summary",{}, `Done (${done.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
       el("thead",{}, el("tr",{}, ...["Action", "Card", "Done", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
@@ -3130,7 +3171,7 @@ function stepDone(c, sid){ return (c.steps_done || {})[sid] === true; }
 function openSteps(c){ return c.col === "done" || c.col === "rej" ? [] : cardSteps(c).filter(s => !stepDone(c, s.id)); }
 function markStep(c, sid, done){
   const base = raw.get(c.id); if(!base) return;
-  change(base, "step." + sid, done); rebuild(); render(); renderDecisions();
+  change(base, "step." + sid, done); rebuild(); render(); renderDecisions(); renderManual();   // listed on Manual actions too (HUB139)
 }
 function stepsEl(list){
   return el("div",{class:"tblwrap"}, el("table",{class:"st"},
