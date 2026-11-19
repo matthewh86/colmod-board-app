@@ -3475,8 +3475,11 @@ function renderReleases(){
     // the release line of each project (HUB47): all of them, or the one the project switcher shows
     const rel = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
     const relShown = rel.filter(([k, r]) => r && typeof r === "object" && (!filt.j || k === filt.j));
-    if(relShown.length) host.append(el("h2",{}, "Release per project"), stTable(["Project", "Promoted", "Next", "State"],
-      relShown.map(([k, r]) => el("tr",{}, el("td",{}, String(r.name || k)), el("td",{}, String(r.release_promoted || "-")),
+    // HUB244: the version of a project's latest release out (RELEASES is newest first) and the scheme its versions follow
+    const verOf = k => { const x = RELEASES.find(q => q.project === k && q.col === "done" && q.version); return x ? String(x.version) : "-"; };
+    const schemeOf = k => String((projects.get(k) || {}).version_scheme || "");
+    if(relShown.length) host.append(el("h2",{}, "Release per project"), stTable(["Project", "Version", "Promoted", "Next", "State"],
+      relShown.map(([k, r]) => el("tr",{}, el("td",{}, String(r.name || k)), el("td",{title: schemeOf(k) ? "scheme " + schemeOf(k) : null}, verOf(k)), el("td",{}, String(r.release_promoted || "-")),
         el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))))));
     else if(rel.length) host.append(el("p",{class:"note"}, "The project chosen has no release line of its own; choose all projects to see the others."));
     releaseLists(host);
@@ -3543,7 +3546,7 @@ function releaseEl(r, open){
       : named.length ? el("div",{}, el("p",{class:"note"}, "No inventory yet: the cards its description names."), el("ul",{class:"rcards"}, ...named.map(id => relCardEl(id, "", !out))))
       : el("p",{class:"note"}, out ? "Its card names no cards in an inventory." : "No cards planned yet.");
   }
-  const head = el("summary",{}, el("span",{class:"rname"}, "\u{1F4E6} ", relIdEl(r.id, true), " " + String(r.t || "")),
+  const head = el("summary",{}, el("span",{class:"rname"}, "\u{1F4E6} ", relIdEl(r.id, true), " " + String(r.t || ""), r.version && !String(r.t || "").includes(String(r.version)) ? el("span",{class:"rver"}, " v" + r.version) : null),
     el("small",{}, [when, count].filter(Boolean).join(" · ")));
   return el("details",{class:"rel", open: open ? "" : null}, head, body);
 }
