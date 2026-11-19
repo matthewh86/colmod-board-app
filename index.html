@@ -3381,6 +3381,8 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   // HUB267: the top-up (API) credits left, always shown once there is a reading
   const c = usageCredits(u), cp = c
     ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API credits $" + c.left.toFixed(0) + " left of $" + c.cap.toFixed(0))] : [];
+  const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
+  if(x) cp.push(el("span",{class:"pill", title:extraLine(x)}, "Usage credits $" + x.spent.toFixed(2) + (x.limit != null ? " of $" + x.limit.toFixed(0) : "") + " used"));
   const rw = usageRunway(u), over = rw ? !!rw.out : !!w.runs_out_at;   // HUB206: runs out = the plan and the API credits
   return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + (rw && rw.why ? "\nRuns out (the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
     "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
@@ -3422,6 +3424,19 @@ function usageCredits(u){
   return {on: !!c.on, month: String(c.month || ""), cap: n("cap_usd"), spent: n("spent_usd"), held: n("reserved_usd"),
     left: n("left_usd"), running: n("runs_running"), runs: n("runs_month")};
 }
+// HUB272: the usage credits: the extra usage the user added to the plan, billed past its limits; kept for handovers
+// (CLAUDE.md "Usage order" stage 4). The desktop app's reading gives what is spent; a limit only when it gives one.
+function usageExtra(u){
+  const x = u && u.extra && typeof u.extra === "object" ? u.extra : null;
+  if(!x || x.spent == null || isNaN(Number(x.spent))) return null;
+  return {on: !!x.enabled, spent: Math.max(0, Number(x.spent)), limit: x.limit != null && !isNaN(Number(x.limit)) ? Number(x.limit) : null,
+    cur: String(x.currency || "USD"), recorded: x.recorded || ""};
+}
+function extraLine(x){
+  return "Usage credits (extra usage past the plan, apart from the API credits): $" + x.spent.toFixed(2) + " used"
+    + (x.limit != null ? " of $" + x.limit.toFixed(2) : "") + (x.on ? "" : " (extra usage off)")
+    + ". Kept for handovers only." + (x.recorded ? " Recorded " + fmtTime(x.recorded) + "." : "");
+}
 function creditLine(c){   // "API credits 2026-11: $12.30 spent, $25.00 held by running runs, $162.70 left of $200"
   return "API credits " + c.month + ": $" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by running runs until they end, $"
     + c.left.toFixed(2) + " free of $" + c.cap.toFixed(0) + (c.on ? "" : " (overflow off: no key file)");
@@ -3447,6 +3462,8 @@ function usageSection(host){
   const cr = usageCredits(u);   // HUB267: the top-up (API) credits left, up top beside the pace
   host.append(el("h2",{}, "Tokens and pace"),
     cr ? el("p",{class:"note credleft", title:creditLine(cr)}, "API top-up credits: ", el("b",{}, "$" + cr.left.toFixed(2) + " left"), " of $" + cr.cap.toFixed(0) + " this month (" + cr.month + ").") : null,
+    usageExtra(u) ? el("p",{class:"note credleft", title:extraLine(usageExtra(u))}, "Usage credits (extra usage past the plan, for handovers only): ",
+      el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"), usageExtra(u).limit != null ? " of $" + usageExtra(u).limit.toFixed(2) + "." : " (the app reports no limit).") : null,
     paceSelector(pace), paceAutoHint(u, pace),
     u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
     rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null);
