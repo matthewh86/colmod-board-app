@@ -1997,6 +1997,12 @@ function createProblem(v, ctx){
 }
 // <<< create-rules
 let newKind = "card";
+// HUB250: the form keeps what was typed (per kind, also over a reload) until Cancel or Create; clicking away, Esc or
+// switching between card, epic, theme and project no longer loses it
+const NEW_DRAFT_KEY = "hub.newDraft";
+const newDraft = ls(NEW_DRAFT_KEY) || {};
+function saveNewDraft(){ ls(NEW_DRAFT_KEY, newDraft); }
+function dropNewDraft(kind){ delete newDraft[kind]; saveNewDraft(); }
 function newCtx(){ return {projects, themes, epics, kinds: KINDS}; }
 function openNew(kind){
   if(readOnly){ toast("This view is read-only."); return; }
@@ -2071,7 +2077,19 @@ function renderNew(){
   const pend = newOnTheWay();
   // DOM append writes a null as the text "null": add the pending list only when there is one
   form.append(err, ...(pend.length ? [el("div",{}, el("p",{class:"hint"}, "On the way to the board:"), el("ul",{}, pend))] : []),
-    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeNew}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Create")));
+    el("div",{class:"acts"}, el("button",{type:"button", title:"Close the form and clear what was typed", onclick:()=>{ dropNewDraft(newKind); closeNew(); }}, "Cancel"),
+      el("button",{type:"submit", class:"pri"}, "Create")));
+  const fields = [...form.querySelectorAll("input[id], select[id], textarea[id]")], kept = newDraft[newKind] || {};
+  for(const f of fields){   // nProj comes before nEpic and nArea: its change event refills them first
+    const v = kept[f.id];
+    if(typeof v !== "string" || (f.tagName === "SELECT" && ![...f.options].some(o => o.value === v))) continue;
+    f.value = v;
+    if(f.id === "nProj") f.dispatchEvent(new Event("change"));
+  }
+  if(fields.some(f => f.tagName !== "SELECT" && f.value.trim()))
+    form.insertBefore(el("p",{class:"hint"}, "Kept from before: Cancel clears it."), err);
+  const keep = () => { newDraft[newKind] = Object.fromEntries(fields.map(f => [f.id, f.value])); saveNewDraft(); };
+  form.addEventListener("input", keep); form.addEventListener("change", keep);
   form.addEventListener("submit", ev => {
     ev.preventDefault();
     const v = read();
@@ -2079,7 +2097,7 @@ function renderNew(){
     const why = createProblem(v, newCtx());
     if(why){ err.textContent = why; return; }
     change(NEW_CARD, "create", v);
-    closeNew();
+    dropNewDraft(newKind); closeNew();
     toast("Sent: the board makes the new " + v.kind + " within about a minute.");
   });
   box.append(form);
@@ -3218,6 +3236,7 @@ function drawMachines(host){
       if(m.app_control) add("App control", m.app_control);   // blocks freshly built test programs (HUB71)
       add("Running job", m.running_job || "none");
       add("Queued for it", m.queued);
+      if(m.hub_version) add("Hub version", m.hub_version);
       if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
       const rows = per[i], wt = workTable(work.filter(w => w.machine === m.machine));
       mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
