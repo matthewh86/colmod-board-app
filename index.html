@@ -439,6 +439,21 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .glegend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.75rem; color:var(--muted)}
 .glegend i{display:inline-block; width:22px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:4px; background:var(--muted)}
 .gwrap{overflow-x:auto; overflow-y:hidden; border:1px solid var(--line); border-radius:8px; background:var(--surface); max-width:100%; -webkit-overflow-scrolling:touch}
+/* HUB192: room under the last row for a horizontal scrollbar drawn over the content (phones, overlay scrollbars) */
+.gwrap{padding-bottom:16px; box-sizing:border-box}
+/* HUB163, HUB191: a row's label is dragged up or down (a card's onto another epic too) */
+.glab.gdrag{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
+.glab .gname{font:inherit; border:0; background:none; padding:0; margin:0; cursor:pointer; text-align:left; min-width:0}
+.glab .gname:hover{text-decoration:underline} .glab .gname:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.grow.gdragging{opacity:.4}
+.grow.gdropin .glab{outline:2px solid var(--accent); outline-offset:-2px}
+.gdropline{position:absolute; left:0; right:0; height:3px; margin-top:-1px; background:var(--accent); z-index:5; pointer-events:none; border-radius:2px}
+.gghost{position:fixed; z-index:70; pointer-events:none; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.78rem; padding:3px 8px; border-radius:6px; background:var(--surface); color:var(--ink); border:1px solid var(--accent); box-shadow:0 6px 18px rgba(0,0,0,.25)}
+body.gdragbody, body.gdragbody *{cursor:grabbing !important}
+/* HUB168: past work: a finished card solid while worked on, pale from its gate pass to Done; the strips paler before now */
+.gbar.past{background:linear-gradient(90deg, var(--gc) 0 var(--gsplit,100%), color-mix(in srgb, var(--gc) 35%, transparent) var(--gsplit,100%))}
+.gslice.past{background:var(--muted); opacity:.55}
+.glegend i.gpastsw{background:linear-gradient(90deg, var(--muted) 0 60%, color-mix(in srgb, var(--muted) 35%, transparent) 60%)}
 .gin{position:relative}
 .grow{display:flex; height:var(--grow); border-bottom:1px solid var(--line)}
 .grow.gaxis{height:34px; position:sticky; top:0}
@@ -2001,14 +2016,18 @@ function openMetaEdit(kind, key){
     if(!Object.keys(v).length){ closeEd(); toast("Nothing changed."); return; }
     const why = metaEditProblem(kind, key, v, {themes, epics});
     if(why){ err.textContent = why; return; }
-    const ref = {id: kind + ":" + key};
-    let prev = null;   // an earlier edit still on its way: the later one carries its fields too (it replaces it on the page)
-    for(const ch of changes.values()) if(ch.card === ref.id && ch.field === "edit" && ch.value && typeof ch.value === "object") prev = ch.value;
-    change(ref, "edit", Object.assign({}, prev || {}, v));
+    metaSend(kind, key, v);
     closeEd(); rebuild(); render();
     toast("Sent: the board updates the " + kind + " within about a minute.");
   });
   nm.focus({preventScroll:true});
+}
+// one epic's or theme's edit on its way to the board (the editor's; the Gantt's drag of an epic or a theme, HUB163)
+function metaSend(kind, key, v){
+  const ref = {id: kind + ":" + key};
+  let prev = null;   // an earlier edit still on its way: the later one carries its fields too (it replaces it on the page)
+  for(const ch of changes.values()) if(ch.card === ref.id && ch.field === "edit" && ch.value && typeof ch.value === "object") prev = ch.value;
+  change(ref, "edit", Object.assign({}, prev || {}, v));
 }
 
 // card drag with pointer events (not native HTML5 drag, which blocks the mouse wheel in Chromium): the wheel scrolls
@@ -3184,6 +3203,96 @@ function gOrder(a, b){
   const byRank = a.col === "next" && b.col === "next";
   return GANTT_COLS.indexOf(a.col) - GANTT_COLS.indexOf(b.col) || (byRank ? 0 : (a.pri || 9) - (b.pri || 9)) || (a.rank || 0) - (b.rank || 0) || String(a.id).localeCompare(String(b.id));
 }
+// >>> gantt-order (tests/test_app.py runs this block)
+// HUB163: the rows inside an epic: finished work first (HUB168, by when it ended), then started, then the plan; each
+// column in the board's own order (its rank), so a card moved on the board above another epic's card moves only
+// among its own epic's cards here
+const G_ROW_COLS = ["done", "prog", "test", "built", "next", "refined"];
+function gRowOrder(a, b){
+  return G_ROW_COLS.indexOf(a.col) - G_ROW_COLS.indexOf(b.col) || (a.col === "done" ? String(a.ended || "").localeCompare(String(b.ended || "")) : 0)
+    || (a.rank || 0) - (b.rank || 0) || String(a.id).localeCompare(String(b.id));
+}
+// HUB163: the `order` values after `key` moves before `before` (null: to the end) in `list` ([[key, order]], in the
+// order shown: order, missing = 99, then key): only the moved one's when there is room between its new neighbours,
+// else the whole list in tens. Returns {key: order} for what changes; {} when nothing moves.
+function gReorder(list, key, before){
+  const cur = new Map(list), keys = list.map(x => x[0]), seq = keys.filter(k => k !== key);
+  let at = before == null ? seq.length : seq.indexOf(before);
+  if(at < 0) at = seq.length;
+  seq.splice(at, 0, key);
+  if(seq.join("\n") === keys.join("\n")) return {};
+  const ord = k => Number.isInteger(cur.get(k)) ? cur.get(k) : 99;
+  const prev = seq[at - 1], next = seq[at + 1];
+  const lo = prev != null ? ord(prev) : -1, hi = next != null ? ord(next) : prev != null ? ord(prev) + 20 : 10;
+  if(hi - lo >= 2){ const o = Math.floor((lo + hi) / 2); if(o >= 0 && o <= 9999) return {[key]: o}; }
+  const step = seq.length * 10 <= 9999 ? 10 : Math.max(1, Math.floor(9999 / seq.length)), out = {};
+  seq.forEach((k, i) => { const o = (i + 1) * step; if(cur.get(k) !== o) out[k] = o; });
+  return out;
+}
+// HUB163, HUB191: where a dragged row lands. rows: the chart's rows in order, {g: proj|theme|epic|card, p, t, e, id,
+// col, top, bottom}; src: the dragged one; y: the pointer. A theme moves among its project's themes, an epic among
+// its theme's epics ({before: key} or {after: key}); a card into any epic of its project ({epic, before: card id or
+// null}), "No theme" / "No epic" keep their place. null: nowhere to go.
+const G_LEVEL = {proj: 0, theme: 1, epic: 2, card: 3};
+function gDropTarget(rows, src, y){
+  const gaps = [];
+  if(src.g === "theme" || src.g === "epic"){
+    const blocks = [];
+    rows.forEach((r, i) => {
+      if(r.g !== src.g || r.p !== src.p || (src.g === "epic" && r.t !== src.t)) return;
+      let j = i + 1; while(j < rows.length && G_LEVEL[rows[j].g] > G_LEVEL[r.g]) j++;
+      const key = r.g === "theme" ? r.t : r.e;
+      if(key) blocks.push({key, top: r.top, bottom: rows[j - 1].bottom});
+    });
+    blocks.forEach(b => gaps.push({y: b.top, before: b.key}));
+    if(blocks.length) gaps.push({y: blocks[blocks.length - 1].bottom, after: blocks[blocks.length - 1].key});
+  } else if(src.g === "card"){
+    rows.forEach((r, i) => {
+      if(r.g !== "epic" || r.p !== src.p || (!r.e && r.e !== src.e)) return;
+      const kids = []; let j = i + 1;
+      while(j < rows.length && rows[j].g === "card") kids.push(rows[j++]);
+      if(!kids.length){ gaps.push({y: (r.top + r.bottom) / 2, epic: r.e, before: null, into: true}); return; }
+      kids.forEach(k => gaps.push({y: k.top, epic: r.e, before: k.id}));
+      gaps.push({y: kids[kids.length - 1].bottom, epic: r.e, before: null});
+    });
+  }
+  let best = null;
+  for(const g of gaps) if(!best || Math.abs(g.y - y) < Math.abs(best.y - y)) best = g;
+  return best;
+}
+// HUB163: a card dropped before `before` (null: the end) among its epic's rows ([{id, col}], in order) takes its place
+// among the cards of its own column (a rank orders a column only): next to {id, side: before|after}, or null when
+// the epic has no other card in that column
+function gCardAnchor(list, src, before){
+  let pos = before == null ? list.length : list.findIndex(x => x.id === before);
+  if(pos < 0) pos = list.length;
+  const same = x => x.col === src.col && x.id !== src.id;
+  const below = list.slice(pos).filter(same), above = list.slice(0, pos).filter(same);
+  return below.length ? {id: below[0].id, side: "before"} : above.length ? {id: above[above.length - 1].id, side: "after"} : null;
+}
+// HUB168: a finished card's past bar: from its start to Done, worked on (solid) up to its gate pass, else to Done;
+// null without both times or when it ended before `from`. T: the board's time parser (gTime)
+function gPastSpan(c, from, T){
+  const s = T(c.started), e = T(c.ended);
+  if(isNaN(s) || isNaN(e) || e < s || e < from) return null;
+  const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {};
+  let w = T(mw.from); if(isNaN(w) || w > e || w < s) w = e;
+  return {s, e, done: w};
+}
+// HUB168: when a card was worked on, for the past part of the Streams / Coordinator strips: from its start to its
+// gate pass (else its move on: Ready to merge, Merged in testing, Done); In progress to now. null: never started
+function gWorked(c, now, T){
+  const s = T(c.started); if(isNaN(s)) return null;
+  const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {}, gate = T(mw.from);
+  let e;
+  if(c.col === "prog") e = !isNaN(gate) && !mw.to ? gate : now;
+  else if(c.col === "built" || c.col === "test") e = !isNaN(gate) ? gate : T(c.colSince);
+  else if(c.col === "done") e = !isNaN(gate) ? gate : T(c.ended);
+  else return null;
+  if(isNaN(e) || e < s) return null;
+  return [s, Math.min(e, now)];
+}
+// <<< gantt-order
 function gBusyAt(iv, t){ let n = 0; for(const x of iv) if(x[0] <= t && x[1] > t) n++; return n; }
 function gPeak(iv, s, e){   // the most intervals running at once in [s, e)
   let most = gBusyAt(iv, s);
@@ -3307,6 +3416,20 @@ document.addEventListener("keydown", ev => {
 // HUB167: the Release toggle shows or hides the Release cards (their milestone rows) and every release line; per viewer
 let gRel = ls("kb.grel") !== false;
 function gRelToggle(){ gRel = !gRel; ls("kb.grel", gRel); gRedraw(); }
+// HUB168: past work: the cards finished in the last GANTT_PAST_H hours as solid bars left of now, and the Streams /
+// Coordinator strips counting what ran before now too; the Past toggle hides the finished cards' rows (per viewer)
+const GANTT_PAST_H = 72;
+let gPast = ls("kb.gpast") !== false;
+function gPastToggle(){ gPast = !gPast; ls("kb.gpast", gPast); gRedraw(); }
+function ganttPast(now){   // the finished cards' past bars: {c, s, e, done, kind: "past"}
+  const out = [];
+  for(const c of cards.values()){
+    if(c.col !== "done" || cardKind(c) === "Release") continue;
+    const sp = gPastSpan(c, now - GANTT_PAST_H * G_H, gTime);
+    if(sp) out.push(Object.assign({c, kind: "past", pool: null, src: "started to Done"}, sp));
+  }
+  return out;
+}
 let gTipEl = null;
 function gTip(ev, text){
   if(!gTipEl){ gTipEl = el("div",{class:"gtip", role:"tooltip"}); document.body.append(gTipEl); }
@@ -3323,6 +3446,7 @@ function gTipText(it){
   const lines = [c.id + " · " + (c.t || ""), "Column: " + (COL_NAME[c.col] || c.col)];
   if(cardKind(c)) lines.push("Type: " + cardKind(c) + " (the bar's corner)");
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
+  else if(it.kind === "past") lines.push("Started: " + when(it.s), (it.done < it.e ? "Gate passed: " + when(it.done) + "\n" : "") + "Done: " + when(it.e) + " (past work)");
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
   if(it.kind === "testing") lines.push((it.done != null && it.merged != null && it.done < it.merged ? "Gate passed: " + when(it.done) + ". " : "") + (it.merged != null ? "Merged: " + when(it.merged) + ". " : "") + "In testing: nobody works on it (no stream slot)");
@@ -3339,16 +3463,18 @@ function renderGantt(){   // a fault in this tab must never stop the board from 
 }
 function drawGantt(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
-  const list = ganttCards();
-  const sig = JSON.stringify([loaded, filt.j, [...gSel.j], [...gSel.t], [...gSel.e], gRel, [...gFold], gNoEst, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
-    list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)])]);
+  const list = ganttCards(), past = gPast ? ganttPast(now) : [];
+  const sig = JSON.stringify([loaded, filt.j, [...gSel.j], [...gSel.t], [...gSel.e], gRel, [...gFold], gNoEst, gPast, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+    [...epics].map(([k, v]) => [k, v.name, v.order, v.theme, v.hue]), [...themes].map(([k, v]) => [k, v.name, v.order, v.hue]),
+    list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.epic, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)]),
+    past.map(it => [it.c.id, it.c.t, it.c.epic, it.s, it.e, it.done])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
   const old = host.querySelector(".gwrap"), keepX = old && old.dataset.scale === scaleKey ? old.scrollLeft : null;
   host.replaceChildren();
   if(!loaded){ host.append(el("p",{class:"note"}, "Loading…")); return; }
   const plan = ganttPlan(list, now);
-  const shownAll = [...plan.items.values()].filter(it => inProject(it.c) && gPass(it.c) && (gRel || it.kind !== "milestone"));
+  const shownAll = [...plan.items.values(), ...past].filter(it => inProject(it.c) && gPass(it.c) && (gRel || it.kind !== "milestone"));
   if(gNoEst && !shownAll.some(it => it.dashed)) gNoEst = false;   // none left without an estimate: back to the view before
   const shown = gNoEst ? shownAll.filter(it => it.dashed) : shownAll;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
@@ -3364,6 +3490,7 @@ function drawGantt(host){
     el("h2",{}, "Gantt"),
     ganttFilters(),   // the controls first: the pills after them change in number, so these stay put
     el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
+    el("button",{type:"button", class:"grel gpast", "aria-pressed":String(gPast), title:(gPast ? "Hide" : "Show") + " the cards finished in the last " + GANTT_PAST_H / 24 + " days (the work streams and the coordinator did)", onclick:gPastToggle}, "✓ Past work"),
     el("span",{class:"pill" + (sNow > sLim ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")}, "Streams: " + sNow + (sLim === Infinity ? " now, no limit (Turbo)" : " of " + sLim + " now")),
     el("span",{class:"pill" + (aNow > aLim ? " over" : ""), title:"ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; art Claude draws counts as a stream"}, "Art: " + aNow + " of " + aLim + " now"),
     el("span",{class:"pill" + (cNow > cLim ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit"}, "Coordinator: " + cNow + " of " + cLim + " now"),
@@ -3381,6 +3508,7 @@ function drawGantt(host){
     el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-theme))"}), "theme (bars in the theme's colour)"),
     ...kinds.map(k => el("span",{class:"g-t-" + k.toLowerCase(), title:"The corner of a card's bar: its type"}, el("i",{class:"grib"}), k)),
     el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
+    gPast ? el("span",{}, el("i",{class:"gpastsw"}), "past work (Done)") : null,
     el("span",{}, el("i",{style:"background:linear-gradient(90deg,var(--muted) 0 50%,transparent 50%),repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "work done, then waiting for the merge"),
     el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
     el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
@@ -3394,7 +3522,8 @@ function drawGantt(host){
   const t1 = Math.min(day0(Math.max(planEnd, now + 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
   const W = Math.ceil((t1 - t0) / G_H * sc.pxh), X = t => Math.round((Math.max(t0, Math.min(t1, t)) - t0) / G_H * sc.pxh);
   const inner = el("div",{class:"gin", style:"width:calc(var(--glw) + " + W + "px)"});
-  const row = (cls, lab, cell) => el("div",{class:"grow " + cls}, lab, el("div",{class:"gcell", style:"width:" + W + "px"}, cell));
+  // data: what a row is, for the drag of rows (HUB163, HUB191): data-g theme|epic|card|proj, data-p, -t, -e, -id, -col
+  const row = (cls, lab, cell, data) => el("div",{class:"grow " + cls, ...(data || {})}, lab, el("div",{class:"gcell", style:"width:" + W + "px"}, cell));
   // the axis: day boundaries, and hour ticks on the day scale
   const ticks = [];
   for(let t = t0; t < t1; t += sc.tick * G_H){
@@ -3403,15 +3532,25 @@ function drawGantt(host){
       isDay ? d.toLocaleDateString(undefined, {weekday:"short", day:"numeric"}) : d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"})));
   }
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gt", style:"color:var(--muted)"}, sc.label + " scale")), ticks));
-  // the resource strips: per slice, the most cards running at once against the limit (from now on: the past is history)
+  // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
+  // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
+  const ran = {stream: [], coord: [], art: []};
+  if(gPast) for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
   for(const [pool, name] of [["stream", "Streams"], ["coord", "Coordinator"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
     let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174)
     const limTxt = isFinite(lim) ? String(lim) : "no limit", slices = [];
-    for(let t = t0; t < t1; t += step){ if(t + step <= now) continue; const n = gPeak(iv, Math.max(t, now), t + step); slices.push([t, n]); peak = Math.max(peak, n); }
+    for(let t = t0; t < t1; t += step){
+      if(t < now && ran[pool].length){ const n = gPeak(ran[pool], t, Math.min(t + step, now)); slices.push([t, n, true]); peak = Math.max(peak, n); }
+      if(t + step <= now) continue;
+      const n = gPeak(iv, Math.max(t, now), t + step); slices.push([t, n, false]); peak = Math.max(peak, n);
+    }
     const hpx = 28, top = 34 - 2 - hpx;
-    for(const [t, n] of slices) if(n) kids.push(el("span",{class:"gslice" + (n > lim ? " over" : ""), title:name + ": " + n + (isFinite(lim) ? " of " + lim : "") + " at " + fmtTime(new Date(t).toISOString()),
-      style:"left:" + X(Math.max(t, now)) + "px; width:" + Math.max(1, X(t + step) - X(Math.max(t, now)) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
+    for(const [t, n, was] of slices) if(n){
+      const a = was ? t : Math.max(t, now), b = was ? Math.min(t + step, now) : t + step;
+      kids.push(el("span",{class:"gslice" + (was ? " past" : "") + (n > lim ? " over" : ""), title:name + ": " + n + (isFinite(lim) ? " of " + lim : "") + (was ? " ran" : "") + " at " + fmtTime(new Date(t).toISOString()),
+        style:"left:" + X(a) + "px; width:" + Math.max(1, X(b) - X(a) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
+    }
     if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
     inner.append(row("gres", el("div",{class:"glab", title:name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo)")}, name + (isFinite(lim) ? " ≤" + lim : ": " + limTxt)), kids));
   }
@@ -3423,7 +3562,7 @@ function drawGantt(host){
   const projOrder = k => { const p = projects.get(k); return p && p.order != null ? p.order : 99; };
   const tOrder = k => (themes.get(k)?.order ?? 99), eOrder = k => (epics.get(k)?.order ?? 99);
   const tree = new Map();   // project -> theme -> epic -> [items]
-  for(const it of shown.sort((a, b) => gOrder(a.c, b.c))){
+  for(const it of shown.sort((a, b) => gRowOrder(a.c, b.c))){
     const p = cardProject(it.c), e = it.c.epic || "", t = epicTheme(e);
     if(!tree.has(p)) tree.set(p, new Map());
     const th = tree.get(p); if(!th.has(t)) th.set(t, new Map());
@@ -3435,14 +3574,22 @@ function drawGantt(host){
   const toggle = key => { gFold.has(key) ? gFold.delete(key) : gFold.add(key); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
   const hueOf = e => themes.get(epicTheme(e))?.hue ?? epics.get(e)?.hue;   // HUB165, HUB166: the theme's hue, else the epic's
   const G_TIP_CARDS = 20;   // HUB164: an epic's tooltip lists at most this many of its cards' titles
-  const groupRow = (cls, key, name, its, hue) => {
+  const groupRow = (cls, key, name, its, hue, data) => {
     const [s, e] = span(its), open = !fold(key), n = its.length;
     let tip = name + " · " + n + (n === 1 ? " card" : " cards") + "\nFrom " + fmtTime(new Date(s).toISOString()) + " to " + fmtTime(new Date(e).toISOString());
     if(cls === "gepic") tip += "\n" + its.slice(0, G_TIP_CARDS).map(i => "• " + i.c.id + " " + (i.c.t || "")).join("\n") + (n > G_TIP_CARDS ? "\n… and " + (n - G_TIP_CARDS) + " more" : "");
     const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, "") };
-    const lab = el("div",{class:"glab"},
+    // HUB189: the name of a real epic or theme opens its editor (none read-only); HUB163: drag the label to reorder
+    const kind = cls === "gepic" ? "epic" : "theme", mkey = kind === "epic" ? data["data-e"] : data["data-t"];
+    const editable = !readOnly && mkey && (kind === "epic" ? epics : themes).has(mkey);
+    if(editable) tip += "\nClick to edit; drag (or Alt+↑ / Alt+↓) to reorder";
+    const label = editable
+      ? el("button",{type:"button", class:"gt gname", "data-gfocus":kind + ":" + mkey, "aria-label":"Edit the " + kind + " " + name + " (Alt+Up or Alt+Down moves it)", ...hover,
+          onclick:() => { gTip(null, ""); openMetaEdit(kind, mkey); }, onkeydown:ev => gKeyMove(ev, ev.currentTarget)}, name + " (" + n + ")")
+      : el("span",{class:"gt", ...hover}, name + " (" + n + ")");
+    const lab = el("div",{class:"glab" + (editable ? " gdrag" : "")},
       el("button",{type:"button", class:"gfold", "aria-expanded":String(open), "aria-label":(open ? "Fold " : "Unfold ") + name, onclick:() => toggle(key)}, open ? "−" : "+"),
-      el("span",{class:"gt", ...hover}, name + " (" + n + ")"));
+      label);
     const hstyle = hue != null ? "; --h:" + hue : "";
     let bar;
     if(cls === "gepic"){   // HUB152: solid where its cards are worked on or planned, dotted and lighter across the gaps
@@ -3457,7 +3604,7 @@ function drawGantt(host){
         bar.push(el("span",{class:"gspan", style:"left:" + X(a) + "px; width:" + Math.max(4, X(b) - X(a)) + "px" + hstyle, ...hover}));
       });
     } else bar = el("span",{class:"gspan", style:"left:" + X(s) + "px; width:" + Math.max(4, X(e) - X(s)) + "px" + hstyle, ...hover});
-    inner.append(row(cls, lab, bar));
+    inner.append(row(cls, lab, bar, Object.assign({"data-g": kind, "data-folded": open ? null : "1"}, data)));
     return open;
   };
   const lines = [];
@@ -3467,12 +3614,14 @@ function drawGantt(host){
   const relLine = (t, label, tip) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"}, el("span",{}, "\u{1F4E6} " + label))); };
   for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)");
   for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")");
-  const cardRow = it => {
-    const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", tip = gTipText(it), hue = hueOf(c.epic || "");
+  const cardRow = (it, data) => {
+    const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", hue = hueOf(c.epic || "");
+    const movable = !readOnly && it.kind !== "past" && it.kind !== "milestone";   // HUB163, HUB191: drag the label
+    const tip = gTipText(it) + (movable ? "\nDrag the label up or down (Alt+↑ / Alt+↓ on its bar) to reorder, onto another epic to move it there" : "");
     const open = () => openCard(c.id);
     const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
       onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); open(); } };
-    const lab = el("div",{class:"glab gcard" + tcls, ...hover},   // the same instant tooltip as the box (HUB132)
+    const lab = el("div",{class:"glab gcard" + tcls + (movable ? " gdrag" : ""), ...hover},   // the same instant tooltip as the box (HUB132)
       kind ? el("span",{class:"gk", "aria-hidden":"true", "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null, el("span",{class:"gid"}, c.id), el("span",{class:"gt"}, c.t || ""));
     let cell;
     if(it.kind === "milestone"){
@@ -3481,25 +3630,27 @@ function drawGantt(host){
       if(it.s >= t0 && it.s <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(it.s) + "px)"}, el("span",{}, "\u{1F4E6} " + c.id)));
     } else {
       const testing = it.kind === "testing";   // HUB146: merged: no longer drawn like work in progress
+      const was = it.kind === "past";   // HUB168: finished: solid while worked on, pale from its gate pass to Done
       const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
-      const split = hatch ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
+      const split = hatch || was ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
       const gend = hatch && it.merged != null ? Math.max(split, Math.min(w, X(it.merged) - X(it.s))) : null;
-      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : "") + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover});
+      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : "") + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover,
+        "data-gfocus":movable ? "card:" + c.id : null, onkeydown:movable ? ev => gKeyMove(ev, ev.currentTarget) : null});
     }
-    inner.append(row(it.kind, lab, cell));
+    inner.append(row(it.kind, lab, cell, Object.assign({"data-g":"card", "data-id":c.id, "data-col":c.col, "data-move":movable ? "1" : null}, data)));
   };
   for(const p of [...tree.keys()].sort((a, b) => projOrder(a) - projOrder(b) || a.localeCompare(b))){
     const th = tree.get(p), all = [...th.values()].flatMap(ep => [...ep.values()].flat());
-    inner.append(row("gproj", el("div",{class:"glab"}, (projects.get(p)?.name || p || "No project") + " (" + all.length + ")"), null));
+    inner.append(row("gproj", el("div",{class:"glab"}, (projects.get(p)?.name || p || "No project") + " (" + all.length + ")"), null, {"data-g":"proj", "data-p":p}));
     for(const t of [...th.keys()].sort((a, b) => tOrder(a) - tOrder(b) || a.localeCompare(b))){
       const ep = th.get(t), tits = [...ep.values()].flat();
-      if(!groupRow("gtheme", "t:" + p + ":" + t, themes.get(t)?.name || "No theme", tits, themes.get(t)?.hue)) continue;
+      if(!groupRow("gtheme", "t:" + p + ":" + t, themes.get(t)?.name || "No theme", tits, themes.get(t)?.hue, {"data-p":p, "data-t":t})) continue;
       for(const e of [...ep.keys()].sort((a, b) => eOrder(a) - eOrder(b) || a.localeCompare(b))){
-        if(!groupRow("gepic", "e:" + p + ":" + e, epics.get(e)?.name || e || noEpicGroup(ep.get(e)), ep.get(e), hueOf(e))) continue;
-        for(const it of ep.get(e)) cardRow(it);
+        if(!groupRow("gepic", "e:" + p + ":" + e, epics.get(e)?.name || e || noEpicGroup(ep.get(e)), ep.get(e), hueOf(e), {"data-p":p, "data-t":t, "data-e":e})) continue;
+        for(const it of ep.get(e)) cardRow(it, {"data-p":p, "data-t":t, "data-e":e});
       }
     }
   }
@@ -3508,7 +3659,182 @@ function drawGantt(host){
   const wrap = el("div",{class:"gwrap", "data-scale":scaleKey, onscroll:() => gTip(null, "")}, inner);
   host.append(wrap);
   wrap.scrollLeft = keepX != null ? keepX : Math.max(0, X(now) - 2 * sc.pxh * (scaleKey === "day" ? 1 : 12));
+  if(gFocusKey){   // a keyboard move (Alt+Up / Alt+Down) keeps the focus on what moved
+    const f = [...inner.querySelectorAll("[data-gfocus]")].find(x => x.dataset.gfocus === gFocusKey);
+    gFocusKey = "";
+    if(f) f.focus({preventScroll:false});
+  }
 }
+
+// ---------- HUB163, HUB191: drag the Gantt's rows. A theme moves among its project's themes and an epic among its
+// theme's epics (their `order`, through the epic / theme editor's change); a card among its epic's cards (its rank in
+// its board column, the board's own move) or onto another epic of its project (its epic, as the card window sets it).
+// Only a row's label starts a drag (the chart keeps its pan, HUB160). Mouse: after 5px; touch and pen: after a 350ms
+// press, so a quick swipe still scrolls the page. Esc cancels. Keyboard: Alt+Up / Alt+Down on the name or the bar.
+let gDrag = null, gFocusKey = "";
+function gRowInfo(r){
+  const d = r.dataset, b = r.getBoundingClientRect();
+  return {g: d.g, p: d.p || "", t: d.t || "", e: d.e || "", id: d.id || "", col: d.col || "", folded: d.folded === "1", top: b.top, bottom: b.bottom, el: r};
+}
+function gRowsOf(inner){ return [...inner.querySelectorAll(".grow[data-g]")].map(gRowInfo); }
+// the siblings' [[key, order]] in the order shown: a project's themes or a theme's epics, from the registry (the ones
+// without live cards too, so the board's Projects panel keeps the same order)
+function gSiblings(src){
+  const own = (v, k) => k === (src.g === "theme" ? src.t : src.e) || !v.project || !src.p || v.project === src.p;
+  const list = src.g === "theme" ? [...themes].filter(([k, v]) => own(v, k)) : [...epics].filter(([k, v]) => epicTheme(k) === src.t && own(v, k));
+  return list.map(([k, v]) => [k, v.order]).sort((a, b) => (Number.isInteger(a[1]) ? a[1] : 99) - (Number.isInteger(b[1]) ? b[1] : 99) || a[0].localeCompare(b[0]));
+}
+// what a drop does; returns a short note for the toast, or "" when nothing changes
+function gApply(src, tgt, rows){
+  if(!tgt || readOnly) return "";
+  if(src.g === "theme" || src.g === "epic"){
+    const key = src.g === "theme" ? src.t : src.e, list = gSiblings(src), keys = list.map(x => x[0]).filter(k => k !== key);
+    let before = tgt.before != null ? tgt.before : null;
+    if(tgt.after != null){ const i = keys.indexOf(tgt.after); before = i >= 0 && i + 1 < keys.length ? keys[i + 1] : null; }
+    if(before === key) return "";
+    const ch = gReorder(list, key, before), n = Object.keys(ch).length;
+    for(const [k, o] of Object.entries(ch)){
+      const v = {order: o}, why = metaEditProblem(src.g, k, v, {themes, epics});
+      if(why){ toast(why); return ""; }
+    }
+    for(const [k, o] of Object.entries(ch)) metaSend(src.g, k, {order: o});
+    if(!n) return "";
+    rebuild(); render();
+    return "New " + src.g + " order sent" + (n > 1 ? " (" + n + " " + src.g + "s renumbered)" : "") + ": the board updates within about a minute.";
+  }
+  const c = cards.get(src.id); if(!c || !tgt.epic && tgt.epic !== src.e) return "";
+  const list = rows.filter(r => r.g === "card" && r.p === src.p && r.e === tgt.epic).map(r => ({id: r.id, col: r.col}));
+  const anchor = gCardAnchor(list, src, tgt.before);
+  let rank;
+  if(anchor){
+    const col = colCards(c.col).filter(x => x.id !== c.id), i = col.findIndex(x => x.id === anchor.id);
+    if(i >= 0) rank = rankAt(c.col, i + (anchor.side === "after" ? 1 : 0), c.id);
+  }
+  if(tgt.epic !== (c.epic || "")){
+    write(c.id, rank !== undefined ? {epic: tgt.epic, rank} : {epic: tgt.epic});
+    return c.id + " moved to the epic " + (epics.get(tgt.epic)?.name || tgt.epic) + ".";
+  }
+  // the same epic: nothing to do when the card keeps its place among its column's cards there
+  const same = list.filter(x => x.col === c.col).map(x => x.id), was = same.indexOf(c.id), rest = same.filter(x => x !== c.id);
+  if(!anchor || rank === undefined) return "";
+  const at = rest.indexOf(anchor.id) + (anchor.side === "after" ? 1 : 0);
+  if(at === was) return "";
+  write(c.id, {rank});
+  return c.id + " moved within its epic (its place in " + (COL_NAME[c.col] || c.col) + " on the board).";
+}
+function gPress(ev){
+  if(gDrag || readOnly || ev.isPrimary === false) return;
+  if(ev.pointerType === "mouse" && ev.button !== 0) return;
+  const lab = ev.target.closest(".glab.gdrag"); if(!lab || ev.target.closest(".gfold")) return;
+  const r = lab.closest(".grow[data-g]"), inner = lab.closest(".gin"); if(!r || !inner) return;
+  gDrag = {row: r, inner, pid: ev.pointerId, type: ev.pointerType, x0: ev.clientX, y0: ev.clientY, y: ev.clientY, active: false};
+  if(ev.pointerType !== "mouse") gDrag.timer = setTimeout(() => { if(gDrag && !gDrag.active) gDragStart(); }, 350);
+  addEventListener("pointermove", gDragMove, true); addEventListener("pointerup", gDragUp, true); addEventListener("pointercancel", gDragCancel, true);
+  addEventListener("keydown", gDragKey, true); addEventListener("blur", gDragCancel);
+}
+function gDragStart(){
+  const d = gDrag; if(!d || !d.row.isConnected){ gDragCancel(); return; }
+  d.active = true; gTip(null, "");
+  d.src = gRowInfo(d.row);
+  d.row.classList.add("gdragging");
+  d.line = el("div",{class:"gdropline", "aria-hidden":"true"}); d.inner.append(d.line);
+  const name = (d.row.querySelector(".glab .gname, .glab .gt, .glab .gid") || d.row).textContent;
+  d.ghost = el("div",{class:"gghost", "aria-hidden":"true"}, (d.src.g === "card" ? d.src.id + " " : "") + name);
+  document.body.append(d.ghost); document.body.classList.add("gdragbody");
+  try{ getSelection().removeAllRanges(); }catch(_){}
+  if(navigator.vibrate && d.type !== "mouse") try{ navigator.vibrate(15); }catch(_){}
+  d.tick = setInterval(() => {   // near the window's top or bottom edge the page scrolls
+    if(!gDrag || !gDrag.active) return;
+    const m = 48, v = gDrag.y < m ? -(m - gDrag.y) / 3 : gDrag.y > innerHeight - m ? (gDrag.y - innerHeight + m) / 3 : 0;
+    if(v){ scrollBy(0, v); gDragShow(); }
+  }, 16);
+  gDragShow();
+}
+function gDragShow(){
+  const d = gDrag; if(!d || !d.active) return;
+  d.ghost.style.left = (d.x || d.x0) + 12 + "px"; d.ghost.style.top = d.y + 8 + "px";
+  const rows = gRowsOf(d.inner), src = rows.find(r => r.el === d.row) || d.src;
+  d.rows = rows; d.src = src;
+  d.tgt = gDropTarget(rows.filter(r => r.el !== d.row || src.g !== "card"), src, d.y);
+  for(const x of d.inner.querySelectorAll(".gdropin")) x.classList.remove("gdropin");
+  if(!d.tgt){ d.line.hidden = true; return; }
+  const top = d.inner.getBoundingClientRect().top;
+  if(d.tgt.into){ d.line.hidden = true; }
+  else { d.line.hidden = false; d.line.style.top = (d.tgt.y - top - 1) + "px"; }
+  if(src.g === "card" && d.tgt.epic !== src.e){   // onto another epic: its row is marked
+    const er = rows.find(r => r.g === "epic" && r.p === src.p && r.e === d.tgt.epic);
+    if(er) er.el.classList.add("gdropin");
+  }
+}
+function gDragMove(ev){
+  const d = gDrag; if(!d || ev.pointerId !== d.pid) return;
+  d.x = ev.clientX; d.y = ev.clientY;
+  if(!d.active){
+    const far = Math.max(Math.abs(ev.clientX - d.x0), Math.abs(ev.clientY - d.y0));
+    if(d.type === "mouse"){ if(far > 5) gDragStart(); }
+    else if(far > 8) gDragCancel();   // a swipe before the press is held: the page scrolls as usual
+    return;
+  }
+  ev.preventDefault();
+  gDragShow();
+}
+function gDragUp(ev){
+  const d = gDrag; if(!d || ev.pointerId !== d.pid) return;
+  if(d.active){
+    gDragShow();
+    const note = gApply(d.src, d.tgt, d.rows || []);
+    gDragEnd(true);
+    if(note) toast(note);
+    return;
+  }
+  gDragEnd(false);
+}
+function gDragCancel(){ if(gDrag) gDragEnd(gDrag.active); }
+function gDragKey(ev){ if(gDrag && ev.key === "Escape"){ ev.preventDefault(); ev.stopPropagation(); gDragCancel(); } }
+function gDragEnd(wasActive){
+  const d = gDrag; if(!d) return;
+  clearTimeout(d.timer); clearInterval(d.tick);
+  removeEventListener("pointermove", gDragMove, true); removeEventListener("pointerup", gDragUp, true); removeEventListener("pointercancel", gDragCancel, true);
+  removeEventListener("keydown", gDragKey, true); removeEventListener("blur", gDragCancel);
+  if(d.line) d.line.remove(); if(d.ghost) d.ghost.remove();
+  d.row.classList.remove("gdragging");
+  for(const x of d.inner.querySelectorAll(".gdropin")) x.classList.remove("gdropin");
+  document.body.classList.remove("gdragbody");
+  gDrag = null;
+  if(wasActive){   // the pointerup after a drag is not a click on the label (it would open the card or the editor)
+    const eat = e => { e.stopPropagation(); e.preventDefault(); };
+    addEventListener("click", eat, true); setTimeout(() => removeEventListener("click", eat, true), 0);
+  }
+}
+// Alt+Up / Alt+Down on a theme's or an epic's name, or on a card's bar: one place up or down among its siblings
+function gKeyMove(ev, target){
+  if(!ev.altKey || (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") || readOnly) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const r = target.closest(".grow[data-g]"), inner = target.closest(".gin"); if(!r || !inner) return;
+  const rows = gRowsOf(inner), src = rows.find(x => x.el === r); if(!src) return;
+  const up = ev.key === "ArrowUp";
+  let tgt = null;
+  if(src.g === "card"){
+    const sib = rows.filter(x => x.g === "card" && x.p === src.p && x.e === src.e && x.col === src.col);
+    const i = sib.findIndex(x => x.el === r), o = sib[i + (up ? -1 : 1)];
+    if(!o){ toast("Already at the " + (up ? "top" : "bottom") + " of its epic's " + (COL_NAME[src.col] || src.col) + " cards."); return; }
+    const after = rows.filter(x => x.g === "card" && x.e === src.e && x.p === src.p);
+    const j = after.findIndex(x => x.el === o.el);
+    tgt = {epic: src.e, before: up ? o.id : (after[j + 1] ? after[j + 1].id : null)};
+  } else {
+    const key = src.g === "theme" ? src.t : src.e;
+    const sib = rows.filter(x => x.g === src.g && x.p === src.p && (src.g === "theme" || x.t === src.t)).map(x => src.g === "theme" ? x.t : x.e).filter(Boolean);
+    const i = sib.indexOf(key), o = sib[i + (up ? -1 : 1)];
+    if(!o){ toast("Already the " + (up ? "first" : "last") + " " + src.g + " here."); return; }
+    tgt = up ? {before: o} : {after: o};
+  }
+  gFocusKey = target.dataset.gfocus || "";
+  const note = gApply(src, tgt, rows);
+  if(note) toast(note); else gFocusKey = "";
+}
+document.getElementById("gantt").addEventListener("pointerdown", gPress);
+document.addEventListener("touchmove", ev => { if(gDrag && gDrag.active) ev.preventDefault(); }, {passive:false});   // a held row doesn't scroll the page
+document.addEventListener("contextmenu", ev => { if(gDrag) ev.preventDefault(); });   // nor opens the long-press menu
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
 const TABS = ["board", "gantt", "decisions", "manual", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
