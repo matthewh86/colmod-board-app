@@ -315,6 +315,23 @@ body.modal-open{overflow:hidden}
 .rk .acts button{font:inherit; font-size:.84rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:5px 12px; cursor:pointer}
 .rk .acts button.pri{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .rk ol{margin:0; padding-left:1.6em; max-height:50dvh; overflow:auto; font-size:.86rem}
+/* HUB120: the New dialog (a project, theme, epic or card made in the App) */
+.newf{width:min(620px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
+.newf h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
+.newf .kinds{display:flex; flex-wrap:wrap; gap:6px}
+.newf .kinds button{font:inherit; font-size:.85rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:999px; padding:4px 12px; cursor:pointer; min-height:32px}
+.newf .kinds button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.newf label{display:grid; gap:4px; font-size:.84rem; color:var(--muted)}
+.newf input,.newf select,.newf textarea{font:inherit; font-size:.9rem; color:var(--ink); padding:7px 9px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
+.newf textarea{min-height:6em; resize:vertical}
+.newf .two{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%,170px),1fr)); gap:10px}
+.newf .err{color:#d93025; font-size:.84rem; min-height:1.2em; margin:0}
+.newf .hint{color:var(--muted); font-size:.8rem; margin:0}
+.newf .acts{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end}
+.newf .acts button{font:inherit; font-size:.86rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:6px 14px; cursor:pointer; min-height:36px}
+.newf .acts button.pri{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
+.newf ul{margin:0; padding-left:18px; font-size:.82rem; color:var(--muted)}
+.ro #newbtn{opacity:.6}
 .toast{z-index:1100; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; font-size:.85rem; max-width:calc(100% - 32px)}
 /* the connect form */
 .setup{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; display:grid; gap:10px; max-width:520px; margin:14px 0 16px}
@@ -487,6 +504,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
         </button>
         <div id="fpop" class="fpop" role="group" aria-label="Show columns" hidden></div>
       </span>
+      <button type="button" id="newbtn" class="fbtn" title="Create a card, epic, theme or project">+ New</button>
       <button type="button" id="selbtn" class="fbtn" aria-pressed="false" title="Select several cards to reorder or move them together">☑ Select</button>
       <span class="savest" id="savest" role="status"></span>
     </div>
@@ -518,6 +536,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 </div>
 <div class="modal" id="modal" hidden></div>
 <div class="modal" id="rankm" hidden></div>
+<div class="modal" id="newm" hidden></div>
 <div class="selbar" id="selbar" role="toolbar" aria-label="Selected cards" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -657,6 +676,7 @@ function changeText(ch){
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
   if(f === "order") return "new order";
   if(f === "comment") return "comment: " + String(v || "").slice(0, 80);
+  if(f === "create") return "new " + String((v && v.kind) || "thing") + ": " + String((v && (v.t || v.name)) || "").slice(0, 80);
   if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
 }
@@ -709,8 +729,9 @@ function changeSettled(id, ch, sent, exp){
   if(!sent) return "";
   if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
-  if(f !== "queue" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing (a queue
-                                                    // order has no card in the export: only `applied` settles it)
+  if(f !== "queue" && f !== "create" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
+                                                    // (a queue order or a new thing (HUB120) has no doc in the export to compare
+                                                    // with: only `applied` settles it)
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
       const q = f.slice(4), base = q.endsWith(OTHER) ? q.slice(0, -OTHER.length) : q;
@@ -755,7 +776,7 @@ function change(card, field, value, extra){
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
   const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
-  if(field !== "comment")   // each comment is a line of its own (HUB117); for any other field the later edit wins on screen
+  if(field !== "comment" && field !== "create")   // each comment (HUB117) and each new thing (HUB120) is its own; for any other field the later edit wins on screen
     for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }
   changes.set(id, doc);
   pendSave();
@@ -1505,7 +1526,7 @@ function fillProjects(){
   placeProjSel();
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
-document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
+document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#newm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
 $("#selbtn").addEventListener("click", ()=>setSelMode(!selMode));
 
 // Ranking game (Backlog, Parked, In refinement, Refined): binary insertion of the cards (in their current order), one
@@ -1610,6 +1631,136 @@ document.addEventListener("keydown", ev=>{
 });
 document.getElementById("rankm").addEventListener("click", ev=>{ if(ev.target.id === "rankm") endRank(); });
 document.getElementById("modal").addEventListener("click", ev=>{ if(ev.target.id==="modal") closeCard(); });
+
+// ---------- New: a card, epic, theme or project made in the App (HUB120). One change file {card: "new", field:
+// "create", value: {kind, ...}}; the desktop makes it through the same checks as `pm.py new` / `epic add` / `theme add`
+// / `project add` (pm.py _remote_create) and gives the key or id. The page checks the same things first, so a refusal
+// is rare; one still comes back as a toast. Keys come from the names.
+const NEW_CARD = {id: "new"};
+// >>> create-rules (tests/test_app.py runs this block)
+const CREATE_COLS = ["park", "back", "refining", "refined", "next"];   // where a new card may start (as the desktop)
+const EPIC_NAME_MAX = 24;
+// why this new thing would be refused, or "": v = {kind, ...} as sent; ctx = {projects, themes, epics, kinds} (Maps / a list)
+function createProblem(v, ctx){
+  const txt = k => typeof v[k] === "string" ? v[k].trim() : "";
+  if(!v || !["project", "theme", "epic", "card"].includes(v.kind)) return "Choose what to make.";
+  if(v.kind === "card"){
+    if(!txt("t")) return "Give the card a title.";
+    if(txt("t").length > 200) return "The title is at most 200 characters.";
+    if(!ctx.kinds.includes(v.type)) return "Choose the card's type.";
+    if(![1, 2, 3, 4].includes(v.pri)) return "Choose a priority.";
+    if(!CREATE_COLS.includes(v.col)) return "A new card starts in Parked, Backlog, In refinement, Refined or Next up.";
+    if(v.epic){ if(!ctx.epics.has(v.epic)) return "That epic is not on the board."; }
+    else {
+      if(!v.project || !ctx.projects.has(v.project)) return "Choose the card's epic.";
+      if([...ctx.epics.values()].some(e => e && e.project === v.project)) return "Choose the card's epic: every card of this project has one.";
+    }
+    return "";
+  }
+  if(!txt("name")) return "Give it a name.";
+  if(txt("name").length > 200) return "The name is at most 200 characters.";
+  if(v.kind === "epic"){
+    if(txt("name").length > EPIC_NAME_MAX) return "An epic's name is at most " + EPIC_NAME_MAX + " characters (a short label; the rest goes in the blurb).";
+    if(!ctx.themes.has(v.theme)) return "Choose the epic's theme.";
+    return "";
+  }
+  if(v.kind === "theme") return ctx.projects.has(v.project) ? "" : "Choose the theme's project.";
+  const pre = String(v.prefix || "").split(",").map(x => x.trim()).filter(Boolean);
+  if(!pre.length || pre.some(x => !/^[A-Z]{1,4}$/.test(x))) return "The id letters are 1 to 4 capital letters (several: separated by commas).";
+  for(const [k, p] of ctx.projects) for(const x of pre) if((p.id_prefixes || []).includes(x)) return x + " is already the id letters of " + (p.name || k) + ".";
+  return "";
+}
+// <<< create-rules
+let newKind = "card";
+function newCtx(){ return {projects, themes, epics, kinds: KINDS}; }
+function openNew(kind){
+  if(readOnly){ toast("This view is read-only."); return; }
+  if(kind) newKind = kind;
+  renderNew();
+}
+function closeNew(){ const box = $("#newm"); box.hidden = true; box.textContent = ""; if(!openId && !rank) document.body.classList.remove("modal-open"); }
+function newOnTheWay(){
+  return [...changes.entries()].filter(([, ch]) => ch.field === "create").sort((a, b) => String(a[1].ts || "").localeCompare(String(b[1].ts || "")))
+    .map(([k, ch]) => el("li",{}, changeText(ch), " · ", sentAt.has(k) ? "sent, waiting for the board" : "not sent yet"));
+}
+function renderNew(){
+  const box = $("#newm"); box.textContent = ""; box.hidden = false; document.body.classList.add("modal-open");
+  const opt = (v, t, sel) => el("option",{value:v, selected: sel ? true : null}, t);
+  const byOrder = m => [...m.entries()].sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[1].name || a[0]).localeCompare(String(b[1].name || b[0])));
+  const field = (label, input, cls) => el("label",{class: cls || null}, label, input);
+  const err = el("p",{class:"err", role:"alert"});
+  const projSelect = (id, def) => el("select",{id}, ...byOrder(projects).map(([k, p]) => opt(k, p.name || k, k === def)));
+  const defProj = filt.j && projects.has(filt.j) ? filt.j : (byOrder(projects)[0] || [""])[0];
+  const kinds = el("div",{class:"kinds", role:"group", "aria-label":"What to make"},
+    ...[["card", "Card"], ["epic", "Epic"], ["theme", "Theme"], ["project", "Project"]].map(([k, t]) =>
+      el("button",{type:"button", "aria-pressed": String(newKind === k), onclick:()=>{ newKind = k; renderNew(); }}, t)));
+  const form = el("form",{class:"newf", role:"dialog", "aria-modal":"true", "aria-label":"New " + newKind});
+  form.append(el("h3",{}, "New " + newKind), kinds);
+  let read;
+  if(newKind === "card"){
+    const pj = projSelect("nProj", defProj), ep = el("select",{id:"nEpic"}), ar = el("select",{id:"nArea"});
+    const fillEps = () => {
+      const p = pj.value; ep.textContent = ""; ar.textContent = "";
+      const mine = byOrder(epics).filter(([, e]) => !e.project || e.project === p);
+      if(!mine.length) ep.append(opt("", "(no epics in this project)"));
+      for(const [k, e] of mine) ep.append(opt(k, (themes.get(e.theme)?.name ? themes.get(e.theme).name + " · " : "") + (e.name || k)));
+      ar.append(opt("", "(none)"));
+      for(const [k, a] of byOrder(areas).filter(([, a]) => !a.project || a.project === p)) ar.append(opt(k, a.name || k));
+      if(filt.e && mine.some(([k]) => k === filt.e)) ep.value = filt.e;
+    };
+    pj.addEventListener("change", fillEps); fillEps();
+    const ty = el("select",{id:"nType"}, ...KINDS.map(k => opt(k, k, k === "Feature")));
+    const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Big feature"]].map(([k, t]) => opt(k, t, k === 3)));
+    const co = el("select",{id:"nCol"}, ...CREATE_COLS.map(k => opt(k, COL_NAME[k], k === "back")));
+    const ti = el("input",{id:"nTitle", maxlength:"200", autocomplete:"off", required:true});
+    const de = el("textarea",{id:"nDesc", maxlength:"8000", placeholder:"What it is and why (optional)"});
+    form.append(field("Title", ti), el("div",{class:"two"}, field("Type", ty), field("Priority", pr), field("Column", co)),
+      el("div",{class:"two"}, field("Project", pj), field("Epic", ep), field("Area", ar)), field("Description", de),
+      el("p",{class:"hint"}, "The board gives the card its id from the project's letters."));
+    read = () => ({kind:"card", t: ti.value.trim(), type: ty.value, pri: Number(pr.value), col: co.value, project: pj.value || null,
+                   epic: ep.value || null, area: ar.value || null, d: de.value.trim() || null});
+  } else if(newKind === "epic"){
+    const th = el("select",{id:"nTheme"}, ...byOrder(themes).filter(([, t]) => !filt.j || !t.project || t.project === filt.j)
+      .map(([k, t]) => opt(k, (projects.get(t.project)?.name ? projects.get(t.project).name + " · " : "") + (t.name || k), k === filt.t)));
+    const nm = el("input",{id:"nName", maxlength:String(EPIC_NAME_MAX), autocomplete:"off", required:true});
+    const bl = el("textarea",{id:"nBlurb", maxlength:"600", placeholder:"What it delivers (optional)"});
+    form.append(field("Name (at most " + EPIC_NAME_MAX + " characters)", nm), field("Theme", th), field("Blurb", bl),
+      el("p",{class:"hint"}, "Its project is its theme's."));
+    read = () => ({kind:"epic", name: nm.value.trim(), theme: th.value, blurb: bl.value.trim() || null});
+  } else if(newKind === "theme"){
+    const pj = projSelect("nProj", defProj);
+    const nm = el("input",{id:"nName", maxlength:"200", autocomplete:"off", required:true});
+    const bl = el("textarea",{id:"nBlurb", maxlength:"600", placeholder:"What it covers (optional)"});
+    form.append(field("Name", nm), field("Project", pj), field("Blurb", bl));
+    read = () => ({kind:"theme", name: nm.value.trim(), project: pj.value, blurb: bl.value.trim() || null});
+  } else {
+    const nm = el("input",{id:"nName", maxlength:"200", autocomplete:"off", required:true});
+    const pre = el("input",{id:"nPrefix", maxlength:"20", autocomplete:"off", autocapitalize:"characters", placeholder:"e.g. ABC", required:true});
+    const bl = el("textarea",{id:"nBlurb", maxlength:"600", placeholder:"What the project is (optional)"});
+    form.append(field("Name", nm), field("Id letters of its cards", pre), field("Blurb", bl),
+      el("p",{class:"hint"}, "Its working folder and lead are set on the desktop."));
+    read = () => ({kind:"project", name: nm.value.trim(), prefix: pre.value.toUpperCase().replace(/\s+/g, ""), blurb: bl.value.trim() || null});
+  }
+  const pend = newOnTheWay();
+  // DOM append writes a null as the text "null": add the pending list only when there is one
+  form.append(err, ...(pend.length ? [el("div",{}, el("p",{class:"hint"}, "On the way to the board:"), el("ul",{}, pend))] : []),
+    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeNew}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Create")));
+  form.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const v = read();
+    for(const k of Object.keys(v)) if(v[k] == null) delete v[k];
+    const why = createProblem(v, newCtx());
+    if(why){ err.textContent = why; return; }
+    change(NEW_CARD, "create", v);
+    closeNew();
+    toast("Sent: the board makes the new " + v.kind + " within about a minute.");
+  });
+  box.append(form);
+  const first = form.querySelector("input, textarea"); if(first) first.focus({preventScroll:true});
+}
+$("#newbtn").addEventListener("click", ()=>openNew());
+document.getElementById("newm").addEventListener("click", ev=>{ if(ev.target.id === "newm") closeNew(); });
+document.addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#newm").hidden){ ev.preventDefault(); closeNew(); } });
 
 // card drag with pointer events (not native HTML5 drag, which blocks the mouse wheel in Chromium): the wheel scrolls
 // the page (Shift+wheel or a sideways wheel the board) while a card is held, and the pointer's edge zones auto-scroll.
