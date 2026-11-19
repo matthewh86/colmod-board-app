@@ -100,6 +100,7 @@ body.panning, body.panning *{cursor:grabbing!important; user-select:none!importa
 .automark::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--muted)}
 body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .col.collapsed{align-self:start}
+.main > .board{align-self:stretch}   /* HUB187: as tall as the epics panel when that is longer: the columns (and the board's sideways scroll bar) reach the page's bottom */
 @media (max-width:720px){ .main{grid-template-columns:1fr} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
 .col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; display:flex; flex-direction:column; min-width:0}
 .col > h2{margin:0; padding:8px 10px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none}
@@ -132,10 +133,13 @@ body.selmode .card .hov{display:none !important}
 .selbar button:disabled,.selbar select:disabled{opacity:.45; cursor:default}
 body.ro #selbtn{display:none}
 .selbar .hint{color:var(--muted); font-size:.78rem}
-.card .hov{position:absolute; top:4px; right:4px; display:none; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,.15)}
+/* HUB190: the placement controls (top, up, down, bottom, position): one set and look on the card's hover bar and in the card window */
+.place{display:inline-flex; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:2px}
+.place button,.row .place button{font:inherit; font-size:.8rem; line-height:1; width:24px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--ink); cursor:pointer}
+.place button:hover,.row .place button:hover,.place button:focus-visible{background:var(--accent-soft); color:var(--accent)}
+@media (pointer:coarse){ .row .place button{width:34px; height:30px; font-size:.95rem} }
+.card .hov{position:absolute; top:4px; right:4px; display:none; box-shadow:0 2px 6px rgba(0,0,0,.15)}
 .card:hover .hov,.card:focus-within .hov{display:flex}
-.card .hov button{font:inherit; font-size:.8rem; line-height:1; width:24px; height:22px; border:0; border-radius:4px; background:transparent; color:var(--ink); cursor:pointer}
-.card .hov button:hover{background:var(--accent-soft); color:var(--accent)}
 @media (hover:none){ .card .hov{display:none !important} }
 .card.p1{--pc:var(--p1)} .card.p2{--pc:var(--p2)} .card.p3{--pc:var(--p3)} .card.p4{--pc:var(--p4)}
 /* a card's left edge is coloured by its kind: Bug red, Feature blue, Technical yellow, Administration grey,
@@ -224,6 +228,20 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .tnone{font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:6px 30px 0 2px}
 .ttw{position:absolute; top:5px; right:5px; width:22px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font:inherit; font-size:.85rem; line-height:22px; cursor:pointer}
 .ttw:hover{background:var(--surface); color:var(--accent)}
+/* HUB188: an epic's or theme's edit icon, shown while it is hovered (always on a touch screen); none when read-only */
+.ewrap{position:relative; display:grid; min-width:0}
+.eedit{position:absolute; top:4px; right:4px; width:22px; height:22px; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--muted); font:inherit; font-size:.8rem; line-height:20px; cursor:pointer; opacity:0}
+.thead > .eedit{right:30px; top:5px}
+.ewrap:hover > .eedit,.thead:hover > .eedit,.eedit:focus-visible{opacity:1}
+.eedit:hover{color:var(--accent); border-color:var(--accent)}
+@media (hover:none){ .eedit{opacity:.75} }
+.ro .eedit{display:none}
+body:not(.ro) .ewrap > .epic{padding-right:30px}
+body:not(.ro) .thead > .epic.theme{padding-right:56px}   /* room for the edit icon beside the fold arrow */
+@media (max-width:720px){ .ewrap{flex:none} }
+.newf .hue{display:flex; gap:8px; align-items:center}
+.newf .hue input[type=range]{flex:1; padding:0}
+.newf .hue i{width:28px; height:20px; border-radius:4px; flex:none; background:hsl(var(--h) 55% 50%); border:1px solid var(--line)}
 .tepics{display:grid; gap:6px; margin-left:8px; padding-left:8px; border-left:2px solid hsl(var(--h) 55% 50% / .45)}
 .tgroup.collapsed .tepics{display:none}
 .card .tpath{font-size:.78rem; color:var(--muted); margin-right:4px}
@@ -378,6 +396,19 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 #gantt > *{min-width:0}
 .ghead{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center}
 .ghead .pill{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
+.rels{display:grid; gap:6px; margin-bottom:14px}
+details.rel{border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:6px 10px; min-width:0}
+details.rel summary{cursor:pointer; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px}
+details.rel summary{list-style:none} details.rel summary::-webkit-details-marker{display:none}
+details.rel summary::before{content:"\25B8"; color:var(--muted); width:.8em} details.rel[open] summary::before{content:"\25BE"}
+details.rel summary small, ul.rcards small{color:var(--muted)}
+details.rel .rname{font-weight:600; overflow-wrap:anywhere}
+.rid{font:inherit; font-family:var(--f-mono); font-size:.85em; padding:0; border:0; background:none; color:var(--accent); cursor:pointer}
+span.rid{color:var(--muted); cursor:default}
+ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-wrap:anywhere}
+.ghead button.pill{font:inherit; font-size:.78rem; color:var(--ink); cursor:pointer}
+.ghead button.pill:hover{border-color:var(--accent)}
+.ghead button.pill[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); font-weight:600}
 .ghead .pill.over{color:var(--blk-ink); background:var(--blk-bg); border-color:transparent; font-weight:600}
 .gscale{display:inline-flex; margin-left:auto; border:1px solid var(--line); border-radius:6px; overflow:hidden}
 .gscale button{font:inherit; font-size:.8rem; border:0; background:var(--surface); color:var(--ink); padding:4px 12px; cursor:pointer; min-height:30px}
@@ -399,24 +430,48 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 .gcell{position:relative; flex:none}
 .gtick{position:absolute; top:0; bottom:0; border-left:1px solid var(--line); font-size:.68rem; color:var(--muted); padding:2px 3px; white-space:nowrap}
 .gtick.day{border-left-color:var(--muted); color:var(--ink); font-weight:600}
-.gbar{position:absolute; top:5px; height:calc(var(--grow) - 11px); min-width:4px; border-radius:4px; border:1px solid var(--tc,var(--muted)); background:var(--tc,var(--muted)); padding:0; cursor:pointer; font:inherit}
+.gbar{position:absolute; top:5px; height:calc(var(--grow) - 11px); min-width:4px; border-radius:4px; border:1px solid var(--gc); background:var(--gc); padding:0; cursor:pointer; font:inherit}
+/* HUB165, HUB166: one hue per theme (the theme's, else the epic's), in three shades: cards the brightest, epics in
+   between, themes the darkest; a card's type is the ribbon in its bar's top left corner (the type's colour) */
+#gantt{--gs:58%; --gl-card:60%; --gl-epic:45%; --gl-theme:31%}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #gantt{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%} }
+:root[data-theme="dark"] #gantt{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%}
+.gbar{--gc:hsl(var(--h,210) var(--gs) var(--gl-card))}
+.gbar[class*="g-t-"]::before, .gbar[class*="g-t-"]::after{content:""; position:absolute; left:-1px; top:-1px; pointer-events:none; clip-path:polygon(0 0, 100% 0, 0 100%); border-top-left-radius:4px}
+.gbar[class*="g-t-"]::before{width:12px; height:12px; background:var(--surface)}
+.gbar[class*="g-t-"]::after{width:10px; height:10px; background:var(--tc)}
+.glegend i.grib{display:inline-block; width:12px; height:12px; border-radius:0; vertical-align:-1px; margin-right:3px; background:var(--tc); clip-path:polygon(0 0, 100% 0, 0 100%)}
+.gsw{display:inline-block; width:22px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:4px}
 .rspin{display:inline-block; width:.8em; height:.8em; margin-left:.4em; vertical-align:-.1em; border-radius:50%;
   background:conic-gradient(var(--accent, var(--muted)) var(--p, 0%), color-mix(in srgb, var(--muted) 30%, transparent) 0);
   -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
-.gbar.planned{background:color-mix(in srgb, var(--tc,var(--muted)) 45%, transparent)}
+.gbar.planned{background:color-mix(in srgb, var(--gc) 45%, transparent)}
 /* HUB144: hatched from the gate pass (--gsplit) to the merge (--gend), solid before and after */
 /* HUB146: Merged, in testing: solid only while it was worked on, hatched while it waited for the merge, then pale
    with a dotted edge while it is in testing: no agent works on it */
-.gbar.testing{border-style:dotted; background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px) 0 0 / var(--gend,0px) 100% no-repeat, color-mix(in srgb, var(--tc,var(--muted)) 20%, transparent)}
-.gbar.waiting{background:linear-gradient(90deg, var(--tc,var(--muted)) 0 var(--gsplit,0px), transparent var(--gsplit,0px) var(--gend,100%), var(--tc,var(--muted)) var(--gend,100%)), repeating-linear-gradient(135deg, var(--tc,var(--muted)) 0 4px, transparent 4px 8px)}
-.grow.gtheme{height:24px; background:color-mix(in srgb, var(--sunk) 60%, transparent)} .grow.gepic{height:22px}
+.gbar.testing{border-style:dotted; background:linear-gradient(90deg, var(--gc) 0 var(--gsplit,0px), transparent var(--gsplit,0px)), repeating-linear-gradient(135deg, var(--gc) 0 4px, transparent 4px 8px) 0 0 / var(--gend,0px) 100% no-repeat, color-mix(in srgb, var(--gc) 20%, transparent)}
+.gbar.waiting{background:linear-gradient(90deg, var(--gc) 0 var(--gsplit,0px), transparent var(--gsplit,0px) var(--gend,100%), var(--gc) var(--gend,100%)), repeating-linear-gradient(135deg, var(--gc) 0 4px, transparent 4px 8px)}
+.grow.gtheme{background:color-mix(in srgb, var(--sunk) 60%, transparent)} .grow.gtools{height:30px; background:var(--sunk)}
 .gtheme .glab{font-weight:600; background-color:var(--sunk)} .gepic .glab{padding-left:16px; color:var(--muted)} .glab.gcard{padding-left:24px}
 .gfold{font:inherit; font-size:.8rem; line-height:1; width:18px; height:18px; flex:none; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink); cursor:pointer}
-.gspan{position:absolute; top:calc(50% - 3px); height:6px; border-radius:3px; background:hsl(var(--h,220) 45% 55% / .55)}
+.gspan{position:absolute; top:5px; height:calc(var(--grow) - 11px); box-sizing:border-box; border-radius:4px; background:hsl(var(--h,220) var(--gs) var(--gl-epic))}
+.gtheme .gspan{background:hsl(var(--h,220) var(--gs) var(--gl-theme))}
 /* HUB152: an epic's bar across a gap between its cards' work (nothing worked on or planned then): dotted, lighter */
-.gspan.gap{box-sizing:border-box; top:calc(50% - 4px); height:8px; border:1.5px dotted hsl(var(--h,220) 55% 68%); background:hsl(var(--h,220) 45% 55% / .08); border-radius:0}
-.gfilt{display:inline-flex; flex-wrap:wrap; gap:4px} .gfilt select{font:inherit; font-size:.78rem; max-width:160px; padding:2px 4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink)}
-.gbar.dashed{background:color-mix(in srgb, var(--tc,var(--muted)) 18%, transparent); border:2px dashed var(--tc,var(--muted))}
+.gspan.gap{top:calc(var(--grow) / 2 - 4px); height:8px; border:1.5px dotted hsl(var(--h,220) var(--gs) var(--gl-epic)); background:hsl(var(--h,220) var(--gs) var(--gl-epic) / .12); border-radius:0}
+.gfilt{position:relative; font-size:.78rem}
+.gfilt > summary, .grel, .gfoldall{list-style:none; font:inherit; font-size:.78rem; cursor:pointer; padding:3px 10px; min-height:28px; box-sizing:border-box; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink)}
+.gfilt > summary::-webkit-details-marker{display:none}
+.gfilt > summary::after{content:"\25BE"; color:var(--muted)}
+.gtools .glab{background-color:var(--sunk); cursor:default}
+.gfilt[open] > summary, .gfilt.on > summary{border-color:var(--accent)}
+.grel[aria-pressed=true]{background:var(--accent); color:var(--on-accent); border-color:var(--accent)}
+.gfpop{position:absolute; z-index:40; top:calc(100% + 4px); left:0; min-width:220px; max-width:min(320px, 90vw); max-height:60vh; overflow:auto; overflow-x:hidden; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.2); padding:6px 8px}
+.gfpop fieldset{border:0; margin:0 0 6px; padding:0}
+.gfpop legend{font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:4px 0 2px}
+.gfpop label{display:flex; align-items:center; gap:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.gfpop label i{flex:none; width:10px; height:10px; border-radius:2px; background:hsl(var(--h,210) var(--gs) var(--gl-card))}
+.gfpop .gfclr{font:inherit; font-size:.75rem; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); padding:2px 8px; cursor:pointer}
+.gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
 .gbar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .gms{position:absolute; top:calc(var(--grow) / 2 - 7px); width:14px; height:14px; margin-left:-7px; transform:rotate(45deg); background:var(--t-rel); border:1px solid var(--surface); padding:0; cursor:pointer}
@@ -447,8 +502,13 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .artbtn{font:inherit; font-size:.78rem; padding:2px 10px; margin-left:8px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
 .artbtn:hover{border-color:var(--accent)} .artbtn.on{background:var(--accent-soft)} .artbtn:disabled{opacity:.5; cursor:default}
 .tbox table td:nth-child(n+3){white-space:nowrap; font-variant-numeric:tabular-nums}
-.usage .tmode{font:inherit; font-size:.74rem; padding:1px 8px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted); cursor:pointer}
-.usage .tmode.on{background:var(--accent-soft); color:var(--ink); border-color:var(--accent)}
+.usage .tmode, .ohead .tmode{font:inherit; font-size:.74rem; padding:1px 8px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted); cursor:pointer}
+.usage .tmode.on, .ohead .tmode.on{background:var(--accent-soft); color:var(--ink); border-color:var(--accent)}
+.ohead{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px}
+.ohead .uleg{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:.76rem; color:var(--muted)}
+.usage .tpickl{display:inline-flex; align-items:center; min-width:0; max-width:100%}
+.usage .tpick{font:inherit; font-size:.74rem; max-width:min(260px, 100%); padding:1px 4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink)}
+.nodata{color:var(--muted); cursor:help}
 .usage .tmode .ukey{margin-right:4px}
 .usage .tname{font:inherit; padding:0; border:0; background:none; color:var(--ink); cursor:pointer; text-align:left}
 .usage .tname.on{font-weight:600; text-decoration:underline}
@@ -537,6 +597,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 <div class="modal" id="modal" hidden></div>
 <div class="modal" id="rankm" hidden></div>
 <div class="modal" id="newm" hidden></div>
+<div class="modal" id="edm" hidden></div>
 <div class="selbar" id="selbar" role="toolbar" aria-label="Selected cards" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -567,6 +628,7 @@ const sentAt = new Map();       // change id -> when its file reached GitHub
 const epics = new Map();        // key -> {name,hue,order,blurb,theme}
 const themes = new Map();       // key -> {name,hue,order,blurb}: the level above the epics (a card's theme is its epic's)
 const RELEASES_OUT = [];          // HUB147: [{id, t, at}] Done release cards of the last weeks (export releases_out)
+const RELEASES = [];              // HUB182: every Release card with its cards (export releases): not out yet first, then out, newest first
 const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
@@ -611,6 +673,7 @@ function pic(src, attrs){   // an <img> for a media path; a picture that is gone
 
 // ---------- the card as shown: the exported card with this page's not-yet-synced changes applied (oldest first)
 function rebuild(){
+  overlayMeta();   // HUB188: epic and theme edits on their way
   cards.clear();
   for(const [id, c] of raw){
     const e = structuredClone(c);
@@ -677,6 +740,7 @@ function changeText(ch){
   if(f === "order") return "new order";
   if(f === "comment") return "comment: " + String(v || "").slice(0, 80);
   if(f === "create") return "new " + String((v && v.kind) || "thing") + ": " + String((v && (v.t || v.name)) || "").slice(0, 80);
+  if(f === "edit") return "details edited: " + Object.keys(v || {}).join(", ");   // HUB188: an epic's or theme's
   if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
 }
@@ -696,7 +760,7 @@ function renderSyncOnly(){
   if(!syncOnly){ box.replaceChildren(); return; }
   const rows = mine.map(([k, ch]) => {
     const ms = Math.max(0, Date.now() - Date.parse(ch.ts || "")), sent = sentAt.get(k), age = ms < 60000 ? "under a minute" : fmtDur(ms);
-    const name = syncOnly === "board" || cards.has(ch.card)
+    const name = cards.has(ch.card) || (syncOnly === "board" && ch.field !== "edit" && ch.field !== "create")
       ? el("button",{type:"button", title:"Open " + ch.card, onclick:()=>openCard(ch.card)}, ch.card) : el("b",{}, ch.card);
     return el("li",{}, name, " ", changeText(ch), " · ", sent ? "sent, waiting " + age + " for the desktop" : "not sent yet (" + age + ")");
   });
@@ -729,7 +793,7 @@ function changeSettled(id, ch, sent, exp){
   if(!sent) return "";
   if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
-  if(f !== "queue" && f !== "create" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
+  if(f !== "queue" && f !== "create" && f !== "edit" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
                                                     // (a queue order or a new thing (HUB120) has no doc in the export to compare
                                                     // with: only `applied` settles it)
     if(!doc) return "gone";
@@ -1222,9 +1286,7 @@ function cardEl(c, full=false){
     const sel = el("select",{"aria-label":"Column", onclick:ev=>ev.stopPropagation(), onchange:ev=>moveTo(c.id, ev.target.value, 0)});
     for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===c.col}, col.name));
     more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
-      el("button",{type:"button", title:"Move to top", onclick:ev=>{ev.stopPropagation(); moveTo(c.id,c.col,0);}},"Top"),
-      el("button",{type:"button", title:"Move up", onclick:ev=>{ev.stopPropagation(); nudge(c.id,-1);}},"↑"),
-      el("button",{type:"button", title:"Move down", onclick:ev=>{ev.stopPropagation(); nudge(c.id,1);}},"↓")));
+      el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
     const ta = el("textarea",{placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
@@ -1235,15 +1297,7 @@ function cardEl(c, full=false){
       onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
     e.append(more); return e;
   }
-  if(!readOnly){   // hover controls: rank within the column
-    const hb = (label, tip, fn) => el("button",{type:"button", title:tip, "aria-label":tip+" ("+c.id+")", draggable:"false",
-      onclick:ev=>{ ev.stopPropagation(); fn(); }, onmousedown:ev=>ev.stopPropagation()}, label);
-    e.append(el("div",{class:"hov"},
-      hb("⤒","Move to top", ()=>moveTo(c.id, c.col, 0)),
-      hb("↑","Move up", ()=>nudge(c.id,-1)),
-      hb("↓","Move down", ()=>nudge(c.id,1)),
-      hb("⤓","Move to bottom", ()=>moveTo(c.id, c.col, colCards(c.col).filter(x=>x.id!==c.id).length))));
-  }
+  if(!readOnly) e.append(el("div",{class:"hov place"}, ...placeBtns(c)));   // hover controls: rank within the column
   if(picked.has(c.id)){ e.classList.add("sel"); e.setAttribute("aria-selected","true"); }
   e.addEventListener("click", ev=>{ if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); });
   e.addEventListener("keydown", ev=>{ if(ev.target===e && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); } });
@@ -1360,6 +1414,47 @@ function nudge(id, dir){
   const j = i + dir; if(j<0 || j>=list.length) return;
   moveTo(id, c.col, j);   // index in the list without this card
 }
+// HUB190: a card's placement controls: top, up, down, bottom and a chosen position. The same buttons (icons, tips,
+// look: CSS .place) on the card's hover bar and in the card window.
+function placeBtns(c){
+  const b = (label, tip, fn) => el("button",{type:"button", title:tip, "aria-label":tip+" ("+c.id+")", draggable:"false",
+    onclick:ev=>{ ev.stopPropagation(); fn(); }, onmousedown:ev=>ev.stopPropagation()}, label);
+  return [b("⤒","Move to top", ()=>moveTo(c.id, c.col, 0)),
+    b("↑","Move up", ()=>nudge(c.id,-1)),
+    b("↓","Move down", ()=>nudge(c.id,1)),
+    b("⤓","Move to bottom", ()=>moveTo(c.id, c.col, colCards(c.col).filter(x=>x.id!==c.id).length)),
+    b("#","Move to position…", ()=>askPosition(c.id))];
+}
+// the small dialogs over the board (a position to move to, an epic's or theme's details): one at a time, in #edm
+function closeEd(){ const box = $("#edm"); box.hidden = true; box.textContent = ""; if(!openId && !rank && $("#newm").hidden) document.body.classList.remove("modal-open"); }
+function edForm(label, ...kids){
+  const form = el("form",{class:"newf edf", role:"dialog", "aria-modal":"true", "aria-label":label}, ...kids);
+  const box = $("#edm"); box.textContent = ""; box.append(form); box.hidden = false; document.body.classList.add("modal-open");
+  return form;
+}
+// Esc and a click beside it close only this dialog, not the card window under it (capture: before the page's own Esc)
+addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#edm").hidden){ ev.preventDefault(); ev.stopImmediatePropagation(); closeEd(); } }, true);
+document.getElementById("edm").addEventListener("click", ev=>{ if(ev.target.id === "edm") closeEd(); });
+function askPosition(id){   // "Move to position": a number within the card's column, 1 the top
+  const c = cards.get(id); if(!c) return;
+  if(readOnly){ toast("This view is read-only."); return; }
+  const list = colCards(c.col), n = list.length, now = list.findIndex(x=>x.id===id) + 1;
+  const inp = el("input",{type:"number", id:"posN", min:"1", max:String(n), step:"1", value:String(now), inputmode:"numeric", required:true});
+  const err = el("p",{class:"err", role:"alert"});
+  const form = edForm("Move " + id + " to a position",
+    el("h3",{}, "Move to position"),
+    el("p",{class:"hint"}, id + " is " + now + " of " + n + " in " + (COL_NAME[c.col] || c.col) + "."),
+    el("label",{}, "Position (1 is the top, " + n + " the bottom)", inp), err,
+    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeEd}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Move")));
+  form.addEventListener("submit", ev=>{
+    ev.preventDefault();
+    const p = Number(inp.value);
+    if(!Number.isInteger(p) || p < 1 || p > n){ err.textContent = "Give a whole number from 1 to " + n + "."; return; }
+    closeEd();
+    if(p !== now) moveTo(id, c.col, p - 1);   // index in the column without this card
+  });
+  inp.focus({preventScroll:true}); inp.select();
+}
 
 function renderSync(){
   const sync = $("#sync"); if(!conn || !loaded) return;
@@ -1457,9 +1552,12 @@ function renderEpics(all){
       onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Projects")));
   if(folded){ box.scrollTop = 0; return; }
   fillProjects();   // HUB148: the switcher sits beside the title (placeProjSel), not in this panel
-  const epicBtn = (k,v) => el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
+  // HUB188: hovering an epic or a theme shows an edit icon that opens its editor (none when read-only)
+  const editBtn = (kind, k, v) => readOnly ? null : el("button",{type:"button", class:"eedit", title:"Edit this " + kind,
+      "aria-label":"Edit the " + kind + " " + (v.name || k), onclick:ev=>{ ev.stopPropagation(); openMetaEdit(kind, k); }}, "✎");
+  const epicBtn = (k,v) => el("div",{class:"ewrap"}, el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
-      el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k)));
+      el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k))), editBtn("epic", k, v));
   // epics grouped under their theme; epics with no or an unknown theme last, under "(no theme)"
   const groups = sortedThemes().map(([k,v])=>({k, v, eps: sortedEpics().filter(([ek])=>epicTheme(ek)===k)}))
     .filter(g => !filt.j || g.eps.length);   // with one project chosen: only the themes that hold its epics
@@ -1475,7 +1573,7 @@ function renderEpics(all){
           el("span",{class:"tn"}, g.v.name), ...statKids(cardStats(all, c=>epicTheme(c.epic)===g.k)))
       : el("div",{class:"tnone"}, nm);
     box.append(el("div",{class:"tgroup"+(isC?" collapsed":""), style:"--h:"+hue, role:"group", "aria-label":g.v ? "Theme "+nm : "Epics with no theme"},
-      el("div",{class:"thead"}, head, g.eps.length ? tog : null),
+      el("div",{class:"thead"}, head, g.v ? editBtn("theme", g.k, g.v) : null, g.eps.length ? tog : null),
       el("div",{class:"tepics"}, ...g.eps.map(([k,v])=>epicBtn(k,v)))));
   }
   if(!themes.size) for(const [k,v] of sortedEpics()) box.append(epicBtn(k,v));   // no themes: the plain list
@@ -1762,6 +1860,108 @@ $("#newbtn").addEventListener("click", ()=>openNew());
 document.getElementById("newm").addEventListener("click", ev=>{ if(ev.target.id === "newm") closeNew(); });
 document.addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#newm").hidden){ ev.preventDefault(); closeNew(); } });
 
+// ---------- HUB188: editing an epic's or a theme's details. One change {card: "epic:KEY" | "theme:KEY", field: "edit",
+// value: the fields that changed}, which `pm.py remote-apply` makes through projects.edit_meta (the same name rule as
+// `pm.py epic add`; an epic's theme stays in its project). Until the board has it (only `applied` settles it, as for a
+// new thing), the page shows the edit over the exported details (overlayMeta).
+// >>> edit-rules (tests/test_app.py runs this block)
+const META_EDIT = {epic: ["name", "blurb", "hue", "order", "theme"], theme: ["name", "blurb", "hue", "order"]};
+// why this edit would be refused, or "": kind "epic" | "theme", key, v = the fields sent; ctx = {themes, epics} (Maps)
+function metaEditProblem(kind, key, v, ctx){
+  if(!META_EDIT[kind]) return "Only an epic or a theme can be edited here.";
+  const own = (kind === "epic" ? ctx.epics : ctx.themes).get(key);
+  if(!own) return "That " + kind + " is not on the board.";
+  const keys = Object.keys(v || {});
+  if(!keys.length) return "Nothing changed.";
+  if(keys.some(k => !META_EDIT[kind].includes(k))) return "Only " + META_EDIT[kind].join(", ") + " can be changed.";
+  if("name" in v){
+    const n = typeof v.name === "string" ? v.name.trim() : "";
+    if(!n) return "Give it a name.";
+    if(kind === "epic" && n.length > EPIC_NAME_MAX) return "An epic's name is at most " + EPIC_NAME_MAX + " characters (a short label; the rest goes in the blurb).";
+    if(n.length > 200) return "The name is at most 200 characters.";
+  }
+  if("blurb" in v && (typeof v.blurb !== "string" || v.blurb.length > 600)) return "The blurb is at most 600 characters.";
+  if("hue" in v && !(Number.isInteger(v.hue) && v.hue >= 0 && v.hue <= 359)) return "The colour (hue) is a whole number from 0 to 359.";
+  if("order" in v && !(Number.isInteger(v.order) && v.order >= 0 && v.order <= 9999)) return "The order is a whole number from 0 to 9999.";
+  if("theme" in v){
+    const t = ctx.themes.get(v.theme);
+    if(!t) return "Choose one of the board's themes.";
+    if(own.project && t.project && t.project !== own.project) return "The theme is of another project: an epic stays in its project.";
+  }
+  return "";
+}
+// <<< edit-rules
+const metaBase = {ready: false, epics: new Map(), themes: new Map()};   // the exported details, before this page's edits
+function snapMeta(){   // load(): keep the export's epics and themes, so an edit that is refused falls back to them
+  metaBase.epics = new Map([...epics].map(([k, v]) => [k, Object.assign({}, v)]));
+  metaBase.themes = new Map([...themes].map(([k, v]) => [k, Object.assign({}, v)]));
+  metaBase.ready = true;
+}
+function overlayMeta(){   // rebuild(): the exported details with the edits on their way drawn over them
+  if(!metaBase.ready) return;
+  for(const [m, base] of [[epics, metaBase.epics], [themes, metaBase.themes]]){ m.clear(); for(const [k, v] of base) m.set(k, Object.assign({}, v)); }
+  for(const ch of [...changes.values()].filter(x => x.field === "edit").sort((a, b) => String(a.ts || "").localeCompare(String(b.ts || "")))){
+    const [kind, key] = [String(ch.card).split(":")[0], String(ch.card).slice(String(ch.card).indexOf(":") + 1)];
+    const x = (kind === "epic" ? epics : kind === "theme" ? themes : new Map()).get(key);
+    if(x && ch.value && typeof ch.value === "object") Object.assign(x, ch.value, {_pending: true});
+  }
+}
+// The editor of an epic's or a theme's details: openMetaEdit("epic", key) or openMetaEdit("theme", key). Reusable from
+// any tab (the board's Projects panel; the Gantt, HUB189). Read-only views get a toast instead.
+function openMetaEdit(kind, key){
+  if(readOnly){ toast("This view is read-only."); return; }
+  const m = kind === "epic" ? epics : kind === "theme" ? themes : null, cur = m && m.get(key);
+  if(!cur){ toast("That " + kind + " is not on the board."); return; }
+  const field = (label, input) => el("label",{}, label, input);
+  const err = el("p",{class:"err", role:"alert"});
+  const nm = el("input",{id:"edName", maxlength: kind === "epic" ? String(EPIC_NAME_MAX) : "200", autocomplete:"off", required:true, value: cur.name || key});
+  const bl = el("textarea",{id:"edBlurb", maxlength:"600", placeholder:"What it " + (kind === "epic" ? "delivers" : "covers") + " (optional)"});
+  bl.value = cur.blurb || "";
+  const hue0 = Number.isInteger(cur.hue) ? cur.hue : 210;
+  const sw = el("i",{style:"--h:" + hue0, "aria-hidden":"true"});
+  const hu = el("input",{id:"edHue", type:"range", min:"0", max:"359", step:"1", value:String(hue0), "aria-label":"Colour (hue)"});
+  const hn = el("input",{type:"number", min:"0", max:"359", step:"1", value:String(hue0), inputmode:"numeric", "aria-label":"Hue in degrees", style:"width:5.5em"});
+  hu.addEventListener("input", () => { hn.value = hu.value; sw.style.setProperty("--h", hu.value); });
+  hn.addEventListener("input", () => { if(hn.value !== "" && Number(hn.value) >= 0 && Number(hn.value) <= 359){ hu.value = hn.value; sw.style.setProperty("--h", hn.value); } });
+  const or = el("input",{id:"edOrder", type:"number", min:"0", max:"9999", step:"1", inputmode:"numeric", value: Number.isInteger(cur.order) ? String(cur.order) : "", placeholder:"(none)"});
+  let th = null;
+  if(kind === "epic"){
+    const own = cur.project;
+    const list = [...themes.entries()].filter(([k, t]) => k === cur.theme || !own || !t.project || t.project === own)
+      .sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[1].name || a[0]).localeCompare(String(b[1].name || b[0])));
+    th = el("select",{id:"edTheme"}, ...(themes.has(cur.theme) ? [] : [el("option",{value:"", selected:true}, cur.theme ? cur.theme + " (not on the board)" : "(no theme)")]),
+      ...list.map(([k, t]) => el("option",{value:k, selected: k === cur.theme ? true : null}, t.name || k)));
+  }
+  const proj = projects.get(cur.project)?.name || cur.project || "";
+  const form = edForm("Edit " + kind + " " + (cur.name || key),
+    el("h3",{}, "Edit " + kind),
+    field("Name" + (kind === "epic" ? " (at most " + EPIC_NAME_MAX + " characters)" : ""), nm),
+    th ? field("Theme", th) : null,
+    field("Blurb", bl),
+    el("div",{class:"two"}, field("Colour (hue)", el("span",{class:"hue"}, sw, hu, hn)), field("Order in the panel", or)),
+    el("p",{class:"hint"}, "Key " + key + (proj ? " · project " + proj : "") + ": these stay." + (cur._pending ? " An earlier edit is still on its way to the board." : "")),
+    err,
+    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeEd}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Save")));
+  form.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const now = {name: nm.value.trim(), blurb: bl.value.trim(), hue: Number(hn.value)};
+    if(or.value !== "") now.order = Number(or.value);
+    if(th && th.value) now.theme = th.value;
+    const v = {};   // only what changed, so an edit made on the desktop meanwhile to another field stays
+    for(const [k, x] of Object.entries(now)) if(!sameValue(x, k === "hue" ? hue0 : cur[k])) v[k] = x;
+    if(!Object.keys(v).length){ closeEd(); toast("Nothing changed."); return; }
+    const why = metaEditProblem(kind, key, v, {themes, epics});
+    if(why){ err.textContent = why; return; }
+    const ref = {id: kind + ":" + key};
+    let prev = null;   // an earlier edit still on its way: the later one carries its fields too (it replaces it on the page)
+    for(const ch of changes.values()) if(ch.card === ref.id && ch.field === "edit" && ch.value && typeof ch.value === "object") prev = ch.value;
+    change(ref, "edit", Object.assign({}, prev || {}, v));
+    closeEd(); rebuild(); render();
+    toast("Sent: the board updates the " + kind + " within about a minute.");
+  });
+  nm.focus({preventScroll:true});
+}
+
 // card drag with pointer events (not native HTML5 drag, which blocks the mouse wheel in Chromium): the wheel scrolls
 // the page (Shift+wheel or a sideways wheel the board) while a card is held, and the pointer's edge zones auto-scroll.
 // Mouse: drag after moving 5px (less is a click). Touch and pen: drag after a 350ms press; moving sooner scrolls. Esc cancels.
@@ -1899,11 +2099,12 @@ document.addEventListener("contextmenu", ev=>{ if(drag) ev.preventDefault(); });
 
 // drag the board with the mouse (anywhere except on cards and controls): sideways scrolls the columns, up/down the
 // page; touch keeps native scrolling. The Gantt has the same (HUB121): `box` is what scrolls sideways
-function dragPan(board, box, skip){
+function dragPan(board, box, skip, only){   // only: a pan starts only on what matches it (HUB160: the Gantt chart itself)
   let pan = null, moved = false;
   board.addEventListener("pointerdown", ev=>{
     moved = false;
     if(ev.pointerType !== "mouse") return;
+    if(only && !ev.target.closest(only)) return;
     // left button: empty board space only (cards keep their own drag); right button: anywhere, cards included
     if(ev.button === 0 ? ev.target.closest(skip) : ev.button !== 2) return;
     if(ev.button === 2 && ev.target.closest("input, textarea")) return;        // the text fields keep their menu
@@ -1922,7 +2123,7 @@ function dragPan(board, box, skip){
   board.addEventListener("click", ev=>{ if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; } }, true);   // a pan isn't a click (column headers collapse on click)
 }
 dragPan($("#board"), () => $("#board"), ".card, button, select, input, textarea, a");
-dragPan($("#gantt"), () => $("#gantt .gwrap"), ".gbar, .gms, .glab, button, select, input, textarea, a");
+dragPan($("#gantt"), () => $("#gantt .gwrap"), ".gbar, .gms, .glab, button, select, input, textarea, a", ".gwrap");
 // middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways): the further the
 // pointer from the click point, the faster; it stops when the button is released
 function autoScroll(board, box){
@@ -1978,6 +2179,30 @@ function sv(tag, attrs={}, ...kids){
   for(const k of kids.flat()) if(k != null && k !== false) e.append(k);
   return e;
 }
+// >>> graph-window
+// HUB177 (the user, 2026-11-19): every graph on the Machines tab spans the same window, the span chosen (6 h, 12 h,
+// a day) ending now. A machine whose file stops earlier (an offline laptop) shows a gap there, not a shorter axis.
+let graphWin = null;                            // the window of the drawing in progress; null = worked out now
+function graphWindow(){ if(graphWin) return graphWin; const b = Math.floor(Date.now() / 60000) * 60000; return {a: b - tokHours * 3600000, b}; }
+function winSlice(end, step, len, win){   // the points of a history (len points of step ms, the last ending at end) that the window shows
+  const first = end - len * step;          // where point 0 starts
+  const k0 = Math.floor((win.a - first) / step), k1 = Math.ceil((win.b - first) / step);
+  return {k0, n: Math.max(1, k1 - k0), t0: first + k0 * step};   // point i of the window is the file's point k0 + i (none outside 0..len-1)
+}
+function winIndex(px, L, pw, win, t0, step){ return Math.floor((win.a + (px - L) / pw * (win.b - win.a) - t0) / step); }   // the point under a pointer
+function winTicks(win, xt, L, pw){   // [x, "hh:00"] of the window's hour lines: every hour, 2 or 6 by its length
+  const hours = (win.b - win.a) / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(win.a), out = [];
+  tick.setMinutes(0, 0, 0);
+  for(let k = 0; k < 60; k++){
+    tick.setHours(tick.getHours() + 1);
+    if(tick.getTime() > win.b) break;
+    if(tick.getHours() % every) continue;
+    const x = xt(tick.getTime());
+    if(x >= L + 14 && x <= L + pw - 14) out.push([x, String(tick.getHours()).padStart(2, "0") + ":00"]);
+  }
+  return out;
+}
+// <<< graph-window
 function usageStats(d){
   const nums = a => (Array.isArray(a) ? a : []).filter(v => typeof v === "number");
   const avg = a => { const x = nums(a); return x.length ? Math.round(x.reduce((s, v) => s + v, 0) / x.length) : null; };
@@ -2001,48 +2226,47 @@ function drawUsage(box, machine){
   const d = usage.get(machine);
   if(!d || !d.end || !Array.isArray(d.cpu) || !d.cpu.length){ box.hidden = true; return; }
   box.hidden = false;
-  const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
-  const sig = [d.end, d.cpu.length, w].join("|"), had = usageEls.get(machine);
+  const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300))), win = graphWindow();
+  const sig = [d.end, d.cpu.length, w, win.a, win.b].join("|"), had = usageEls.get(machine);
   if(had && had.sig === sig){ if(box.firstChild !== had.node) box.replaceChildren(had.node); return; }   // same data, same width: the same picture
   const node = buildUsage(d, machine, w);
   usageEls.set(machine, {sig, node});
   box.replaceChildren(node);
 }
-function buildUsage(d, machine, w){
-  const n = d.cpu.length, step = (d.step || 300) * 1000, end = d.end * 1000, t0 = end - n * step;
-  const mem = Array.isArray(d.mem) ? d.mem : [], games = Array.isArray(d.games) ? d.games : [], slots = Array.isArray(d.slots) ? d.slots : [];
-  const s = usageStats(d);
+function buildUsage(d0, machine, w){
+  // HUB177: the graph spans the Machines tab's one window (graphWindow), ending now, whatever the file holds: the
+  // file's points are placed in it by their time, and a stretch it has no point for (a machine that stopped
+  // reporting) is a gap, not a shorter axis
+  const step = (d0.step || 300) * 1000, end = d0.end * 1000, win = graphWindow();
+  const {k0, n, t0} = winSlice(end, step, d0.cpu.length, win);
+  const pick = a => Array.from({length: n}, (_, i) => Array.isArray(a) && k0 + i >= 0 && k0 + i < a.length ? a[k0 + i] : null);
+  const d = {step: d0.step, end: d0.end, cpu: pick(d0.cpu), mem: pick(d0.mem), games: pick(d0.games), slots: pick(d0.slots)};
+  const mem = d.mem, games = d.games, slots = d.slots;
+  const s = usageStats(d), fresh = end >= win.b - 3 * step;   // its "now" figures only while the file is current
   // two plots on one time axis, each with its own single scale: per cent above, a count of games below
-  const L = 34, R = 8, pw = w - L - R, T1 = 6, H1 = 96, T2 = T1 + H1 + 14, H2 = 34, H = T2 + H2 + 16, bw = pw / n;
-  const xi = i => L + bw * (i + .5), xt = t => L + pw * (t - t0) / (end - t0);
+  const L = 34, R = 8, pw = w - L - R, T1 = 6, H1 = 96, T2 = T1 + H1 + 14, H2 = 34, H = T2 + H2 + 16;
+  const xt = t => L + pw * (Math.max(win.a, Math.min(win.b, t)) - win.a) / (win.b - win.a), xi = i => xt(t0 + (i + .5) * step);
   const y1 = v => T1 + H1 * (1 - Math.min(100, Math.max(0, v)) / 100);
   const most = Math.max(1, s.slotsMax || 0, s.gamesMax || 0), y2 = v => T2 + H2 * (1 - Math.min(most, Math.max(0, v)) / most);
   const f = v => v.toFixed(1);
   const line = a => { let p = "", open = false;
     a.forEach((v, i) => { if(typeof v !== "number"){ open = false; return; } p += (open ? "L" : "M") + f(xi(i)) + " " + f(y1(v)) + (open ? "" : "h.01"); open = true; });
     return p; };
-  const steps = (a, fill) => { let p = "", open = false;
-    a.forEach((v, i) => { const xl = L + bw * i;
+  const steps = (a, fill) => { let p = "", open = false, xr = L;
+    a.forEach((v, i) => { const xl = xt(t0 + i * step);
       if(typeof v !== "number"){ if(open && fill) p += `L${f(xl)} ${f(y2(0))}Z`; open = false; return; }
+      xr = xt(t0 + (i + 1) * step);
       p += open ? `L${f(xl)} ${f(y2(v))}` : (fill ? `M${f(xl)} ${f(y2(0))}L${f(xl)} ${f(y2(v))}` : `M${f(xl)} ${f(y2(v))}`);
-      p += `L${f(xl + bw)} ${f(y2(v))}`; open = true; });
-    if(open && fill) p += `L${f(L + pw)} ${f(y2(0))}Z`;
+      p += `L${f(xr)} ${f(y2(v))}`; open = true; });
+    if(open && fill) p += `L${f(xr)} ${f(y2(0))}Z`;
     return p; };
   const grid = (y, label) => [sv("line",{x1:L, x2:L + pw, y1:f(y), y2:f(y), stroke:"var(--line)", "stroke-width":1}),
                               sv("text",{x:L - 5, y:f(y + 3.5), "text-anchor":"end"}, label)];
   const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":usageSummary(d, machine)});
   svg.append(...grid(y1(100), "100%"), ...grid(y1(50), "50"), ...grid(y1(0), "0"), ...grid(y2(most), String(most)), ...grid(y2(0), "0"));
-  const hours = (end - t0) / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
-  tick.setMinutes(0, 0, 0);
-  for(let k = 0; k < 30; k++){
-    tick.setHours(tick.getHours() + 1);
-    if(tick.getTime() > end) break;
-    if(tick.getTime() < t0 || tick.getHours() % every) continue;
-    const x = xt(tick.getTime());
-    if(x < L + 14 || x > L + pw - 14) continue;
+  for(const [x, label] of winTicks(win, xt, L, pw))
     svg.append(sv("line",{x1:f(x), x2:f(x), y1:T1, y2:T2 + H2, stroke:"var(--line)", "stroke-width":1}),
-               sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
-  }
+               sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, label));
   svg.append(sv("path",{d:steps(games, true), fill:"var(--u-games)", "fill-opacity":.2}),
              sv("path",{d:steps(games, false), fill:"none", stroke:"var(--u-games)", "stroke-width":1.5, "stroke-linejoin":"round"}),
              sv("path",{d:steps(slots, false), fill:"none", stroke:"var(--muted)", "stroke-width":1}),
@@ -2076,7 +2300,7 @@ function buildUsage(d, machine, w){
     tipEl.style.left = x < w / 2 ? (x + 10) + "px" : "auto";
     tipEl.style.right = x < w / 2 ? "auto" : (w - x + 10) + "px";
   };
-  const point = ev => { const r = svg.getBoundingClientRect(); show(Math.floor((ev.clientX - r.left - L) / bw)); };
+  const point = ev => { const r = svg.getBoundingClientRect(); show(winIndex(ev.clientX - r.left, L, pw, win, t0, step)); };
   svg.addEventListener("pointermove", point);
   svg.addEventListener("pointerdown", point);
   svg.addEventListener("pointerleave", hide);
@@ -2089,11 +2313,13 @@ function buildUsage(d, machine, w){
   });
   plot.addEventListener("blur", hide);
   const leg = (k, name, v) => el("span",{}, k, name + " ", el("b",{}, v));
-  const legend = el("div",{class:"uleg"}, leg(key("--u-cpu"), "Processor", val(s.cpuNow, "%")), leg(key("--u-mem"), "Memory", val(s.memNow, "%")),
-    leg(key("--u-games", "box"), "Games running", val(s.gamesNow, "")), leg(key("--muted", "thin"), "Slots offered", val(s.slotsNow, "")));
+  const now = v => fresh ? v : null;   // an offline machine's last figures are not "now"
+  const legend = el("div",{class:"uleg"}, leg(key("--u-cpu"), "Processor", val(now(s.cpuNow), "%")), leg(key("--u-mem"), "Memory", val(now(s.memNow), "%")),
+    leg(key("--u-games", "box"), "Games running", val(now(s.gamesNow), "")), leg(key("--muted", "thin"), "Slots offered", val(now(s.slotsNow), "")));
   // the same numbers as a table, hour by hour, newest first
   const byHour = new Map();
   for(let i = 0; i < n; i++){
+    if(typeof d.cpu[i] !== "number" && typeof mem[i] !== "number") continue;   // no data: no row
     const h = new Date(t0 + i * step); h.setMinutes(0, 0, 0);
     const g = byHour.get(h.getTime()) || {cpu: [], mem: [], games: [], slots: []};
     g.cpu.push(d.cpu[i]); g.mem.push(mem[i]); g.games.push(games[i]); g.slots.push(slots[i]);
@@ -2105,7 +2331,7 @@ function buildUsage(d, machine, w){
   const table = el("details",{}, el("summary",{}, "Table"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, ...["Hour", "Processor", "Memory", "Most games", "Slots"].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
   return el("div",{class:"usage"}, legend, plot,
-    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per point. Processor average ${val(s.cpuAvg, "%")}, peak ${val(s.cpuMax, "%")}; `
+    el("p",{class:"note"}, (fresh ? `Up to ${hm(end)}` : `No data since ${day(end)} ${hm(end)}`) + `, ${Math.round(step / 60000)} min per point. Processor average ${val(s.cpuAvg, "%")}, peak ${val(s.cpuMax, "%")}; `
       + `memory average ${val(s.memAvg, "%")}, peak ${val(s.memMax, "%")}; at most ${s.gamesMax || 0} games at once.`), table);
 }
 addEventListener("resize", () => { clearTimeout(usageSoon.t); usageSoon.t = setTimeout(() => {   // a new width: the graphs are drawn to fit
@@ -2115,7 +2341,9 @@ addEventListener("resize", () => { clearTimeout(usageSoon.t); usageSoon.t = setT
 const tokens = new Map(), tokEls = new Map();   // machine -> its history / {sig, node}
 let tokMode = "all";                            // "all" | "new" (without what was read back from the cache)
 let tokHours = 24;                              // the span shown: the last day by default (the node keeps a day)
-let tokPick = "";                               // one session or agent shown alone; "" = all of them, stacked
+const tokPicks = new Map();                     // HUB178: per graph (machine or TOK_ALL), the session or agent shown alone; none = all, stacked
+function tokPickOf(machine){ return tokPicks.get(machine) || ""; }
+function setTokPick(machine, name){ if(name) tokPicks.set(machine, name); else tokPicks.delete(machine); }
 const TOK_COL = ["--c-prog", "--c-decide", "--c-done", "--c-test", "--c-built", "--c-next", "--c-refining", "--c-refined", "--c-rej", "--c-back"];
 const TOK_ALL = "all machines";                 // the total graph's key: a machine's name never has a space
 // The long-context marker (HUB40): a session or agent whose context is long, because it has run a long time, re-reads
@@ -2126,10 +2354,11 @@ const CTX_LONG = 150000, AGE_LONG = 8 * 3600000;
 function fmtTok(v){
   return v >= 1e9 ? (v / 1e9).toFixed(2) + " bn" : v >= 1e6 ? (v / 1e6).toFixed(v >= 1e8 ? 0 : 1) + " M" : v >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v));
 }
-function tokSeries(d){   // the file's series, checked, with one value per point of the span shown for the chosen view; largest first
-  const full = Math.max(0, ...d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0));
-  const n = Math.max(1, Math.min(full, Math.round(tokHours * 3600 / (d.step || 1800)))), skip = full - n;
-  const arr = a => Array.from({length: n}, (_, i) => Array.isArray(a) && typeof a[skip + i] === "number" && a[skip + i] > 0 ? a[skip + i] : 0);
+function tokSeries(d){   // the file's series, checked, with one value per point of the window (graphWindow); largest first
+  const full = Math.max(0, ...d.series.map(s => s && Array.isArray(s.read) ? s.read.length : 0)), step = (d.step || 1800) * 1000;
+  const {k0, n, t0} = winSlice(d.end * 1000, step, full, graphWindow());   // HUB177: placed by time, ending now
+  const arr = a => Array.from({length: n}, (_, i) => Array.isArray(a) && typeof a[k0 + i] === "number" && a[k0 + i] > 0 ? a[k0 + i] : 0);
+  const lastUse = a => { for(let k = Math.min(full, Array.isArray(a) ? a.length : 0) - 1; k >= 0; k--) if(a[k] > 0) return Math.min(Date.now(), d.end * 1000 - (full - k - 1) * step); return 0; };
   const sum = a => a.reduce((x, y) => x + y, 0);
   const num = v => typeof v === "number" && v > 0 ? v : 0;
   const rows = d.series.filter(s => s && typeof s === "object").map(s => {
@@ -2138,10 +2367,12 @@ function tokSeries(d){   // the file's series, checked, with one value per point
     const of = s.of ? String(s.of).slice(0, 40) : "";
     const what = s.kind === "session" ? "session" : s.kind === "agent" ? "agent of " + (of || "a session")
       : s.kind === "agents" ? "agents without a name of their own" : "the rest";
+    // HUB180: when it last used tokens: its latest reply (ctx_at), else the end of its last half hour with output
+    const last = Math.max(num(s.ctx_at) * 1000, lastUse(s.out));
     return {name: String(s.name || "unnamed").slice(0, 48), kind: String(s.kind || ""), what, val, fresh: sum(fresh), read: sum(rd), out: sum(out), total: sum(val),
-            ctx: num(s.ctx), ctxAt: num(s.ctx_at) * 1000, since: num(s.since) * 1000};
+            ctx: num(s.ctx), ctxAt: num(s.ctx_at) * 1000, since: num(s.since) * 1000, last};
   }).sort((a, b) => b.total - a.total);
-  return {n, rows};
+  return {n, rows, t0, step};
 }
 function tokMerged(){   // every machine's file summed into one, aligned on the half hours: the total graph
   const docs = [...tokens.values()].filter(d => d && d.end && Array.isArray(d.series) && d.series.length);
@@ -2197,55 +2428,49 @@ function drawTokens(box, machine){
   if(!d || !d.end || !Array.isArray(d.series) || !d.series.length){ box.hidden = true; return; }
   box.hidden = false;
   const w = Math.max(200, Math.min(900, Math.round(box.clientWidth || 300)));
-  const sig = [d.end, d.series.length, w, tokMode, tokHours, tokPick, Math.floor(Date.now() / 600000)].join("|"), had = tokEls.get(machine);
+  const win = graphWindow();
+  const sig = [d.end, d.series.length, w, tokMode, win.a, win.b, tokPickOf(machine)].join("|"), had = tokEls.get(machine);
   if(had && had.sig === sig){ if(box.firstChild !== had.node) box.replaceChildren(had.node); return; }
   const node = buildTokens(d, machine, w);
   tokEls.set(machine, {sig, node});
   box.replaceChildren(node);
 }
 function buildTokens(d, machine, w){
-  const {n, rows} = tokSeries(d);
-  const step = (d.step || 1800) * 1000, end = d.end * 1000, t0 = end - n * step;
+  const {n, rows, t0, step} = tokSeries(d), win = graphWindow(), end = Math.min(d.end * 1000, win.b);
   // every session and agent has its own band and legend entry, none summed into "more" (the user, 2026-11-17, HUB92);
   // the colours repeat past the palette, and the hover names each band
   const shown = rows.filter(r => r.total > 0);
   const colOf = r => { const i = shown.indexOf(r); return TOK_COL[Math.max(0, i) % TOK_COL.length]; };
-  const picked = rows.find(r => r.name === tokPick);
+  const picked = rows.find(r => r.name === tokPickOf(machine));
   let stack = shown.map(r => ({name: r.name, col: colOf(r), val: r.val}));
   if(picked) stack = [{name: picked.name, col: colOf(picked), val: picked.val}];   // one session or agent alone, on its own scale
   const tot = Array.from({length: n}, (_, i) => stack.reduce((s, r) => s + r.val[i], 0)), most = Math.max(1, ...tot);
   const all = picked ? picked.total : rows.reduce((s, r) => s + r.total, 0);
-  const L = 44, R = 8, pw = w - L - R, T = 6, Hh = 110, H = T + Hh + 16, bw = pw / Math.max(1, n);
+  const L = 44, R = 8, pw = w - L - R, T = 6, Hh = 110, H = T + Hh + 16;
+  const xt = t => L + pw * (Math.max(win.a, Math.min(win.b, t)) - win.a) / (win.b - win.a);   // HUB177: by time, in the shared window
+  const bx = i => xt(t0 + i * step), bwOf = i => Math.max(0, bx(i + 1) - bx(i));
   const f = v => v.toFixed(1), y = v => T + Hh * (1 - v / most);
   const hm = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
   const day = t => new Date(t).toLocaleDateString([], {day:"numeric", month:"short"});
-  const hours = Math.round(n * step / 360000) / 10;
+  const hours = Math.round((win.b - win.a) / 360000) / 10;
   const view = tokMode === "all" ? "all tokens" : "tokens without cache reads";
+  const fresh = d.end * 1000 >= win.b - step;   // the file is current: its last bar is the one running now
   const words = `${machine}, Claude ${view} in the last ${hours} h: ${fmtTok(all)} in all` + (picked ? ` for ${picked.name}.` : ". " + rows.slice(0, 8).map(r => `${r.name} ${fmtTok(r.total)}`).join(", ") + ".");
   const svg = sv("svg",{width:w, height:H, viewBox:`0 0 ${w} ${H}`, role:"img", "aria-label":words});
   for(const [v, label] of [[most, fmtTok(most)], [most / 2, fmtTok(most / 2)], [0, "0"]])
     svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, label));
-  const every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(t0);
-  tick.setMinutes(0, 0, 0);
-  for(let k = 0; k < 30; k++){
-    tick.setHours(tick.getHours() + 1);
-    if(tick.getTime() > end) break;
-    if(tick.getTime() < t0 || tick.getHours() % every) continue;
-    const x = L + pw * (tick.getTime() - t0) / (end - t0);
-    if(x < L + 14 || x > L + pw - 14) continue;
-    svg.append(sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
-  }
+  for(const [x, label] of winTicks(win, xt, L, pw)) svg.append(sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, label));
   for(let i = 0; i < n; i++){   // one stacked bar per point, the largest series at the bottom, a gap between bars
     let base = 0;
     for(const s of stack){
       const v = s.val[i];
       if(!v) continue;
       const top = y(base + v), h = y(base) - top;
-      svg.append(sv("rect",{x:f(L + bw * i + .5), y:f(top), width:f(Math.max(1, bw - 1)), height:f(Math.max(.5, h)), fill:`var(${s.col})`}));
+      if(bwOf(i) > 0) svg.append(sv("rect",{x:f(bx(i) + .5), y:f(top), width:f(Math.max(1, bwOf(i) - 1)), height:f(Math.max(.5, h)), fill:`var(${s.col})`}));
       base += v;
     }
   }
-  const mark = sv("rect",{x:0, y:T, width:f(bw), height:Hh, fill:"var(--ink)", "fill-opacity":.08, visibility:"hidden"});
+  const mark = sv("rect",{x:0, y:T, width:f(bwOf(n - 1)), height:Hh, fill:"var(--ink)", "fill-opacity":.08, visibility:"hidden"});
   svg.append(mark);
   const key = c => { const k = el("i",{class:"ukey box"}); k.style.background = `var(${c})`; k.style.opacity = 1; return k; };
   const tipEl = el("div",{class:"utip", hidden:true});
@@ -2253,15 +2478,15 @@ function buildTokens(d, machine, w){
   const hide = () => { at = -1; tipEl.hidden = true; mark.setAttribute("visibility", "hidden"); };
   const show = i => {
     at = Math.min(n - 1, Math.max(0, i));
-    const x = L + bw * at, t = t0 + at * step;
-    mark.setAttribute("x", f(x)); mark.setAttribute("visibility", "visible");
+    const x = bx(at), t = t0 + at * step;
+    mark.setAttribute("x", f(x)); mark.setAttribute("width", f(bwOf(at))); mark.setAttribute("visibility", "visible");
     tipEl.replaceChildren(el("div",{class:"ut"}, `${day(t)} ${hm(t)} to ${hm(t + step)}: `, el("b",{}, fmtTok(tot[at]))),
       ...stack.filter(s => s.val[at]).map(s => el("div",{}, key(s.col), el("b",{}, fmtTok(s.val[at])), " " + s.name)));
     tipEl.hidden = false;
-    tipEl.style.left = x < w / 2 ? (x + bw + 8) + "px" : "auto";
+    tipEl.style.left = x < w / 2 ? (x + bwOf(at) + 8) + "px" : "auto";
     tipEl.style.right = x < w / 2 ? "auto" : (w - x + 8) + "px";
   };
-  const point = ev => { const r = svg.getBoundingClientRect(); show(Math.floor((ev.clientX - r.left - L) / bw)); };
+  const point = ev => { const r = svg.getBoundingClientRect(); show(winIndex(ev.clientX - r.left, L, pw, win, t0, step)); };
   svg.addEventListener("pointermove", point);
   svg.addEventListener("pointerdown", point);
   svg.addEventListener("pointerleave", hide);
@@ -2276,15 +2501,17 @@ function buildTokens(d, machine, w){
   const btn = (on, label, go) => { const b = el("button",{type:"button", class:"tmode" + (on ? " on" : ""), "aria-pressed":String(on)}, label);
     b.addEventListener("click", () => { if(!on){ go(); renderStatus(); } }); return b; };
   const mode = (id, label) => btn(tokMode === id, label, () => { tokMode = id; });
-  const span = (h, label) => btn(tokHours === h, label, () => { tokHours = h; });
-  const pick = (name, label, col) => { const b = btn(tokPick === name, "", () => { tokPick = name; });
-    if(col) b.append(key(col)); b.append(label); return b; };
+  // HUB178 (the user, 2026-11-19): one drop-down per graph picks a session or agent to show alone, instead of a
+  // button for every one of them on the page; "Every one" stacks them all again. The swatch is the one picked's colour.
+  const sel = el("select",{class:"tpick", "aria-label":"Show one session or agent alone in the token graph of " + machine},
+    el("option",{value:""}, "Every one (" + shown.length + ")"),
+    ...shown.map(r => el("option",{value:r.name}, r.name + " · " + fmtTok(r.total))));
+  sel.value = picked ? picked.name : "";
+  sel.addEventListener("change", () => { setTokPick(machine, sel.value); renderStatus(); });
   const head = el("div",{class:"uleg"}, el("span",{}, (picked ? picked.name + " " : "Claude tokens ") , el("b",{}, fmtTok(all))),
-    mode("all", "All"), mode("new", "Without cache reads"), span(6, "6 h"), span(12, "12 h"), span(24, "Day"));
-  // the legend picks one session or agent to show alone; "Every one" stacks them all again
-  const legend = el("div",{class:"uleg"}, pick("", "Every one"), ...shown.map(r => pick(r.name, r.name, colOf(r))));
-  return el("div",{class:"usage"}, head, legend, plot,
-    el("p",{class:"note"}, `Up to ${hm(end)}, ${Math.round(step / 60000)} min per bar, ${view}` + (picked ? `, ${picked.name} alone` : "") + ". "
+    mode("all", "All"), mode("new", "Without cache reads"), el("label",{class:"tpickl"}, picked ? key(colOf(picked)) : null, sel));
+  return el("div",{class:"usage"}, head, plot,
+    el("p",{class:"note"}, (fresh ? `Up to ${hm(end)}` : `No data since ${day(d.end * 1000)} ${hm(d.end * 1000)}`) + `, ${Math.round(step / 60000)} min per bar, ${view}` + (picked ? `, ${picked.name} alone` : "") + ". "
       + (machine === TOK_ALL ? "Every machine's sessions and agents together." : "Sessions that ran on this machine;") + " an agent is counted on its own line, not in its session's."));
 }
 function tokRate(r, step){   // tokens per hour over the last hour of the series (HUB90): who is using them now
@@ -2294,7 +2521,7 @@ function tokRate(r, step){   // tokens per hour over the last hour of the series
 
 // ---------- machines, jobs and hub state (export/status.json, written by the primary node)
 const TONE = {online:"ok", idle:"ok", up:"ok", done:"ok", busy:"warn", working:"warn", running:"warn", claimed:"warn", queued:"warn",
-              stale:"bad", down:"bad", failed:"bad", lost:"bad", behind:"bad"};
+              offline:"bad", down:"bad", failed:"bad", lost:"bad", behind:"bad"};
 function stateEl(text){ return el("span",{class:"state " + (TONE[text] || "")}, text); }
 function agoEl(t, after){   // a time that counts on by itself (tickAgo), so the tab need not be rebuilt for it
   return el("span",{class:"ago", "data-t":String(t), "data-after":after}, fmtDur(Math.max(0, Date.now() - t)) + after);
@@ -2338,30 +2565,50 @@ function heatOf(v, most){   // the tokens/hr cell's row colour: from none to a s
 }
 
 // ---------- Machines
-function machineRows(machine, sessions){   // a machine's sessions and agents: the registered ones and the token file's, merged
+function tokRows(machine){   // a machine's token file's rows with their rate, or []
   const d = tokens.get(machine), step = d && d.step || 1800;
-  const tok = d && d.end && Array.isArray(d.series) ? tokSeries(d).rows : [];
+  return d && d.end && Array.isArray(d.series) ? tokSeries(d).rows.map(r => ({r, rate: tokRate(r, step), machine})) : [];
+}
+function machineRows(machine, sessions){   // a machine's sessions and agents: the registered ones and the token file's, merged
   const by = new Map();
-  for(const r of tok) by.set(r.name, {name: r.name, what: r.what, tok: r, rate: tokRate(r, step)});
+  // a token row with nothing in the span shown is history, not a row of its own (HUB180: it read as a 0 that looked broken)
+  for(const {r, rate} of tokRows(machine)) if(r.total > 0) by.set(r.name, {name: r.name, what: r.what, tok: r, rate, graph: machine});
   for(const s of sessions){
-    const row = by.get(s.name) || {name: s.name, what: "", tok: null, rate: 0};
+    let row = by.get(s.name);
+    if(!row){   // HUB180: registered under another machine than its tokens were counted on (or under none): found by its name
+      const hit = [...tokens.keys()].flatMap(tokRows).find(x => x.r.name === s.name && (x.r.kind === "session" || x.r.kind === "agent"));
+      row = hit ? {name: s.name, what: hit.r.what, tok: hit.r, rate: hit.rate, graph: hit.machine} : {name: s.name, what: "", tok: null, rate: 0, graph: machine};
+    }
     row.s = s;
     by.set(s.name, row);
   }
   return [...by.values()].sort((x, y) => y.rate - x.rate || (y.tok ? y.tok.total : 0) - (x.tok ? x.tok.total : 0) || x.name.localeCompare(y.name));
 }
+// HUB180: "—" only where there truly is no figure, with the reason on hover; a 0 is a real figure and says so on hover
+const NO_TOK = "No Claude token history under this name: the node counts a session by the HUB_SESSION name its hub commands use, "
+  + "and keeps a day";
+function noData(why){ return el("span",{class:"nodata", title:why, "aria-label":"no data: " + why}, "\u2014"); }
 function sessionTable(rows, most){
   const hours = Math.round(tokHours);
   const out = rows.map(r => {
-    const s = r.s || {}, seen = Date.parse(s.seen), lc = longCtx(r.tok && r.tok.ctx ? r.tok : ctxOf(r.name), s.started);
-    const name = r.tok ? el("button",{type:"button", class:"tname" + (tokPick === r.name ? " on" : ""), title:"Show " + r.name + " alone in the Overview's token graph",
-      onclick:()=>{ tokPick = tokPick === r.name ? "" : r.name; renderStatus(); }}, r.name) : r.name;
-    const tot = r.tok ? el("td",{class:"num", title:`new input ${fmtTok(r.tok.fresh)}, read from cache ${fmtTok(r.tok.read)}, output ${fmtTok(r.tok.out)}`}, fmtTok(r.tok.total)) : el("td",{class:"num"}, "-");
+    const s = r.s || {}, lc = longCtx(r.tok && r.tok.ctx ? r.tok : ctxOf(r.name), s.started);
+    const g = r.graph && tokens.has(r.graph) ? r.graph : TOK_ALL, on = tokPickOf(g) === r.name;
+    const name = r.tok ? el("button",{type:"button", class:"tname" + (on ? " on" : ""), title:"Show " + r.name + " alone in the Overview's token graph" + (g === TOK_ALL ? "" : " of " + g),
+      onclick:()=>{ setTokPick(g, on ? "" : r.name); renderStatus(); }}, r.name) : r.name;
+    // Last seen: the newer of the hub's heartbeat (a hub command) and its latest reply in the token file
+    const beat = Date.parse(s.seen), last = r.tok && r.tok.last > 0 ? r.tok.last : NaN;
+    const seen = Math.max(isNaN(beat) ? 0 : beat, isNaN(last) ? 0 : last);
+    const seenWhy = seen === last ? "its latest Claude reply" : "its latest hub command (heartbeat)";
+    const seenEl = seen > 0 ? el("span",{title:"From " + seenWhy}, agoEl(seen, " ago"))
+      : noData("No heartbeat from the hub and no Claude reply in the token files of the last day");
+    const rateEl = !r.tok ? noData(NO_TOK)
+      : r.rate > 0 ? fmtTok(r.rate) : el("span",{title:"No Claude tokens in the last hour" + (r.tok.last > 0 ? "; last used " + fmtDur(Math.max(0, Date.now() - r.tok.last)) + " ago" : "")}, "0");
+    const tot = r.tok ? el("td",{class:"num", title:`new input ${fmtTok(r.tok.fresh)}, read from cache ${fmtTok(r.tok.read)}, output ${fmtTok(r.tok.out)}`}, fmtTok(r.tok.total)) : el("td",{class:"num"}, noData(NO_TOK));
     const tr = el("tr",{class: r.rate > 0 ? "heat" : ""},
       el("td",{}, name, lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || r.what || "-"),
       el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
-      el("td",{}, isNaN(seen) ? "-" : agoEl(seen, " ago")),
-      el("td",{class:"num"}, r.tok ? fmtTok(r.rate) : "-"), tot);
+      el("td",{}, seenEl),
+      el("td",{class:"num"}, rateEl), tot);
     const bg = heatOf(r.rate, most); if(bg) tr.style.background = bg;
     return tr;
   });
@@ -2383,11 +2630,16 @@ function workTable(list){
 }
 function renderMachines(){
   const now = Date.now();
-  rebuildPanel("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, tokPick,
+  rebuildPanel("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, [...tokPicks],
     [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
     Math.floor(now / 600000)], host => {
+    graphWin = null; graphWin = graphWindow();   // HUB177: one window for every graph and rate drawn now
+    try { drawMachines(host); } finally { graphWin = null; }
+  });
+}
+function drawMachines(host){
     const machines = Array.isArray(hubStatus.machines) ? hubStatus.machines : [];
     const sessions = Array.isArray(hubStatus.sessions) ? hubStatus.sessions.filter(s => s && s.name) : [];
     const work = Array.isArray(hubStatus.work) ? hubStatus.work.filter(Boolean) : [];
@@ -2399,7 +2651,11 @@ function renderMachines(){
     for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine)),
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true})));
-    host.append(el("h2",{}, "Overview"), over);
+    // HUB177: the span is chosen once for every graph here (it was on each token graph only)
+    const span = (h, label) => { const b = el("button",{type:"button", class:"tmode" + (tokHours === h ? " on" : ""), "aria-pressed":String(tokHours === h)}, label);
+      b.addEventListener("click", () => { if(tokHours !== h){ tokHours = h; renderStatus(); } }); return b; };
+    host.append(el("div",{class:"ohead"}, el("h2",{}, "Overview"),
+      el("span",{class:"uleg", role:"group", "aria-label":"Span of every graph"}, "Last ", span(6, "6 h"), span(12, "12 h"), span(24, "Day"))), over);
     for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
     for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
     // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
@@ -2409,7 +2665,7 @@ function renderMachines(){
     const most = Math.max(0, ...per.flat().map(r => r.rate));
     const mach = el("div",{class:"mach rows"});
     machines.forEach((m, i) => {
-      const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "stale";
+      const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "offline";   // HUB181: the user's word for it (was stale)
       const local = Array.isArray(m.working_on) ? m.working_on.filter(Boolean).map(String) : [];
       const dl = el("dl",{class:"facts"});
       const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
@@ -2436,8 +2692,8 @@ function renderMachines(){
     const lw = workTable(work.filter(w => !names.has(String(w.machine))));
     if(lw) host.append(el("h3",{}, "Local work on no machine listed"), lw);
     host.append(el("p",{class:"note"}, "Tokens/hr: Claude tokens in the last hour (" + (tokMode === "all" ? "all tokens" : "without cache reads")
-      + "), highest first; the hotter the row, the more. Tap a name to show it alone in the Overview's token graph."));
-  });
+      + "), highest first; the hotter the row, the more. Tap a name to show it alone in the Overview's token graph."
+      + " Last seen: its latest Claude reply or hub command, whichever is newer. \u2014: no figure (hover for why)."));
 }
 
 // ---------- Hub: the hub's own facts, and whether this App is the hub's
@@ -2532,7 +2788,7 @@ function renderHubTab(){
 
 // ---------- Releases: testing and the release line of each project
 function renderReleases(){
-  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j], host => {
+  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].filter(c => cardKind(c) === "Release").map(c => [c.id, c.col])], host => {
     const {fact} = statusFacts();
     const done = Number(fact("Done")), total = Number(fact("Total"));
     const dl = el("dl",{class:"facts"});
@@ -2554,7 +2810,34 @@ function renderReleases(){
       relShown.map(([k, r]) => el("tr",{}, el("td",{}, String(r.name || k)), el("td",{}, String(r.release_promoted || "-")),
         el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))))));
     else if(rel.length) host.append(el("p",{class:"note"}, "The project chosen has no release line of its own; choose all projects to see the others."));
+    releaseLists(host);
   });
+}
+// HUB182 (the user, 2026-11-19): each release with the cards that went out in it (its inventory, HUB116), and the
+// releases before it. A release not out yet lists the cards its description names until it has an inventory.
+function relCardEl(id, title){
+  const c = cards.get(String(id)), t = title || (c && c.t) || "";
+  return el("li",{}, c ? el("button",{type:"button", class:"rid", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : el("span",{class:"rid"}, String(id)),
+    t ? " " + t : "", c && c.col !== "done" ? el("small",{}, " · " + ((COLS.find(x => x.k === c.col) || {}).name || c.col)) : null);
+}
+function releaseEl(r, open){
+  const c = cards.get(String(r.id)), list = Array.isArray(r.cards) ? r.cards.filter(x => Array.isArray(x) && x[0]) : [];
+  const named = list.length ? [] : (Array.isArray(r.named) ? r.named : []);
+  const when = r.at ? (r.col === "done" ? "out " : "planned ") + fmtTime(String(r.at)) : "";
+  const count = list.length ? list.length + (list.length === 1 ? " card" : " cards") : named.length ? named.length + " named" : "no cards listed";
+  const head = el("summary",{}, el("span",{class:"rname"}, "\u{1F4E6} ", c ? el("button",{type:"button", class:"rid", title:"Open " + r.id, onclick:ev=>{ ev.preventDefault(); openCard(String(r.id)); }}, String(r.id)) : el("span",{class:"rid"}, String(r.id)),
+    " " + String(r.t || "")), el("small",{}, [when, count].filter(Boolean).join(" · ")));
+  const body = list.length ? el("ul",{class:"rcards"}, ...list.map(x => relCardEl(x[0], String(x[1] || ""))))
+    : named.length ? el("div",{}, el("p",{class:"note"}, "No inventory yet: the cards its description names."), el("ul",{class:"rcards"}, ...named.map(id => relCardEl(id, ""))))
+    : el("p",{class:"note"}, r.col === "done" ? "Its card names no cards in an inventory." : "No cards named yet.");
+  return el("details",{class:"rel", open: open ? "" : null}, head, body);
+}
+function releaseLists(host){
+  const mine = RELEASES.filter(r => !filt.j || !r.project || r.project === filt.j);
+  const now = mine.filter(r => r.col !== "done"), past = mine.filter(r => r.col === "done");
+  if(now.length) host.append(el("h2",{}, "This release"), el("div",{class:"rels"}, ...now.map(r => releaseEl(r, true))));
+  host.append(el("h2",{}, "Previous releases"), past.length ? el("div",{class:"rels"}, ...past.map((r, i) => releaseEl(r, i === 0 && !now.length)))
+    : el("p",{class:"note"}, RELEASES.length ? "None for the project chosen." : "No release out yet, or the board's export does not list them yet."));
 }
 
 // ---------- Queues (HUB90): the queued jobs in the order they start; the user moves them. The order goes to the board
@@ -2771,16 +3054,51 @@ function ganttPlan(list, now){
 }
 function ganttCards(){ return [...cards.values()].filter(c => GANTT_COLS.includes(c.col)); }
 const gFold = new Set(ls("kb.gfold") || []);   // Gantt theme / epic rows folded away (HUB122, HUB123)
-function ganttFilters(){   // HUB124: project, theme and epic, the same filters as the board's
-  const opt = (v, t, on) => el("option",{value:v, selected:on}, t);
-  const pj = el("select",{"aria-label":"Project", onchange:ev => setProject(ev.target.value)}, opt("", "All projects", !filt.j),
-    ...[...projects.entries()].sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99)).map(([k, v]) => opt(k, v.name || k, filt.j === k)));
-  const ths = sortedThemes().filter(([k]) => sortedEpics().some(([e]) => epicTheme(e) === k && epicInProject(e)));
-  const th = el("select",{"aria-label":"Theme", onchange:ev => setTheme(ev.target.value)}, opt("", "All themes", !filt.t), ...ths.map(([k, v]) => opt(k, v.name || k, filt.t === k)));
-  const eps = sortedEpics().filter(([k]) => epicInProject(k) && (!filt.t || epicTheme(k) === filt.t));
-  const ep = el("select",{"aria-label":"Epic", onchange:ev => setEpic(ev.target.value)}, opt("", "All epics", !filt.e), ...eps.map(([k, v]) => opt(k, v.name || k, filt.e === k)));
-  return el("span",{class:"gfilt"}, pj, th, ep);
+let gNoEst = false;   // HUB176: the "N cards without an estimate" pill shows only those cards (every row unfolded); clicked again, the view before
+// HUB159: the Gantt's own filter, one dropdown of checkboxes in three groups (Projects, Themes, Epics); a group with
+// nothing ticked lets everything through. It is the Gantt's alone (the board's theme / epic filters no longer reach
+// it); the header's Projects dropdown still applies on top. Kept per viewer.
+const gSel = (() => { const v = ls("kb.gsel") || {}, set = x => new Set(Array.isArray(x) ? x : []); return {j: set(v.j), t: set(v.t), e: set(v.e)}; })();
+let gFiltOpen = false;   // the dropdown stays open while its boxes are ticked (each tick redraws the tab)
+function gSelSave(){ ls("kb.gsel", {j: [...gSel.j], t: [...gSel.t], e: [...gSel.e]}); }
+function gSelCount(){ return gSel.j.size + gSel.t.size + gSel.e.size; }
+function gPass(c){   // the card passes the Gantt's checkbox filter
+  const e = c.epic || "";
+  return (!gSel.j.size || gSel.j.has(cardProject(c))) && (!gSel.t.size || gSel.t.has(epicTheme(e))) && (!gSel.e.size || gSel.e.has(e));
 }
+function gRedraw(){ const h = document.getElementById("gantt"); if(h) h.dataset.sig = ""; renderGantt(); }
+function ganttFilters(){
+  const changed = () => { gSelSave(); gRedraw(); };
+  const box = (grp, k, name, hue) => {
+    const cb = el("input",{type:"checkbox", value:k, onchange:ev => { ev.target.checked ? gSel[grp].add(k) : gSel[grp].delete(k); changed(); }});
+    cb.checked = gSel[grp].has(k);
+    return el("label",{title:name}, cb, hue != null ? el("i",{style:"--h:" + hue}) : null, el("span",{}, name));
+  };
+  const group = (name, rows) => rows.length ? el("fieldset",{}, el("legend",{}, name), ...rows) : null;
+  const pjs = [...projects.entries()].filter(([k]) => !filt.j || filt.j === k).sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99));
+  const inJ = k => { const p = epics.get(k)?.project; return !gSel.j.size || !p || gSel.j.has(p); };   // the ticked projects' epics
+  const ths = sortedThemes().filter(([k]) => gSel.t.has(k) || sortedEpics().some(([e]) => epicTheme(e) === k && inJ(e)));
+  const eps = sortedEpics().filter(([k]) => gSel.e.has(k) || (inJ(k) && (!gSel.t.size || gSel.t.has(epicTheme(k)))));   // and the ticked themes'
+  const n = gSelCount();
+  return el("details",{class:"gfilt" + (n ? " on" : ""), open:gFiltOpen, ontoggle:ev => { gFiltOpen = ev.target.open; }},
+    el("summary",{title:"Filter the Gantt by project, theme and epic (the header's Projects dropdown applies too)"}, n ? "Filter: " + n + " ticked" : "Filter: all"),
+    el("div",{class:"gfpop", role:"group", "aria-label":"Projects, themes and epics"},
+      group("Projects", pjs.map(([k, v]) => box("j", k, v.name || k, v.hue))),
+      group("Themes", ths.map(([k, v]) => box("t", k, v.name || k, v.hue))),
+      group("Epics", eps.map(([k, v]) => box("e", k, v.name || k, themes.get(epicTheme(k))?.hue ?? v.hue))),
+      n ? el("button",{type:"button", class:"gfclr", onclick:() => { gSel.j.clear(); gSel.t.clear(); gSel.e.clear(); changed(); }}, "Clear all") : null));
+}
+document.addEventListener("click", ev => {   // a click outside the open dropdown closes it
+  const d = document.querySelector("#gantt .gfilt[open]");
+  if(d && !ev.target.closest(".gfilt")){ d.open = false; gFiltOpen = false; }
+});
+document.addEventListener("keydown", ev => {
+  const d = document.querySelector("#gantt .gfilt[open]");
+  if(d && ev.key === "Escape"){ d.open = false; gFiltOpen = false; d.querySelector("summary").focus(); }
+});
+// HUB167: the Release toggle shows or hides the Release cards (their milestone rows) and every release line; per viewer
+let gRel = ls("kb.grel") !== false;
+function gRelToggle(){ gRel = !gRel; ls("kb.grel", gRel); gRedraw(); }
 let gTipEl = null;
 function gTip(ev, text){
   if(!gTipEl){ gTipEl = el("div",{class:"gtip", role:"tooltip"}); document.body.append(gTipEl); }
@@ -2795,6 +3113,7 @@ function gTip(ev, text){
 function gTipText(it){
   const c = it.c, when = t => fmtTime(new Date(t).toISOString());
   const lines = [c.id + " · " + (c.t || ""), "Column: " + (COL_NAME[c.col] || c.col)];
+  if(cardKind(c)) lines.push("Type: " + cardKind(c) + " (the bar's corner)");
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
@@ -2813,7 +3132,7 @@ function renderGantt(){   // a fault in this tab must never stop the board from 
 function drawGantt(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards();
-  const sig = JSON.stringify([loaded, filt.j, filt.t, filt.e, [...gFold], scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+  const sig = JSON.stringify([loaded, filt.j, [...gSel.j], [...gSel.t], [...gSel.e], gRel, [...gFold], gNoEst, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
@@ -2821,7 +3140,9 @@ function drawGantt(host){
   host.replaceChildren();
   if(!loaded){ host.append(el("p",{class:"note"}, "Loading…")); return; }
   const plan = ganttPlan(list, now);
-  const shown = [...plan.items.values()].filter(it => inProject(it.c) && (!filt.t || epicTheme(it.c.epic) === filt.t) && (!filt.e || (it.c.epic || "") === filt.e));
+  const shownAll = [...plan.items.values()].filter(it => inProject(it.c) && gPass(it.c) && (gRel || it.kind !== "milestone"));
+  if(gNoEst && !shownAll.some(it => it.dashed)) gNoEst = false;   // none left without an estimate: back to the view before
+  const shown = gNoEst ? shownAll.filter(it => it.dashed) : shownAll;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
   const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), sLim = plan.limit.stream;
   const noEst = shown.filter(it => it.dashed).length;
@@ -2833,24 +3154,31 @@ function drawGantt(host){
   const foldAll = () => { for(const k of epicKeys) allFolded ? gFold.delete(k) : gFold.add(k); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
   host.append(el("div",{class:"ghead"},
     el("h2",{}, "Gantt"),
+    ganttFilters(),   // the controls first: the pills after them change in number, so these stay put
+    el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
     el("span",{class:"pill" + (sNow > sLim ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit" + (sLim < GANTT_STREAMS_MAX ? " the pace allows (the hub's own is " + GANTT_STREAMS_MAX + ")" : "")}, "Streams: " + sNow + " of " + sLim + " now"),
     el("span",{class:"pill" + (aNow > GANTT_ART_MAX ? " over" : ""), title:"Art streams (Artwork cards) In progress now, apart from the development streams"}, "Art: " + aNow + " of " + GANTT_ART_MAX + " now"),
     el("span",{class:"pill" + (cNow > GANTT_COORD_MAX ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit"}, "Coordinator: " + cNow + " of " + GANTT_COORD_MAX + " now"),
-    noEst ? el("span",{class:"pill", title:"Drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"}, noEst + (noEst === 1 ? " card" : " cards") + " without an estimate") : null,
+    noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
+      title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
+      noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
     el("span",{class:"pill"}, "Plan ends " + fmtTime(new Date(planEnd).toISOString())),
     ...usagePills(),
-    ganttFilters(),
-    epicKeys.length ? el("button",{type:"button", class:"gfoldall", "aria-pressed":String(allFolded), title:allFolded ? "Show every epic's cards" : "Fold every epic: one row each", onclick:foldAll}, allFolded ? "Expand epics" : "Collapse epics") : null,
     el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
       el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
+  const kinds = [...new Set(shown.map(it => cardKind(it.c)).filter(k => k && k !== "Release"))].sort();
   host.append(el("div",{class:"glegend"},
+    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-card))"}), "card"),
+    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-epic))"}), "epic"),
+    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-theme))"}), "theme (bars in the theme's colour)"),
+    ...kinds.map(k => el("span",{class:"g-t-" + k.toLowerCase(), title:"The corner of a card's bar: its type"}, el("i",{class:"grib"}), k)),
     el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
     el("span",{}, el("i",{style:"background:linear-gradient(90deg,var(--muted) 0 50%,transparent 50%),repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "work done, then waiting for the merge"),
     el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
     el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
     el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
     el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
-  if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || filt.t || filt.e ? " with these filters." : "."))); return; }
+  if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || gSelCount() || !gRel ? " with these filters." : "."))); return; }
   // the time range: from a little before now (or the earliest start, at most 3 days back) to the end of the plan
   const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const minS = shown.reduce((m, it) => Math.min(m, it.s), now - 6 * G_H);
@@ -2879,6 +3207,9 @@ function drawGantt(host){
     kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
     inner.append(row("gres", el("div",{class:"glab", title:name + ": at most " + lim + " at once"}, name + " ≤" + lim), kids));
   }
+  // HUB158: the fold-all button sits right above where the projects start listing (the label column, kept in view)
+  if(epicKeys.length) inner.append(row("gtools", el("div",{class:"glab"},
+    el("button",{type:"button", class:"gfoldall", "aria-pressed":String(allFolded), title:allFolded ? "Show every epic's cards" : "Fold every epic: one row each", onclick:foldAll}, allFolded ? "Expand epics" : "Collapse epics")), null));
   // the rows (HUB122, HUB123): project, then each theme (its epics folded with +/-), each epic (its cards folded
   // with +/-), in the registry's order; a theme's and an epic's row shows the span of what it holds
   const projOrder = k => { const p = projects.get(k); return p && p.order != null ? p.order : 99; };
@@ -2892,11 +3223,14 @@ function drawGantt(host){
     ep.get(e).push(it);
   }
   const span = its => [Math.min(...its.map(i => i.s)), Math.max(...its.map(i => i.e))];
-  const fold = key => gFold.has(key);
+  const fold = key => !gNoEst && gFold.has(key);   // HUB176: the no-estimate view opens every row, the folds are kept for after
   const toggle = key => { gFold.has(key) ? gFold.delete(key) : gFold.add(key); ls("kb.gfold", [...gFold]); host.dataset.sig = ""; renderGantt(); };
+  const hueOf = e => themes.get(epicTheme(e))?.hue ?? epics.get(e)?.hue;   // HUB165, HUB166: the theme's hue, else the epic's
+  const G_TIP_CARDS = 20;   // HUB164: an epic's tooltip lists at most this many of its cards' titles
   const groupRow = (cls, key, name, its, hue) => {
     const [s, e] = span(its), open = !fold(key), n = its.length;
-    const tip = name + " · " + n + (n === 1 ? " card" : " cards") + "\nFrom " + fmtTime(new Date(s).toISOString()) + " to " + fmtTime(new Date(e).toISOString());
+    let tip = name + " · " + n + (n === 1 ? " card" : " cards") + "\nFrom " + fmtTime(new Date(s).toISOString()) + " to " + fmtTime(new Date(e).toISOString());
+    if(cls === "gepic") tip += "\n" + its.slice(0, G_TIP_CARDS).map(i => "• " + i.c.id + " " + (i.c.t || "")).join("\n") + (n > G_TIP_CARDS ? "\n… and " + (n - G_TIP_CARDS) + " more" : "");
     const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, "") };
     const lab = el("div",{class:"glab"},
       el("button",{type:"button", class:"gfold", "aria-expanded":String(open), "aria-label":(open ? "Fold " : "Unfold ") + name, onclick:() => toggle(key)}, open ? "−" : "+"),
@@ -2922,11 +3256,11 @@ function drawGantt(host){
   // HUB147: a yellow line for every release: the planned ones (Release cards at their eta) and the ones already out
   // (Done release cards of the last weeks, export releases_out), whatever is folded or filtered below
   const relName = c => (String(c.t || "").match(/\brel\d+\b/) || [c.id])[0];   // "rel72", else the card id
-  const relLine = (t, label, tip) => { if(t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"}, el("span",{}, "\u{1F4E6} " + label))); };
+  const relLine = (t, label, tip) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"}, el("span",{}, "\u{1F4E6} " + label))); };
   for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)");
   for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")");
   const cardRow = it => {
-    const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", tip = gTipText(it);
+    const c = it.c, kind = cardKind(c), tcls = kind ? " g-t-" + kind.toLowerCase() : "", tip = gTipText(it), hue = hueOf(c.epic || "");
     const open = () => openCard(c.id);
     const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
       onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); open(); } };
@@ -2945,7 +3279,7 @@ function drawGantt(host){
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
       const split = hatch ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
       const gend = hatch && it.merged != null ? Math.max(split, Math.min(w, X(it.merged) - X(it.s))) : null;
-      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover});
+      cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : "") + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover});
     }
     inner.append(row(it.kind, lab, cell));
   };
@@ -2956,7 +3290,7 @@ function drawGantt(host){
       const ep = th.get(t), tits = [...ep.values()].flat();
       if(!groupRow("gtheme", "t:" + p + ":" + t, themes.get(t)?.name || "No theme", tits, themes.get(t)?.hue)) continue;
       for(const e of [...ep.keys()].sort((a, b) => eOrder(a) - eOrder(b) || a.localeCompare(b))){
-        if(!groupRow("gepic", "e:" + p + ":" + e, epics.get(e)?.name || e || "No epic", ep.get(e), epics.get(e)?.hue)) continue;
+        if(!groupRow("gepic", "e:" + p + ":" + e, epics.get(e)?.name || e || "No epic", ep.get(e), hueOf(e))) continue;
         for(const it of ep.get(e)) cardRow(it);
       }
     }
@@ -3439,7 +3773,9 @@ async function load(sha){
   for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
   for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
   RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
+  RELEASES.length = 0; for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id) RELEASES.push(r);
   for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
+  snapMeta();   // HUB188: the exported epics and themes, under this page's edits on their way (overlayMeta)
   ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
     .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
   if (filt.t && themes.size && !themes.has(filt.t)){ filt.t = ""; ls("kb.filters", filt); }   // a remembered theme that is gone
