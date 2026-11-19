@@ -4928,7 +4928,7 @@ async function load(sha){
   pendSave();
   rebuild();
 }
-const POLL_MS = 12000;
+const POLL_MS = 6000;
 let nextCheck = null;   // when the next look at the board is due (HUB135: the ring beside "checked")
 function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); nextCheck = Date.now() + 2500; }
 function startPolling(){
