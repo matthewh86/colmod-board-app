@@ -595,6 +595,8 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .rlinks .rcards{margin:4px 0 0}
 .gline.tok{border-left:2px dotted var(--gtok); z-index:1} .gline.tok span{color:var(--gtok)}
 .gline.tok.plan, .gtoksw.plan{--gtok:var(--p2)} .gline.tok.credits, .gtoksw.credits{--gtok:var(--p1)}
+.gline.tok.refresh, .gtoksw.refresh{--gtok:#228b22} .gline.tok.refresh{border-left-style:solid}  /* HUB278: forest green */
+.glegend i.gtoksw.refresh{border-left-style:solid}
 .glegend i.gtoksw{width:0; height:12px; border-radius:0; background:none; border-left:2px dotted var(--gtok)}
 /* HUB203: the key behind an info icon in the header, left of the Tokens pill */
 .gkey{position:relative; font-size:.78rem}
@@ -3381,16 +3383,22 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   if(!u || !wins.length) return [el("span",{class:"pill", title:"The coordinator records the plan's limits on each wake (hub/usage.py)"}, "Tokens: no reading yet")];
   const out = wins.filter(w => w.runs_out_at).sort((a, b) => String(a.runs_out_at).localeCompare(String(b.runs_out_at)));
   const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
-  // HUB267: the top-up (API) credits left, always shown once there is a reading
-  const c = usageCredits(u), cp = c
-    ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API credits $" + c.left.toFixed(0) + " left of $" + c.cap.toFixed(0))] : [];
+  // HUB279: the API credits as two pills: what is really left under the cap (spent only), and the budget still free
+  // (the cap less what is spent and what running runs hold)
+  const c = usageCredits(u), cp = [];
+  if(c){
+    const pc = v => c.cap ? Math.round(100 * v / c.cap) : 0, real = Math.max(0, c.cap - c.spent);
+    cp.push(el("span",{class:"pill" + (u.plan_used_up && real < 1 ? " over" : ""), title:creditLine(c)},
+      "API Tokens Remaining: " + pc(real) + " % / $" + real.toFixed(2) + " (Real)"));
+    cp.push(el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c) + "\nBudgeted: the cap less what is spent and what running runs hold until they end"},
+      "API Tokens Budget " + pc(c.left) + " % / $" + c.left.toFixed(2) + " (Budgeted)"));
+  }
   const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
   if(x) cp.push(el("span",{class:"pill" + (x.left != null && x.left < 1 ? " over" : ""), title:extraLine(x)},
     x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used"));
-  const rw = usageRunway(u), over = rw ? !!rw.out : !!w.runs_out_at;   // HUB206: runs out = the plan and the API credits
-  return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + (rw && rw.why ? "\nRuns out (the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
-    "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
-    + runoutText(u, w)), ...cp];
+  const rw = usageRunway(u), over = Number(w.pct) >= 100;   // the plan's tokens; the run-out times are in the title
+  return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + "\nRuns out" + runoutText(u, w).replace(/^ · /, ": ") + (rw && rw.why ? "\n(the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
+    "Plan Tokens Remaining: " + Math.max(0, 100 - Math.round(Number(w.pct) || 0)) + " %"), ...cp];
 }
 // >>> runway (tests/test_app.py runs this block)
 // HUB204-HUB206: the hub's runway (hub/usage.py runway): when the plan runs out, then the API credits after it.
@@ -3409,13 +3417,18 @@ function runoutText(u, w){   // the Tokens pill's end: " · runs out <when>" (th
   if(r.plan) return " · plan out " + fmtTime(r.plan) + ", API credits last";
   return " · lasts";
 }
-function runwayLines(u){   // the Gantt's token lines: [{t, k: "plan" | "credits", label, tip}]
+function runwayLines(u){   // the Gantt's token lines: [{t, k: "plan" | "credits" | "refresh", label, tip}]
   const r = usageRunway(u), out = [];
   if(!r) return out;
+  // HUB278: the plan's tokens come back here (a forest green line); the API credits only drain until then, so their
+  // run-out line is drawn only when it falls before the refresh
+  const refresh = r.refresh ? Date.parse(r.refresh) : null;
   if(r.plan) out.push({t: Date.parse(r.plan), k: "plan", label: "Plan tokens out",
     tip: "The plan's tokens run out here at the present rate (" + r.planLabel + (r.refresh ? ", refreshes " + fmtTime(r.refresh) : "") + ")"});
-  if(r.credits) out.push({t: Date.parse(r.credits), k: "credits", label: "API credits out",
-    tip: "The Claude API credits (the overflow streams, capped a month) run out here" + (r.guess ? ", at an assumed rate: no overflow run measured this month" : " at this month's rate") + (r.out ? "" : "; the plan refreshes before that matters")});
+  if(r.credits && !(refresh && Date.parse(r.credits) >= refresh)) out.push({t: Date.parse(r.credits), k: "credits", label: "API credits out",
+    tip: "The Claude API credits (the overflow streams, capped a month) run out here" + (r.guess ? ", at an assumed rate: no overflow run measured this month" : " at this month's rate")});
+  if(refresh) out.push({t: refresh, k: "refresh", label: "Plan tokens refresh",
+    tip: "The plan's tokens refresh here (" + r.planLabel + "); the API credits stop being used from then"});
   return out;
 }
 // <<< runway
@@ -4250,7 +4263,7 @@ function ganttKey(shown){
       el("span",{}, el("i",{style:"border-right:3px dotted var(--p1)"}), "blocked outside the plan: no end"),
       el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
       el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
-      el("span",{}, el("i",{class:"gtoksw plan"}), "plan tokens run out"), el("span",{}, el("i",{class:"gtoksw credits"}), "API credits run out"),
+      el("span",{}, el("i",{class:"gtoksw plan"}), "plan tokens run out"), el("span",{}, el("i",{class:"gtoksw credits"}), "API credits run out"), el("span",{}, el("i",{class:"gtoksw refresh"}), "plan tokens refresh"),
       el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
 }
 document.addEventListener("click", ev => {   // a click outside the open key closes it
@@ -4304,7 +4317,7 @@ function drawGantt(host){
   const minS = shown.reduce((m, it) => Math.min(m, it.s), now - 6 * G_H);
   const t0 = day0(Math.max(minS, now - 3 * 24 * G_H));
   // HUB204, HUB205: the token lines widen the range to show them, at most a week ahead
-  const tok = runwayLines(usageNow().u).filter(x => x.t >= now - 6 * G_H && x.t <= now + 7 * 24 * G_H);
+  const tok = runwayLines(usageNow().u).filter(x => x.t >= now - 3 * 24 * G_H && x.t <= now + 7 * 24 * G_H);   // HUB277: a past run-out stays
   const tokEnd = tok.reduce((m, x) => Math.max(m, x.t), 0);
   const t1 = Math.min(day0(Math.max(planEnd, tokEnd, now + (sc.ahead || 1) * 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
   const W = Math.ceil((t1 - t0) / G_H * sc.pxh), X = t => Math.round((Math.max(t0, Math.min(t1, t)) - t0) / G_H * sc.pxh);
