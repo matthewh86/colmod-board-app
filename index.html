@@ -1723,7 +1723,8 @@ function render(){
     for(const c of list) ul.append(cardEl(c));
     sec.append(ul);
     const na = ARCH.items.filter(c=>c.col===col.k).length;
-    if(na && !isC) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)."));
+    if(na && !isC) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)"
+      + (col.k === "done" ? "; the latest 60 of the last 7 days are shown here." : ".")));   // HUB230 (hub/phone.py DONE_MAX)
     board.append(sec);
     if(sc[col.k]) ul.scrollTop = sc[col.k];
   }
