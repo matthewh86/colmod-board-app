@@ -93,7 +93,14 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .bar .savest{font-size:.8rem; color:var(--muted); margin-left:auto}
 .note{font-size:.82rem; color:var(--muted); margin:10px 0 0}
 .linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; font-size:.82rem; text-decoration:underline}
-.main{display:grid; grid-template-columns:200px minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
+.main{position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
+/* HUB216: the projects panel's right border: a visible line in the gap, dragged to resize the panel (kept per viewer) */
+.eresize{position:absolute; top:0; bottom:0; left:calc(var(--ew,200px) + 1px); width:10px; cursor:col-resize; touch-action:none; z-index:4}
+.eresize::before{content:""; position:absolute; top:0; bottom:0; left:4px; width:1px; background:var(--line)}
+.eresize:hover::before,.eresize:focus-visible::before,.eresize.on::before{left:3px; width:3px; background:var(--accent)}
+.eresize:focus-visible{outline:none}
+.main.ecol .eresize,.main:has(> .epics[hidden]) .eresize{display:none}
+body.eresizing, body.eresizing *{cursor:col-resize !important; user-select:none !important}
 .board{display:grid; grid-template-columns:repeat(var(--ncol,8), minmax(260px,1fr)); gap:10px; overflow-x:auto; padding-bottom:8px; align-items:stretch; cursor:grab; min-height:calc(100dvh - 190px)}   /* fills the window even with few cards, so the empty space below still drags the board */
 body.panning, body.panning *{cursor:grabbing!important; user-select:none!important}
 .automark{position:fixed; z-index:50; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%; border:1.5px solid var(--muted); background:var(--surface); pointer-events:none; display:grid; place-items:center}
@@ -101,7 +108,7 @@ body.panning, body.panning *{cursor:grabbing!important; user-select:none!importa
 body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .col.collapsed{align-self:start}
 .main > .board{align-self:stretch}   /* HUB187: as tall as the epics panel when that is longer: the columns (and the board's sideways scroll bar) reach the page's bottom */
-@media (max-width:720px){ .main{grid-template-columns:1fr} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+@media (max-width:720px){ .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
 .col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; display:flex; flex-direction:column; min-width:0}
 .col > h2{margin:0; padding:8px 10px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none}
 .col > h2 .n{font-family:var(--f-mono); color:var(--muted); font-weight:400}
@@ -138,7 +145,7 @@ body.ro #selbtn{display:none}
 .place button,.row .place button{font:inherit; font-size:.8rem; line-height:1; width:24px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--ink); cursor:pointer}
 .place button:hover,.row .place button:hover,.place button:focus-visible{background:var(--accent-soft); color:var(--accent)}
 @media (pointer:coarse){ .row .place button{width:34px; height:30px; font-size:.95rem} }
-.card .hov{position:absolute; top:4px; right:4px; display:none; box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.card .hov{position:absolute; bottom:4px; right:4px; z-index:3; display:none; box-shadow:0 2px 6px rgba(0,0,0,.15)}   /* HUB214: bottom right, the priority in the top row stays in view */
 .card:hover .hov,.card:focus-within .hov{display:flex}
 @media (hover:none){ .card .hov{display:none !important} }
 .card.p1{--pc:var(--p1)} .card.p2{--pc:var(--p2)} .card.p3{--pc:var(--p3)} .card.p4{--pc:var(--p4)}
@@ -170,6 +177,7 @@ body.ro #selbtn{display:none}
 .card .st{font-size:.78rem; color:var(--muted)}
 a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .card .blk{font-size:.68rem; font-weight:600; color:var(--blk-ink); background:var(--blk-bg); border-radius:999px; padding:1px 7px; white-space:nowrap}
+.card .flags{display:grid; justify-items:start; gap:3px}   /* HUB215: one indicator per line, under the title */
 .card .blkb{font-size:.85rem; color:var(--blk-ink); background:var(--blk-bg); border-radius:6px; padding:6px 9px; margin:4px 0}
 .card .lnk{font-size:.78rem} .card .lnk a{color:inherit; opacity:.8} .card .lnk a:hover{opacity:1}
 .card .qb{font-size:.76rem; background:var(--q-soft); color:var(--ink); border-left:3px solid var(--q); padding:3px 6px; border-radius:3px}
@@ -461,11 +469,15 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .glegend i.gpastsw{background:linear-gradient(90deg, var(--muted) 0 60%, color-mix(in srgb, var(--muted) 35%, transparent) 60%)}
 .gin{position:relative}
 .grow{display:flex; height:var(--grow); border-bottom:1px solid var(--line)}
-.grow.gaxis{height:34px; position:sticky; top:0}
+/* HUB207: the axis row is no stacking context of its own (it was sticky, which lifted the lines over its Day scale
+   cell), and each label cell covers its row's bottom border, so no line shows across the label column */
+.grow.gaxis{height:34px}
 .grow.gproj{height:24px; background:var(--sunk)}
 .grow.gres{height:34px; background:var(--sunk)}
 .glab{position:sticky; left:0; z-index:3; flex:none; width:var(--glw); background:inherit; background-color:var(--surface); border-right:1px solid var(--line); display:flex; align-items:center; gap:5px; padding:0 6px; font-size:.76rem; overflow:hidden; white-space:nowrap; cursor:pointer}
+.glab{box-shadow:0 1px 0 var(--line)}
 .gproj .glab, .gres .glab{background-color:var(--sunk); cursor:default; font-weight:600; color:var(--muted)}
+.gres .glab.over{color:var(--blk-ink); background-color:var(--blk-bg)}   /* HUB217: the pool is over its limit now */
 .gproj .glab{color:var(--ink); text-transform:uppercase; letter-spacing:.05em; font-size:.7rem}
 .glab .gid{font-family:var(--f-mono); font-weight:600; color:var(--tc,var(--muted))}
 .glab .gk{font-size:.75rem; line-height:1}
@@ -527,6 +539,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gfpop .gfclr{font:inherit; font-size:.75rem; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); padding:2px 8px; cursor:pointer}
 .gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
+.gbar.held{border-right:3px dotted var(--p1); border-top-right-radius:0; border-bottom-right-radius:0}   /* HUB213: blocked outside the plan: no planned end */
 .gbar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .gms{position:absolute; top:calc(var(--grow) / 2 - 7px); width:14px; height:14px; margin-left:-7px; transform:rotate(45deg); background:var(--t-rel); border:1px solid var(--surface); padding:0; cursor:pointer}
 .gmsi{position:absolute; top:3px; margin-left:10px; font-size:.8rem; pointer-events:none}
@@ -534,6 +547,19 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gline.rel{border-left:2px dashed var(--t-rel); z-index:1}
 .gline span{position:absolute; top:17px; left:3px; font-size:.68rem; font-weight:600; white-space:nowrap; color:var(--accent); background:var(--surface); padding:0 2px; border-radius:3px}
 .gline.rel span{color:var(--t-rel); top:auto; bottom:2px}
+/* HUB208: a release's name at the top of its line too; HUB204/HUB205: the token run-out lines, named at the top */
+.gline.rel span.gltop, .gline span.gltop{top:17px; bottom:auto; pointer-events:auto; cursor:default}
+.gline.tok{border-left:2px dotted var(--gtok); z-index:1} .gline.tok span{color:var(--gtok)}
+.gline.tok.plan, .gtoksw.plan{--gtok:var(--p2)} .gline.tok.credits, .gtoksw.credits{--gtok:var(--p1)}
+.glegend i.gtoksw{width:0; height:12px; border-radius:0; background:none; border-left:2px dotted var(--gtok)}
+/* HUB203: the key behind an info icon in the header, left of the Tokens pill */
+.gkey{position:relative; font-size:.78rem}
+.gkey > summary{list-style:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; min-width:28px; min-height:28px; box-sizing:border-box; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--muted); font-size:1rem; line-height:1}
+.gkey > summary::-webkit-details-marker{display:none}
+.gkey[open] > summary, .gkey > summary:hover{border-color:var(--accent); color:var(--ink)}
+.gkeypop{position:absolute; z-index:40; top:calc(100% + 4px); left:0; width:max-content; max-width:min(340px, 90vw); display:grid; gap:4px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.2); padding:8px 10px}
+.gkey.gkright .gkeypop{left:auto; right:0}
+@media (max-width:640px){ .gkeypop, .gkey.gkright .gkeypop{position:fixed; top:auto; left:16px; right:16px; width:auto; max-width:none} }
 .gslice{position:absolute; bottom:2px; background:var(--accent); opacity:.75; border-radius:2px 2px 0 0}
 .gslice.over{background:var(--p1); opacity:1}
 .glimit{position:absolute; left:0; right:0; border-top:1px dashed var(--muted); pointer-events:none}
@@ -639,6 +665,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
     </form>
     <div class="main">
       <nav class="epics" id="epics" aria-label="Projects, themes and epics"></nav>
+      <div class="eresize" id="eresize" role="separator" aria-orientation="vertical" aria-label="Width of the projects panel" tabindex="0" title="Drag to resize the projects panel (arrow keys too; double-click resets it)"></div>
       <div class="board" id="board"></div>
     </div>
     <div class="empty" id="empty" hidden></div>
@@ -1203,13 +1230,16 @@ function cardEl(c, full=false){
   const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(kind?" t-"+kind.toLowerCase():"")+(c._pending&&!full?" pending":"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
   if(kind && !full && !e.title) e.title = kind;
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
+  // HUB215: the Blocked and warning indicators: in the card window's top row; on a board card, each on a line of its
+  // own under the title
+  const flags = [c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
+    syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
+    refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null].filter(Boolean);
   e.append(el("div",{class:"top"},
     kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null,
     el("span",{class:"id"},c.id),
     artTool(c) ? el("span",{class:"lab arttool", title:ART_TOOL[artTool(c)][1]}, ART_TOOL[artTool(c)][0]) : null,
-    c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
-    syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
-    refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
+    ...(full ? flags : []),
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
     c._pending && full ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
@@ -1221,6 +1251,7 @@ function cardEl(c, full=false){
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
+  if(!full && flags.length) e.append(el("div",{class:"flags"}, ...flags));   // HUB215
   const ep = epics.get(c.epic);
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
   const tpath = th ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th.name+" ›") : null;
@@ -2230,6 +2261,41 @@ function dragPan(board, box, skip, only){   // only: a pan starts only on what m
 }
 dragPan($("#board"), () => $("#board"), ".card, button, select, input, textarea, a");
 dragPan($("#gantt"), () => $("#gantt .gwrap"), ".gbar, .gms, .glab, button, select, input, textarea, a", ".gwrap");
+
+// ---------- HUB216: the projects panel's width: dragged at its right border (or arrow keys on it), kept per viewer
+// >>> panel-width (tests/test_app.py runs this block)
+const EW_DEFAULT = 200, EW_MIN = 150, EW_MAX = 600;
+function ewClamp(w, room){   // room: the page's width; the board keeps at least 320px of it
+  const n = Math.round(Number(w));
+  if(!isFinite(n)) return EW_DEFAULT;
+  return Math.max(EW_MIN, Math.min(EW_MAX, room > 0 ? Math.max(EW_MIN, room - 320) : EW_MAX, n));
+}
+// <<< panel-width
+(function panelResize(){
+  const main = document.querySelector(".main"), bar = $("#eresize");
+  if(!main || !bar) return;
+  let w = ewClamp(ls("kb.ew") ?? EW_DEFAULT, main.clientWidth);
+  const set = (v, keep) => { w = ewClamp(v, main.clientWidth); main.style.setProperty("--ew", w + "px"); bar.setAttribute("aria-valuenow", String(w)); if(keep) ls("kb.ew", w); };
+  bar.setAttribute("aria-valuemin", String(EW_MIN)); bar.setAttribute("aria-valuemax", String(EW_MAX));
+  set(w, false);
+  let drag = null;
+  bar.addEventListener("pointerdown", ev => {
+    if(ev.button !== 0) return;
+    ev.preventDefault(); bar.setPointerCapture(ev.pointerId);
+    drag = {x: ev.clientX, w}; bar.classList.add("on"); document.body.classList.add("eresizing");
+  });
+  bar.addEventListener("pointermove", ev => { if(drag) set(drag.w + ev.clientX - drag.x, false); });
+  const end = () => { if(!drag) return; drag = null; bar.classList.remove("on"); document.body.classList.remove("eresizing"); set(w, true); };
+  bar.addEventListener("pointerup", end); bar.addEventListener("pointercancel", end); bar.addEventListener("lostpointercapture", end);
+  bar.addEventListener("dblclick", () => set(EW_DEFAULT, true));
+  bar.addEventListener("keydown", ev => {
+    const step = ev.shiftKey ? 64 : 16;
+    if(ev.key === "ArrowLeft"){ ev.preventDefault(); set(w - step, true); }
+    else if(ev.key === "ArrowRight"){ ev.preventDefault(); set(w + step, true); }
+    else if(ev.key === "Home"){ ev.preventDefault(); set(EW_DEFAULT, true); }
+  });
+  addEventListener("resize", () => { if(!drag) set(ls("kb.ew") ?? EW_DEFAULT, false); });   // the viewer's width, fitted again
+})();
 // middle button held: autoscroll in both directions (the browser's own only scrolls the board sideways): the further the
 // pointer from the click point, the faster; it stops when the button is released
 function autoScroll(board, box){
@@ -3024,10 +3090,38 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
   const c = usageCredits(u), cp = c && (u.plan_used_up || c.spent || c.held)
     ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API $" + c.spent.toFixed(0) + " of $" + c.cap.toFixed(0))] : [];
-  return [el("span",{class:"pill" + (w.runs_out_at ? " over" : ""), title:wins.map(usageLine).join("\n") + "\nRecorded " + fmtTime(u.recorded)},
+  const rw = usageRunway(u), over = rw ? !!rw.out : !!w.runs_out_at;   // HUB206: runs out = the plan and the API credits
+  return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + (rw && rw.why ? "\nRuns out (the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
     "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
-    + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : " · lasts")), ...cp];
+    + runoutText(u, w)), ...cp];
 }
+// >>> runway (tests/test_app.py runs this block)
+// HUB204-HUB206: the hub's runway (hub/usage.py runway): when the plan runs out, then the API credits after it.
+// "Runs out" is both used up; a plan that runs out while the credits bridge to its refresh lasts.
+function usageRunway(u){
+  const r = u && u.runway && typeof u.runway === "object" ? u.runway : null;
+  if(!r) return null;
+  const t = k => r[k] && !isNaN(Date.parse(r[k])) ? r[k] : null;
+  return {plan: t("plan_out_at"), planLabel: String(r.plan_label || "the plan"), refresh: t("plan_refresh_at"),
+    credits: t("credits_out_at"), out: t("out_at"), guess: !!r.credits_rate_guess, why: String(r.why || "")};
+}
+function runoutText(u, w){   // the Tokens pill's end: " · runs out <when>" (the plan and the credits), else how it lasts
+  const r = usageRunway(u);
+  if(!r) return w && w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : " · lasts";
+  if(r.out) return " · runs out " + fmtTime(r.out);
+  if(r.plan) return " · plan out " + fmtTime(r.plan) + ", API credits last";
+  return " · lasts";
+}
+function runwayLines(u){   // the Gantt's token lines: [{t, k: "plan" | "credits", label, tip}]
+  const r = usageRunway(u), out = [];
+  if(!r) return out;
+  if(r.plan) out.push({t: Date.parse(r.plan), k: "plan", label: "Plan tokens out",
+    tip: "The plan's tokens run out here at the present rate (" + r.planLabel + (r.refresh ? ", refreshes " + fmtTime(r.refresh) : "") + ")"});
+  if(r.credits) out.push({t: Date.parse(r.credits), k: "credits", label: "API credits out",
+    tip: "The Claude API credits (the overflow streams, capped a month) run out here" + (r.guess ? ", at an assumed rate: no overflow run measured this month" : " at this month's rate") + (r.out ? "" : "; the plan refreshes before that matters")});
+  return out;
+}
+// <<< runway
 // the API credit side of the budget (HUB161): the overflow streams' month spend against the cap (hub/overflow.py),
 // aggregate numbers only
 function usageCredits(u){
@@ -3058,8 +3152,10 @@ function creditsTable(u){
 }
 function usageSection(host){
   const {u, pace, wins} = usageNow();
-  host.append(el("h2",{}, "Tokens and pace"), paceSelector(pace),
-    u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null);
+  const rw = usageRunway(u);
+  host.append(el("h2",{}, "Tokens and pace"), paceSelector(pace), paceAutoHint(u, pace),
+    u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
+    rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null);
   limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
   if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake."), ...creditsTable(u)); return; }
   host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
@@ -3068,6 +3164,15 @@ function usageSection(host){
       el("td",{}, w.resets_at ? fmtTime(w.resets_at) : "-"),
       el("td",{}, w.runs_out_at ? fmtTime(w.runs_out_at) + (w.before_reset_h != null ? " (" + w.before_reset_h + " h before its refresh)" : "") : "lasts to the refresh")))))),
     el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + "."), ...creditsTable(u));
+}
+// HUB210: the hub dropped the pace to Conservative by itself when the API credits started being used; said under the
+// pace until one is picked again (the export's pace_auto is then gone)
+function paceAutoHint(u, pace){
+  const a = u && u.pace_auto && typeof u.pace_auto === "object" ? u.pace_auto : null;
+  if(!a || pace !== a.to) return null;
+  const name = k => (PACES.find(x => x[0] === k) || [k, k])[1];
+  return el("p",{class:"note pauto", role:"status"}, "ℹ️ The pace dropped to " + name(a.to) + " by itself " + fmtTime(a.at)
+    + " (it was " + name(a.from) + "): the overflow streams started using the Claude API credits. Pick a pace to change it; the hub drops it at most once a month.");
 }
 // HUB175: the pace as one segmented control; the help below it says what the hovered (or focused) pace does, and goes
 // back to the chosen one's when the pointer or focus leaves
@@ -3331,7 +3436,8 @@ const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; ever
 const GANTT_DEFAULT_MIN = 240;            // the length of a card with no estimate (and, started, no eta): dashed
 const GANTT_OVERDUE_MIN = 60;             // an In progress card past its eta is taken to need this much more from now
 const GANTT_COLS = ["prog", "test", "built", "next", "refined"];   // the rows' order: started first, then the plan
-const GANTT_SCALES = {day: {pxh: 22, slice: 1, tick: 3, label: "Day"}, week: {pxh: 3, slice: 6, tick: 24, label: "Week"}};
+// ahead: the chart reaches at least this many days past now (HUB219: the Week view draws three weeks, not only to the plan's end)
+const GANTT_SCALES = {day: {pxh: 22, slice: 1, tick: 3, label: "Day", ahead: 1}, week: {pxh: 2, slice: 6, tick: 24, label: "Week", ahead: 21}};
 const G_H = 3600000, G_MIN = 60000;
 function gTime(s){   // the board's times: UTC; a time without a zone is UTC too, a date alone means the end of that day
   if(!s) return NaN;
@@ -3453,7 +3559,16 @@ function gEarliest(iv, lim, from, dur){   // the first time from `from` at which
   for(const t of cands) if(gPeak(iv, t, t + dur) < lim) return t;
   return cands[cands.length - 1];
 }
-// the plan: id -> {c, s, e, src, pool, kind: started|waiting|planned|milestone, dashed, overdue, waits}
+// >>> gantt-held (tests/test_app.py runs this block)
+// HUB213: a card blocked on nothing the plan holds: its `blocked` text names no other planned card (has(id)), so it
+// waits on an outside party, a manual action or an answer, and the plan cannot say when it ends (hub/pm/plan.py held)
+function gHeld(c, has){
+  const blk = String(c.blk || "").trim();
+  if(!blk) return false;
+  return !(blk.match(/\b[A-Z]+\d+[a-z]?\b/g) || []).some(id => id !== c.id && has(id));
+}
+// <<< gantt-held
+// the plan: id -> {c, s, e, src, pool, kind: started|held|waiting|planned|milestone, dashed, overdue, waits}
 function ganttPlan(list, now){
   const byId = new Map(list.map(c => [c.id, c]));
   const out = new Map(), busy = {stream: [], coord: [], art: [], drawn: []}, limit = {stream: gStreamLimit(), coord: gCoordLimit(), art: hubLimits().art, drawn: hubLimits().drawn};
@@ -3469,6 +3584,10 @@ function ganttPlan(list, now){
     }
     if(!started) continue;
     let s = gTime(c.started); if(isNaN(s)) s = gTime(c.colSince); if(isNaN(s)) s = now;
+    if(c.col === "prog" && gHeld(c, id => byId.has(id))){   // HUB213: blocked outside the plan: no planned end, no slot, its eta unused
+      out.set(c.id, {c, s, e: Math.max(s, now), src: "none planned: blocked on no planned card (an outside party, a manual action or an answer)", pool: null, kind: "held", waits: []});
+      continue;
+    }
     let e = gTime(c.eta), src = "eta", dashed = false, overdue = false;
     if(isNaN(e) || e <= s){ const m = est(c); e = s + (m || GANTT_DEFAULT_MIN) * G_MIN; src = m ? "start + estimate (" + fmtDur(m * G_MIN) + ")" : "start + default length (no estimate, no eta)"; dashed = !m; }
     const pool = c.col === "prog" ? gPool(c) : null;   // Ready to merge and Merged in testing wait on the merge, not on a stream
@@ -3654,10 +3773,9 @@ document.addEventListener("keydown", ev => {
 let gRel = ls("kb.grel") !== false;
 function gRelToggle(){ gRel = !gRel; ls("kb.grel", gRel); gRedraw(); }
 // HUB168: past work: the cards finished in the last GANTT_PAST_H hours as solid bars left of now, and the Streams /
-// Coordinator strips counting what ran before now too; the Past toggle hides the finished cards' rows (per viewer)
+// Coordinator strips counting what ran before now too. HUB202: always drawn (no toggle): they sit left of now, where
+// the chart opens scrolled past them, so they are there as needed and cost no room
 const GANTT_PAST_H = 72;
-let gPast = ls("kb.gpast") !== false;
-function gPastToggle(){ gPast = !gPast; ls("kb.gpast", gPast); gRedraw(); }
 function ganttPast(now){   // the finished cards' past bars: {c, s, e, done, kind: "past"}
   const out = [];
   for(const c of cards.values()){
@@ -3681,8 +3799,9 @@ function gTip(ev, text){
 function gTipText(it){
   const c = it.c, when = t => fmtTime(new Date(t).toISOString());
   const lines = [c.id + " · " + (c.t || ""), "Column: " + (COL_NAME[c.col] || c.col)];
-  if(cardKind(c)) lines.push("Type: " + cardKind(c) + " (the bar's corner)");
+  if(cardKind(c)) lines.push("Type: " + cardKind(c));   // HUB218: the type alone
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
+  else if(it.kind === "held") lines.push("Start: " + when(it.s), "End: " + it.src + "; drawn to now. A wait on an outside party is Parked with no ETA");
   else if(it.kind === "past") lines.push("Started: " + when(it.s), (it.done < it.e ? "Gate passed: " + when(it.done) + "\n" : "") + "Done: " + when(it.e) + " (past work)");
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
@@ -3698,11 +3817,44 @@ function renderGantt(){   // a fault in this tab must never stop the board from 
   try { drawGantt(host); }
   catch(e){ host.replaceChildren(el("p",{class:"note"}, "The Gantt view could not be shown: " + (e && e.message || e))); }
 }
+// HUB203: the key (legend) folded into an info icon in the header, left of the Tokens pill; it opens a small panel
+// (a click outside or Esc closes it) and stays open across redraws like the filter
+let gKeyOpen = false;
+function ganttKey(shown){
+  const kinds = [...new Set(shown.map(it => cardKind(it.c)).filter(k => k && k !== "Release"))].sort();
+  // the panel opens toward the side with room: right-aligned when the icon sits in the right half of the window
+  const side = d => { if(d.open) d.classList.toggle("gkright", d.getBoundingClientRect().left > innerWidth / 2); };
+  if(gKeyOpen) requestAnimationFrame(() => { const d = document.querySelector("#gantt .gkey"); if(d) side(d); });
+  return el("details",{class:"gkey", open:gKeyOpen, ontoggle:ev => { gKeyOpen = ev.target.open; side(ev.target); }},
+    el("summary",{title:"Key: what the bars, colours and lines mean", "aria-label":"Key"}, "ⓘ"),
+    el("div",{class:"glegend gkeypop", role:"group", "aria-label":"Key"},
+      el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-card))"}), "card"),
+      el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-epic))"}), "epic"),
+      el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-theme))"}), "theme (bars in the theme's colour)"),
+      ...kinds.map(k => el("span",{class:"g-t-" + k.toLowerCase(), title:"The ribbon in a card's bar's top left corner: its type"}, el("i",{class:"grib"}), k)),
+      el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
+      el("span",{}, el("i",{class:"gpastsw"}), "past work (Done)"),
+      el("span",{}, el("i",{style:"background:linear-gradient(90deg,var(--muted) 0 50%,transparent 50%),repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "work done, then waiting for the merge"),
+      el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
+      el("span",{}, el("i",{style:"border-right:3px dotted var(--p1)"}), "blocked outside the plan: no end"),
+      el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
+      el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
+      el("span",{}, el("i",{class:"gtoksw plan"}), "plan tokens run out"), el("span",{}, el("i",{class:"gtoksw credits"}), "API credits run out"),
+      el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
+}
+document.addEventListener("click", ev => {   // a click outside the open key closes it
+  const d = document.querySelector("#gantt .gkey[open]");
+  if(d && !ev.target.closest(".gkey")){ d.open = false; gKeyOpen = false; }
+});
+document.addEventListener("keydown", ev => {
+  const d = document.querySelector("#gantt .gkey[open]");
+  if(d && ev.key === "Escape"){ d.open = false; gKeyOpen = false; d.querySelector("summary").focus(); }
+});
 function drawGantt(host){
   gSelReady();   // HUB197: a HUB159 selection becomes the tree's before anything is filtered
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
-  const list = ganttCards(), past = gPast ? ganttPast(now) : [];
-  const sig = JSON.stringify([loaded, filt.j, [...gSel], !!gSelOld, gRel, [...gFold], gNoEst, gPast, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+  const list = ganttCards(), past = ganttPast(now);
+  const sig = JSON.stringify([loaded, filt.j, [...gSel], !!gSelOld, gRel, [...gFold], gNoEst, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
     [...epics].map(([k, v]) => [k, v.name, v.order, v.theme, v.hue]), [...themes].map(([k, v]) => [k, v.name, v.order, v.hue]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.epic, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)]),
     past.map(it => [it.c.id, it.c.t, it.c.epic, it.s, it.e, it.done])]);
@@ -3728,37 +3880,22 @@ function drawGantt(host){
     el("h2",{}, "Gantt"),
     ganttFilters(),   // the controls first: the pills after them change in number, so these stay put
     el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
-    el("button",{type:"button", class:"grel gpast", "aria-pressed":String(gPast), title:(gPast ? "Hide" : "Show") + " the cards finished in the last " + GANTT_PAST_H / 24 + " days (the work streams and the coordinator did)", onclick:gPastToggle}, "✓ Past work"),
-    el("span",{class:"pill" + (sNow > sLim ? " over" : ""), title:"Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")}, "Streams: " + sNow + (sLim === Infinity ? " now, no limit (Turbo)" : " of " + sLim + " now")),
-    el("span",{class:"pill" + (aNow > aLim ? " over" : ""), title:"ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; the pool is fixed at " + ART_POOL + " (one GPU, one ComfyUI queue)"}, "Art: " + aNow + " of " + aLim + " now"),
-    el("span",{class:"pill" + (dNow > dLim ? " over" : ""), title:"Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"}, "Drawn art: " + dNow + " of " + dLim + " now"),
-    el("span",{class:"pill" + (cNow > cLim ? " over" : ""), title:"The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")}, "Coordinator: " + cNow + (cLim === Infinity ? " now, no limit (Turbo)" : " of " + cLim + " now")),
     noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
       title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
       noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
-    el("span",{class:"pill"}, "Plan ends " + fmtTime(new Date(planEnd).toISOString())),
+    ganttKey(shown),   // HUB203: the key, folded into an info icon left of the Tokens pill
     ...usagePills(),
     el("span",{class:"gscale", role:"group", "aria-label":"Scale"}, ...Object.entries(GANTT_SCALES).map(([k, v]) =>
       el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))));
-  const kinds = [...new Set(shown.map(it => cardKind(it.c)).filter(k => k && k !== "Release"))].sort();
-  host.append(el("div",{class:"glegend"},
-    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-card))"}), "card"),
-    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-epic))"}), "epic"),
-    el("span",{}, el("i",{class:"gsw", style:"background:hsl(210 var(--gs) var(--gl-theme))"}), "theme (bars in the theme's colour)"),
-    ...kinds.map(k => el("span",{class:"g-t-" + k.toLowerCase(), title:"The corner of a card's bar: its type"}, el("i",{class:"grib"}), k)),
-    el("span",{}, el("i",{}), "started"), el("span",{}, el("i",{style:"opacity:.45"}), "planned"),
-    gPast ? el("span",{}, el("i",{class:"gpastsw"}), "past work (Done)") : null,
-    el("span",{}, el("i",{style:"background:linear-gradient(90deg,var(--muted) 0 50%,transparent 50%),repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)"}), "work done, then waiting for the merge"),
-    el("span",{}, el("i",{style:"background:none;border:2px dashed var(--muted)"}), "no estimate"),
-    el("span",{}, el("i",{style:"height:6px;background:color-mix(in srgb,var(--muted) 14%,transparent);border:1px dotted var(--muted)"}), "epic: nothing worked on or planned"),
-    el("span",{}, "\u{1F4E6} release"), el("span",{}, el("i",{style:"width:2px;background:var(--accent)"}), "now"),
-    el("span",{}, el("i",{style:"background:var(--p1)"}), "over the limit")));
   if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || gSelCount() || !gRel ? " with these filters." : "."))); return; }
   // the time range: from a little before now (or the earliest start, at most 3 days back) to the end of the plan
   const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const minS = shown.reduce((m, it) => Math.min(m, it.s), now - 6 * G_H);
   const t0 = day0(Math.max(minS, now - 3 * 24 * G_H));
-  const t1 = Math.min(day0(Math.max(planEnd, now + 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
+  // HUB204, HUB205: the token lines widen the range to show them, at most a week ahead
+  const tok = runwayLines(usageNow().u).filter(x => x.t >= now - 6 * G_H && x.t <= now + 7 * 24 * G_H);
+  const tokEnd = tok.reduce((m, x) => Math.max(m, x.t), 0);
+  const t1 = Math.min(day0(Math.max(planEnd, tokEnd, now + (sc.ahead || 1) * 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
   const W = Math.ceil((t1 - t0) / G_H * sc.pxh), X = t => Math.round((Math.max(t0, Math.min(t1, t)) - t0) / G_H * sc.pxh);
   const inner = el("div",{class:"gin", style:"width:calc(var(--glw) + " + W + "px)"});
   // data: what a row is, for the drag of rows (HUB163, HUB191): data-g theme|epic|card|proj, data-p, -t, -e, -id, -col
@@ -3774,8 +3911,18 @@ function drawGantt(host){
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
-  if(gPast) for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
-  for(const [pool, name] of [["stream", "Streams"], ["coord", "Coordinator"]]){
+  for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
+  // HUB217: each strip's label entry counts its pool In progress now against the limit (the header's pills, before)
+  const poolHead = {
+    stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
+      "Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
+    art: [aNow > aLim, "Art: " + aNow + " of " + aLim + " now",
+      "ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; the pool is fixed at " + ART_POOL + " (one GPU, one ComfyUI queue)"],
+    drawn: [dNow > dLim, "Drawn art: " + dNow + " of " + dLim + " now",
+      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"],
+    coord: [cNow > cLim, "Coordinator: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
+      "The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
+  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Coordinator"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
     let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
     const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
@@ -3791,7 +3938,8 @@ function drawGantt(host){
         style:"left:" + X(a) + "px; width:" + Math.max(1, X(b) - X(a) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
     }
     if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
-    inner.append(row("gres", el("div",{class:"glab", title:name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo)")}, name + (isFinite(lim) ? " ≤" + lim : ": " + limTxt)), kids));
+    const [over, head, why] = poolHead[pool];
+    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
   }
   // HUB158: the fold-all button sits right above where the projects start listing (the label column, kept in view)
   if(epicKeys.length) inner.append(row("gtools", el("div",{class:"glab"},
@@ -3853,7 +4001,12 @@ function drawGantt(host){
   // HUB147: a yellow line for every release: the planned ones (Release cards at their eta) and the ones already out
   // (Done release cards of the last weeks, export releases_out), whatever is folded or filtered below
   const relName = c => (String(c.t || "").match(/\brel\d+\b/) || [c.id])[0];   // "rel72", else the card id
-  const relLine = (t, label, tip) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"}, el("span",{}, "\u{1F4E6} " + label))); };
+  // HUB208: the release's name at the top of its line too (in the axis row), where hovering it shows what it is
+  const relLine = (t, label, tip) => { if(gRel && t >= t0 && t <= t1) lines.push(el("span",{class:"gline rel", title:tip, style:"left:calc(var(--glw) + " + X(t) + "px)"},
+    el("span",{class:"gltop", title:tip}, "\u{1F4E6} " + label), el("span",{}, "\u{1F4E6} " + label))); };
+  // HUB204, HUB205: where the plan's tokens, then the Claude API credits, are estimated to run out
+  for(const x of tok) if(x.t >= t0 && x.t <= t1) lines.push(el("span",{class:"gline tok " + x.k, style:"left:calc(var(--glw) + " + X(x.t) + "px)"},
+    el("span",{class:"gltop", title:x.tip + ": " + fmtTime(new Date(x.t).toISOString())}, x.label)));
   for(const it of plan.items.values()) if(it.kind === "milestone" && inProject(it.c)) relLine(it.s, relName(it.c), it.c.id + " " + (it.c.t || "") + " (planned)");
   for(const r of RELEASES_OUT) if(!plan.items.has(r.id) && (!filt.j || (projects.get(filt.j)?.id_prefixes || []).some(p => String(r.id).startsWith(p)) || !projects.get(filt.j))) relLine(gTime(r.at), relName(r), r.id + " " + (r.t || "") + " (out " + fmtTime(r.at) + ")");
   const cardRow = (it, data) => {
@@ -3868,13 +4021,12 @@ function drawGantt(host){
     let cell;
     if(it.kind === "milestone"){
       cell = [el("button",{type:"button", class:"gms", style:"left:" + X(it.s) + "px", "aria-label":tip, ...hover}),
-        el("span",{class:"gmsi", style:"left:" + X(it.s) + "px"}, "\u{1F4E6}")];
-      if(it.s >= t0 && it.s <= t1) lines.push(el("span",{class:"gline rel", style:"left:calc(var(--glw) + " + X(it.s) + "px)"}, el("span",{}, "\u{1F4E6} " + c.id)));
+        el("span",{class:"gmsi", style:"left:" + X(it.s) + "px"}, "\u{1F4E6}")];   // its line is relLine's (HUB208: one label each)
     } else {
       const testing = it.kind === "testing";   // HUB146: merged: no longer drawn like work in progress
       const was = it.kind === "past";   // HUB168: finished: solid while worked on, pale from its gate pass to Done
       const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
       const split = hatch || was ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
