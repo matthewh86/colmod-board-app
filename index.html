@@ -629,7 +629,13 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .usage .note{margin:0}
 .usage details{font-size:.8rem} .usage summary{cursor:pointer; color:var(--muted)}
 /* HUB252: the AI Assistant panel (right side; answers and suggests only) */
-.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px; cursor:pointer}
+.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px 3px 8px; cursor:pointer; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px}   /* HUB254: top right */
+.aibtn svg{width:18px; height:18px; flex:none}
+.aibtn[aria-expanded="true"]{background:var(--sunk)}
+/* HUB254: the open panel pushes the board left so it stays in view; on a narrow screen it covers the board instead */
+body.ai-open .wrap{margin-right:min(420px,100%)}
+body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(420px,100%)) / 2)}
+@media (max-width:820px){ body.ai-open .wrap{margin-right:0} body.ai-open .selbar, body.ai-open .toast{left:50%} }
 .aipanel{position:fixed; top:0; right:0; bottom:0; width:min(420px,100%); z-index:15; background:var(--surface); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column}
 .aipanel[hidden]{display:none}
 .aihead{display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
@@ -648,7 +654,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 
 <div class="wrap" id="app">
   <header class="top">
-    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel">AI Assistant</button></div>
+    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Ask the AI Assistant about the board"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>AI Assistant</button></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -5094,7 +5100,7 @@ async function aiAsk(text){
   }
   fin("No answer yet. The node's local model may be busy or off; ask again later.");
 }
-function aiOpen(v){ $("#aipanel").hidden = !v; $("#aibtn").setAttribute("aria-expanded", String(!!v)); if(v){ if(!ai.conv) aiNewConv(); $("#aiq").focus(); } }
+function aiOpen(v){ $("#aipanel").hidden = !v; $("#aibtn").setAttribute("aria-expanded", String(!!v)); document.body.classList.toggle("ai-open", !!v); if(v){ if(!ai.conv) aiNewConv(); $("#aiq").focus(); } }
 $("#aibtn").addEventListener("click", () => aiOpen($("#aipanel").hidden));
 $("#aiclose").addEventListener("click", () => aiOpen(false));
 $("#ainew").addEventListener("click", aiNewConv);
