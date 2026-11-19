@@ -49,7 +49,10 @@
 html,body{min-height:100%}
 body{background:var(--bg); color:var(--ink); font:14px/1.45 var(--f-body); margin:0}
 .wrap{padding-inline:16px; padding-block:0 24px}
-header.top{padding-block:14px 6px; display:grid; gap:8px}
+header.top{padding-block:14px 4px; display:grid; gap:8px}
+.tally:empty{display:none}
+.budget{display:inline-flex; align-items:center; gap:4px; margin-left:6px; white-space:nowrap}   /* HUB272 */
+.budget .budgetin{width:7em; padding:2px 6px; font:inherit}   /* HUB274: the empty tally row added a gap above the tabs */
 h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
 .hrow .projsel{width:auto; max-width:46vw; margin:0; align-self:center}   /* HUB148: beside the title */
@@ -72,7 +75,7 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .synconly button{font:inherit; cursor:pointer}
 .tabhide{display:none!important}   /* a tab's own list while the sync pill's view shows only the changes on their way */
 .projsel{width:100%; flex:none; margin:2px 0 4px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:6px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a phone; the page never widens (Manual actions was off-screen, 2026-11-17) */
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:2px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a phone; the page never widens (Manual actions was off-screen, 2026-11-17) */
 .tabs::-webkit-scrollbar{display:none}
 .tab .badge{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:9px; background:#d93025; color:#fff; font-size:.7rem; font-weight:700; line-height:1; vertical-align:2px; box-sizing:border-box}   /* the open count, a red circle (Decisions, Manual actions) */
 .tab{flex:none; white-space:nowrap; font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
@@ -3382,7 +3385,8 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   const c = usageCredits(u), cp = c
     ? [el("span",{class:"pill" + (u.plan_used_up && c.left < 1 ? " over" : ""), title:creditLine(c)}, "API credits $" + c.left.toFixed(0) + " left of $" + c.cap.toFixed(0))] : [];
   const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
-  if(x) cp.push(el("span",{class:"pill", title:extraLine(x)}, "Usage credits $" + x.spent.toFixed(2) + (x.limit != null ? " of $" + x.limit.toFixed(0) : "") + " used"));
+  if(x) cp.push(el("span",{class:"pill" + (x.left != null && x.left < 1 ? " over" : ""), title:extraLine(x)},
+    x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used"));
   const rw = usageRunway(u), over = rw ? !!rw.out : !!w.runs_out_at;   // HUB206: runs out = the plan and the API credits
   return [el("span",{class:"pill" + (over ? " over" : ""), title:wins.map(usageLine).join("\n") + (rw && rw.why ? "\nRuns out (the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
     "Tokens " + Math.round(Number(w.pct) || 0) + " % · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
@@ -3429,12 +3433,28 @@ function usageCredits(u){
 function usageExtra(u){
   const x = u && u.extra && typeof u.extra === "object" ? u.extra : null;
   if(!x || x.spent == null || isNaN(Number(x.spent))) return null;
-  return {on: !!x.enabled, spent: Math.max(0, Number(x.spent)), limit: x.limit != null && !isNaN(Number(x.limit)) ? Number(x.limit) : null,
+  const set = extraBudget(u);   // the reading's limit when it gives one, else the budget the user set here
+  const limit = x.limit != null && !isNaN(Number(x.limit)) ? Number(x.limit) : set > 0 ? set : null;
+  const spent = Math.max(0, Number(x.spent));
+  return {on: !!x.enabled, spent, limit, left: limit != null ? Math.max(0, limit - spent) : null,
     cur: String(x.currency || "USD"), recorded: x.recorded || ""};
+}
+// HUB272: the user's usage credits budget (hub/usage.py LIMITS "extra", whole USD, 0 = not set), with a change on its way
+function extraBudget(u){
+  let v = u && u.limits && typeof u.limits === "object" ? u.limits.extra : 0;
+  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "limit.extra") v = ch.value;
+  return Number.isInteger(v) && v >= 0 && v <= 5000 ? v : 0;
+}
+function extraBudgetInput(u){
+  const inp = el("input",{type:"number", id:"limit-extra", min:"0", max:"5000", step:"1", value:String(extraBudget(u) || ""), placeholder:"not set",
+    class:"budgetin", "aria-label":"Usage credits budget in US dollars (0 = not set)", disabled:readOnly ? true : null,
+    onchange:ev => { const v = Math.max(0, Math.min(5000, Math.round(Number(ev.target.value) || 0)));
+      if(v !== extraBudget(hubStatus && hubStatus.usage)) change({id: "hub", upd: null}, "limit.extra", v); renderHubTab(); }});
+  return el("label",{class:"budget"}, "Budget $", inp);
 }
 function extraLine(x){
   return "Usage credits (extra usage past the plan, apart from the API credits): $" + x.spent.toFixed(2) + " used"
-    + (x.limit != null ? " of $" + x.limit.toFixed(2) : "") + (x.on ? "" : " (extra usage off)")
+    + (x.limit != null ? " of $" + x.limit.toFixed(2) + ", $" + x.left.toFixed(2) + " left" : ", no budget set (the Hub tab sets one)") + (x.on ? "" : " (extra usage off)")
     + ". Kept for handovers only." + (x.recorded ? " Recorded " + fmtTime(x.recorded) + "." : "");
 }
 function creditLine(c){   // "API credits 2026-11: $12.30 spent, $25.00 held by running runs, $162.70 left of $200"
@@ -3463,7 +3483,9 @@ function usageSection(host){
   host.append(el("h2",{}, "Tokens and pace"),
     cr ? el("p",{class:"note credleft", title:creditLine(cr)}, "API top-up credits: ", el("b",{}, "$" + cr.left.toFixed(2) + " left"), " of $" + cr.cap.toFixed(0) + " this month (" + cr.month + ").") : null,
     usageExtra(u) ? el("p",{class:"note credleft", title:extraLine(usageExtra(u))}, "Usage credits (extra usage past the plan, for handovers only): ",
-      el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"), usageExtra(u).limit != null ? " of $" + usageExtra(u).limit.toFixed(2) + "." : " (the app reports no limit).") : null,
+      usageExtra(u).left != null ? el("b",{}, "$" + usageExtra(u).left.toFixed(2) + " left") : el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"),
+      usageExtra(u).left != null ? " of $" + usageExtra(u).limit.toFixed(0) + " ($" + usageExtra(u).spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
+      extraBudgetInput(u)) : null,
     paceSelector(pace), paceAutoHint(u, pace),
     u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
     rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null);
@@ -4780,8 +4802,11 @@ function drawManual(host, past){   // past: the done ones (Past manual actions);
       return el("tr",{}, el("td",{}, el("span",{}, d.t || d.id), el("div",{class:"note"}, String(d.id) + (d.project ? " · " + String((projects.get(d.project) || {}).name || d.project) : "")), d.d ? el("div",{}, String(d.d)) : null),
         el("td",{}, manCardBtn(d.card)), el("td",{}, manDay(d.snoozed_at)), el("td",{}, wake, " ", btn));
     });
-    host.append(el("details",{class:"snoozed"}, el("summary",{}, `Snoozed (${snoozed.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
-      el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows)))));
+    // HUB273: Snoozed stays open or shut across redraws (answering Done on a snoozed action redraws the list)
+    const zd = el("details",{class:"snoozed", open:!!filt.snoozedOpen}, el("summary",{}, `Snoozed (${snoozed.length})`), el("div",{class:"tblwrap"}, el("table",{class:"st arts"},
+      el("thead",{}, el("tr",{}, ...["Action", "Card", "Snoozed", ""].map(h => el("th",{}, h)))), el("tbody",{}, rows))));
+    zd.addEventListener("toggle", () => { filt.snoozedOpen = zd.open; ls("kb.filters", filt); });
+    host.append(zd);
   }
 }
 function doneManualEl(done){   // the done manual actions, each can be opened again
