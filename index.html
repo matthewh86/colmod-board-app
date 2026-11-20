@@ -327,6 +327,8 @@ img.zoom:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .empty{color:var(--muted); padding:30px 0; text-align:center}
 .modal{position:fixed; inset:0; z-index:20; background:rgba(10,14,20,.55); display:flex; align-items:flex-start; justify-content:center; padding:calc(24px + env(safe-area-inset-top,0px)) 16px 24px; overflow:auto}
+.edbar{position:sticky; bottom:-16px; background:var(--surface); padding:8px 0; border-top:1px solid var(--line); align-items:center; gap:8px}   /* HUB293: Save at the bottom of the card editor */
+.eddiff{margin:8px 0; padding-left:18px; max-height:50vh; overflow:auto; overflow-wrap:anywhere}
 .mpanel{width:min(680px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
 .mhead{display:flex; align-items:center; gap:8px}
 .mcol{font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-left:3px solid var(--cc); padding-left:6px}
@@ -1370,11 +1372,13 @@ function cardEl(c, full=false){
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
   const tpath = th ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th.name+" ›") : null;
   if(full && !readOnly && epics.size){   // card window: the epic pill is a drop-down
-    const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value && ev.target.value !== c.epic) write(c.id,{epic:ev.target.value}); }});
-    if(!ep) es.append(el("option",{value:"", selected:true}, c.epic ? c.epic : noEpicText(c)));
-    for(const [k,v] of sortedEpics()) es.append(el("option",{value:k, selected:k===c.epic}, v.name));
-    e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(ep?ep.hue:210), title:"Change this card's epic"},
-      el("span",{"aria-hidden":"true"}, (ep?ep.name:noEpicText(c))+" ▾"), es)));
+    // HUB293: a change is held in the editor (EDIT) until Save
+    const epV = edVal(c, "epic", c.epic), epP = epics.get(epV);
+    const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value){ edPut(c, "epic", ev.target.value, c.epic); renderModal(); } }});
+    if(!epP) es.append(el("option",{value:"", selected:true}, c.epic ? c.epic : noEpicText(c)));
+    for(const [k,v] of sortedEpics()) es.append(el("option",{value:k, selected:k===epV}, v.name));
+    e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
+      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEpicText(c))+" ▾"), es)));
   } else if(ep) e.append(el("div",{}, tpath, el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
   else if(c.adhoc === true) e.append(el("div",{}, el("span",{class:"chip", style:"--h:0", title:"Ad hoc: outside any epic (HUB170)"}, "Ad hoc")));
   if(c.st && full) e.append(el("div",{class:"st"}, linkify(c.st)));   // board cards stay short: details in the card window
@@ -1383,6 +1387,7 @@ function cardEl(c, full=false){
       title:"Open this item in the change log"}, full ? "What changed (change log) ↗" : "Changes ↗")));
   const opts = Array.isArray(c.opts) ? c.opts.filter(o=>o && o.id) : [];
   const ans = (c.ans && typeof c.ans === "object") ? c.ans : {};
+  const ansv = k => edVal(c, "ans." + k, ans[k]);   // HUB293: the answer as edited (not yet saved), else the board's
   if(opts.length){
     const done = opts.filter(o=>ans[o.id]).length;
     if(!full){
@@ -1392,26 +1397,24 @@ function cardEl(c, full=false){
       const optEl = o => {
         const row = el("div",{class:"ch"});
         for(const ch of (o.choices||[])){
-          const sel = ans[o.id]===ch.v;
+          const sel = ansv(o.id)===ch.v;
           const src = mediaImg(ch.img);   // choice picture: a media file of the card
           const label = (ch.t || String(ch.v)) + (ch.rec?" (recommended)":"");
           row.append(el("button",{type:"button", class:(ch.rec?"rec ":"")+(src?"pic":""), "aria-pressed":String(sel), title:ch.rec?"Recommended":"",
-            onclick:()=>write(c.id,{ans:{[o.id]: sel ? (ans[o.id+OTHER] ? "__other" : null) : ch.v}})},   // typed text is kept
+            onclick:()=>{ edPut(c, "ans."+o.id, sel ? (ansv(o.id+OTHER) ? "__other" : null) : ch.v, ans[o.id]); renderModal(); }},   // typed text is kept
             src ? pic(src, {alt:label, loading:"lazy"}) : null, src ? el("span",{}, label) : label));
         }
         // typed text (ans[id + OTHER]) sits beside the chosen button as a note; with no button chosen it is the answer
         // (ans[id] = "__other"). Choosing or unchoosing a button never clears it.
         const oid = "qo-"+c.id+"-"+o.id;
-        const other = el("textarea",{id:oid, class:"other", placeholder:"Something else, or a note? Write it here (saved when you leave the field; kept when you pick a button)", "aria-label":"Other answer: "+o.q, onclick:ev=>ev.stopPropagation()});
-        other.value = ans[o.id+OTHER] || "";
-        other.addEventListener("blur", ()=>{
+        const other = el("textarea",{id:oid, class:"other", placeholder:"Something else, or a note? Write it here (kept until you Save; kept when you pick a button)", "aria-label":"Other answer: "+o.q, onclick:ev=>ev.stopPropagation()});
+        other.value = ansv(o.id+OTHER) || "";
+        other.addEventListener("input", ()=>{
           const v = other.value.trim();
-          if(v === String(ans[o.id+OTHER]||"")) return;
-          const keep = ans[o.id] && ans[o.id] !== "__other";   // a chosen button stays chosen
-          const want = v ? (keep ? ans[o.id] : "__other") : (keep ? ans[o.id] : null);
-          const patch = {[o.id+OTHER]: v || null};
-          if(want !== (ans[o.id] ?? null)) patch[o.id] = want;
-          write(c.id,{ans: patch});
+          const keep = ansv(o.id) && ansv(o.id) !== "__other";   // a chosen button stays chosen
+          const want = v ? (keep ? ansv(o.id) : "__other") : (keep ? ansv(o.id) : null);
+          edPut(c, "ans."+o.id+OTHER, v || null, ans[o.id+OTHER]);
+          edPut(c, "ans."+o.id, want, ans[o.id]);
         });
         const qsrc = mediaImg(o.img);   // e.g. the original, for comparison
         return el("div",{class:"dq"}, el("div",{class:"qt"}, linkify(o.q)), qsrc ? pic(qsrc, {class:"qimg zoom", alt:o.q, loading:"lazy", tabindex:"0", title:"Click to enlarge"}) : null,
@@ -1444,9 +1447,9 @@ function cardEl(c, full=false){
       const box = el("div",{class:"decs", onclick:ev=>ev.stopPropagation()}, el("div",{class:"dh"}, "Questions", el("span",{}, qdone+"/"+qs.length+" answered")));
       const qEl = x => {
         const tid = "qa-"+c.id+"-"+x.id;
-        const ta = el("textarea",{id:tid, placeholder:"Your answer (saved when you leave the field)", onclick:ev=>ev.stopPropagation()});
-        ta.value = ans[x.id] || "";
-        ta.addEventListener("blur", ()=>{ const v = ta.value.trim(); if(v !== String(ans[x.id]||"")) write(c.id,{ans:{[x.id]: v || null}}); });
+        const ta = el("textarea",{id:tid, placeholder:"Your answer (kept until you Save)", onclick:ev=>ev.stopPropagation()});
+        ta.value = ansv(x.id) || "";
+        ta.addEventListener("input", ()=>edPut(c, "ans."+x.id, ta.value.trim() || null, ans[x.id]));
         return el("div",{class:"dq"}, el("label",{class:"qt", for:tid}, linkify(x.q)), ta);
       };
       const qDone = pastAtOpen(c, qs.map(x=>"q:"+x.id), k=>!!String(ans[k.slice(2)]||"").trim());
@@ -1506,10 +1509,11 @@ function cardEl(c, full=false){
     if(c.d) more.append(descEl(String(c.d)));
     more.append(el("div",{class:"meta"}, ...[c.g&&("Group: "+c.g), c.cat&&("Area: "+(areas.get(c.cat)?.name || c.cat)), c.imp&&("Impact: "+c.imp), c.dif&&("Effort: "+c.dif), c.tri&&("Triage: "+c.tri)].filter(Boolean).map(s=>el("span",{},s))));
     const pr = el("div",{class:"row"}, el("span",{class:"lbl"},"Priority"));
-    for(const p of [1,2,3,4]) pr.append(el("button",{type:"button", "aria-pressed":String(c.pri===p), onclick:ev=>{ev.stopPropagation(); write(c.id,{pri:c.pri===p?0:p});}}, PRI[p]));
+    const priV = edVal(c, "pri", c.pri || 0);
+    for(const p of [1,2,3,4]) pr.append(el("button",{type:"button", "aria-pressed":String(priV===p), onclick:ev=>{ev.stopPropagation(); edPut(c, "pri", priV===p?0:p, c.pri || 0); renderModal();}}, PRI[p]));
     more.append(pr);
-    const sel = el("select",{"aria-label":"Column", onclick:ev=>ev.stopPropagation(), onchange:ev=>moveTo(c.id, ev.target.value, 0)});
-    for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===c.col}, col.name));
+    const sel = el("select",{"aria-label":"Column", onclick:ev=>ev.stopPropagation(), onchange:ev=>{ edPut(c, "col", ev.target.value, c.col); renderModal(); }});
+    for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===edVal(c, "col", c.col)}, col.name));
     more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
       el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
@@ -1524,6 +1528,7 @@ function cardEl(c, full=false){
     ta.addEventListener("keydown", ev=>{ if(ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); post(); } });
     more.append(ta, el("div",{class:"row"}, el("button",{type:"button", class:"cpost", title:"Add the comment to the activity (Ctrl+Enter)",
       onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
+    if(!readOnly && cards.has(c.id)) more.append(edBarEl(c));   // HUB293
     e.append(more); return e;
   }
   if(!readOnly) e.append(el("div",{class:"hov place"}, ...placeBtns(c)));   // hover controls: rank within the column
@@ -1547,12 +1552,93 @@ function draftSet(id, v){
   try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.fromEntries(drafts))); }catch(e){}
 }
 // <<< comment-drafts
-function openCard(id){ lastFocus = document.activeElement; openId = id; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); }
-function closeCard(){ openId = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }
+// >>> card-editor (tests/test_app.py runs this block)
+// HUB293: the card editor holds its changes (EDIT) until the Save button; closing, opening another card or switching
+// tab with changes asks Save or Discard, with a summary of each changed field.
+let EDIT = {id: null, v: new Map()};   // the open card's unsaved changes: "epic", "pri", "col", "ans.<id>" -> new value
+function edVal(c, key, cur){ return EDIT.id === c.id && EDIT.v.has(key) ? EDIT.v.get(key) : cur; }
+function edDirty(){ return !!openId && EDIT.id === openId && EDIT.v.size > 0; }
+function edReset(){ EDIT = {id: null, v: new Map()}; }
+function edPut(c, key, val, cur){
+  if(readOnly){ toast("This view is read-only."); return; }
+  if(EDIT.id !== c.id) EDIT = {id: c.id, v: new Map()};
+  if(String(val ?? "") === String(cur ?? "")) EDIT.v.delete(key); else EDIT.v.set(key, val);
+  const box = document.getElementById("edbar"); if(box) edBarFill(box, c);
+}
+function edShort(s){ s = String(s ?? "").replace(/\s+/g, " ").trim(); return s.length > 80 ? s.slice(0, 77) + "..." : s; }
+function edDiff(c){   // [{field, was, now}] for each unsaved change
+  const out = [], a = (c.ans && typeof c.ans === "object") ? c.ans : {};
+  const opts = Array.isArray(c.opts) ? c.opts : [], qs = qList(c);
+  const show = (key, v) => {
+    if(v == null || v === "") return "(none)";
+    if(key === "epic") return epics.get(v)?.name || v;
+    if(key === "pri") return v ? (PRI[v] || v) : "(none)";
+    if(key === "col") return COL_NAME[v] || v;
+    const o = opts.find(x => x && x.id === key.slice(4));
+    const ch = o && (o.choices || []).find(x => x.v === v);
+    return v === "__other" ? "(the note)" : ch ? (ch.t || String(ch.v)) : edShort(v);
+  };
+  for(const [key, now] of EDIT.id === c.id ? EDIT.v : []){
+    let field, was;
+    if(key === "epic"){ field = "Epic"; was = c.epic; }
+    else if(key === "pri"){ field = "Priority"; was = c.pri || 0; }
+    else if(key === "col"){ field = "Column"; was = c.col; }
+    else {
+      const id = key.slice(4), note = id.endsWith(OTHER), base = note ? id.slice(0, -OTHER.length) : id;
+      const q = (opts.find(x => x && x.id === base) || qs.find(x => x.id === base) || {}).q || base;
+      field = (note ? "Note on " : "Answer: ") + edShort(q); was = a[id];
+      if(note){ out.push({field, was: edShort(was) || "(none)", now: edShort(now) || "(none)"}); continue; }
+    }
+    out.push({field, was: show(key, was), now: show(key, now)});
+  }
+  return out;
+}
+function edBarFill(box, c){
+  const n = EDIT.id === c.id ? EDIT.v.size : 0;
+  box.replaceChildren(
+    el("button",{type:"button", class:"pri edsave", disabled:!n, title:"Send every change to the board", onclick:ev=>{ ev.stopPropagation(); edSave(); }}, "Save"),
+    el("button",{type:"button", class:"eddiscard", disabled:!n, title:"Throw the changes away", onclick:ev=>{ ev.stopPropagation(); edReset(); renderModal(); }}, "Discard"),
+    el("span",{class:"hint"}, n ? n + (n === 1 ? " unsaved change" : " unsaved changes") : "No unsaved changes"));
+}
+function edBarEl(c){ const box = el("div",{class:"row edbar", id:"edbar"}); edBarFill(box, c); return box; }
+function edSave(){   // true when everything was sent (or there was nothing to send)
+  const c = openId && cards.get(openId);
+  if(!c || !edDirty()) return true;
+  const patch = {}, ans = {};
+  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "pri" || k === "epic") patch[k] = x; }
+  if(Object.keys(ans).length) patch.ans = ans;
+  if(Object.keys(patch).length){
+    if(!write(c.id, patch, true)){ render(); return false; }
+    for(const k of [...EDIT.v.keys()]) if(k !== "col") EDIT.v.delete(k);
+  }
+  const col = EDIT.v.get("col");
+  if(col !== undefined && !write(c.id, {col, rank: rankAt(col, 0, c.id)}, true)){ render(); return false; }
+  edReset(); render();
+  return true;
+}
+function edPrompt(then){   // unsaved changes: summary, then Save, Discard or Cancel (keep editing)
+  const c = cards.get(openId); if(!c){ then(); return; }
+  const rows = edDiff(c);
+  const form = edForm("Unsaved changes to " + c.id,
+    el("h3",{}, "Unsaved changes to " + c.id),
+    el("ul",{class:"eddiff"}, ...rows.map(r => el("li",{}, el("b",{}, r.field + ": "), r.was + " → " + r.now))),
+    el("div",{class:"acts"},
+      el("button",{type:"button", onclick:closeEd}, "Cancel"),
+      el("button",{type:"button", class:"eddiscard", onclick:()=>{ edReset(); closeEd(); then(); }}, "Discard"),
+      el("button",{type:"button", class:"pri edsave", onclick:()=>{ if(edSave()){ closeEd(); then(); } }}, "Save")));
+  const b = form.querySelector(".edsave"); if(b) b.focus({preventScroll:true});
+}
+function edGuard(then){ if(edDirty()) edPrompt(then); else then(); }
+// <<< card-editor
+function openCard(id){
+  const go = () => { if(EDIT.id !== id) edReset(); lastFocus = document.activeElement; openId = id; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); };
+  if(openId && openId !== id) edGuard(go); else go();
+}
+function closeCard(){ edGuard(() => { edReset(); openId = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }); }
 function renderModal(){
   const box = $("#modal");
   const c = openId && (cards.get(openId) || REL_DOCS.get(openId));   // HUB199: an archived Release card opens too
-  if(!c){ openId = null; box.hidden = true; box.textContent = ""; if(!rank) document.body.classList.remove("modal-open"); return; }
+  if(!c){ openId = null; edReset(); box.hidden = true; box.textContent = ""; if(!rank) document.body.classList.remove("modal-open"); return; }
   const arch = !cards.has(c.id);
   const old = box.querySelector(".mpanel");
   const keepScroll = old ? old.scrollTop : 0, keepBox = box.scrollTop, same = old && old.dataset.id === c.id;
@@ -2579,6 +2665,15 @@ function winSlice(end, step, len, win){   // the points of a history (len points
   const k0 = Math.floor((win.a - first) / step), k1 = Math.ceil((win.b - first) / step);
   return {k0, n: Math.max(1, k1 - k0), t0: first + k0 * step};   // point i of the window is the file's point k0 + i (none outside 0..len-1)
 }
+// HUB294: the thin vertical "now" line every graph over time draws, in the Gantt's look but muted (var(--muted) holds
+// in both themes); none where the window ends before now (slack: one point). x(t) maps a time to the plot's x.
+function nowLine(a, b, slack, x, L, pw, y1, y2){
+  const t = Date.now();
+  if(t < a || t > b + slack) return [];
+  const px = Math.min(L + pw, Math.max(L, x(Math.min(t, b)))).toFixed(1), left = px > L + pw - 30;
+  return [sv("line",{class:"gnow", x1:px, x2:px, y1, y2, stroke:"var(--muted)", "stroke-width":1.5}),
+          sv("text",{class:"gnow", x:(left ? px - 3 : +px + 3), y:y1 + 9, "text-anchor":left ? "end" : "start", fill:"var(--muted)", "font-size":"9", "font-weight":600}, "now")];
+}
 function winIndex(px, L, pw, win, t0, step){ return Math.floor((win.a + (px - L) / pw * (win.b - win.a) - t0) / step); }   // the point under a pointer
 function winTicks(win, xt, L, pw){   // [x, "hh:00"] of the window's hour lines: every hour, 2 or 6 by its length
   const hours = (win.b - win.a) / 3600000, every = hours > 12 ? 6 : hours > 4 ? 2 : 1, tick = new Date(win.a), out = [];
@@ -2657,6 +2752,7 @@ function buildUsage(d0, machine, w){
   for(const [x, label] of winTicks(win, xt, L, pw))
     svg.append(sv("line",{x1:f(x), x2:f(x), y1:T1, y2:T2 + H2, stroke:"var(--line)", "stroke-width":1}),
                sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, label));
+  svg.append(...nowLine(win.a, win.b, 0, xt, L, pw, T1, T2 + H2));
   svg.append(sv("path",{d:steps(games, true), fill:"var(--u-games)", "fill-opacity":.2}),
              sv("path",{d:steps(games, false), fill:"none", stroke:"var(--u-games)", "stroke-width":1.5, "stroke-linejoin":"round"}),
              sv("path",{d:steps(slots, false), fill:"none", stroke:"var(--muted)", "stroke-width":1}),
@@ -2850,6 +2946,7 @@ function buildTokens(d, machine, w){
   for(const [v, label] of [[most, fmtTok(most)], [most / 2, fmtTok(most / 2)], [0, "0"]])
     svg.append(sv("line",{x1:L, x2:L + pw, y1:f(y(v)), y2:f(y(v)), stroke:"var(--line)", "stroke-width":1}), sv("text",{x:L - 5, y:f(y(v) + 3.5), "text-anchor":"end"}, label));
   for(const [x, label] of winTicks(win, xt, L, pw)) svg.append(sv("text",{x:f(x), y:H - 3, "text-anchor":"middle"}, label));
+  svg.append(...nowLine(win.a, win.b, 0, xt, L, pw, T, T + Hh));
   for(let i = 0; i < n; i++){   // one stacked bar per point, the largest series at the bottom, a gap between bars
     let base = 0;
     for(const s of stack){
@@ -3027,6 +3124,7 @@ function buildTokHourly(h, w){
     if(tx < L + 14 || tx > L + pw - 14) continue;
     svg.append(sv("text",{x:f(tx), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
   }
+  svg.append(...nowLine(t0, end, step, t => L + pw * (t - t0) / (end - t0), L, pw, T, T + Hh));
   const path = v => v.map((p, i) => (i ? "L" : "M") + f(x(i)) + " " + f(y(p))).join(" ");
   svg.append(sv("path",{d:path(total) + ` L${f(x(n - 1))} ${f(y(0))} L${f(x(0))} ${f(y(0))} Z`, fill:"var(--accent)", "fill-opacity":.12, stroke:"none"}));
   lines.forEach((l, k) => svg.append(sv("path",{d:path(l.v), fill:"none", stroke:`var(${TOK_COL[(k + 1) % TOK_COL.length]})`, "stroke-width":1.2, "stroke-dasharray":"4 3"})));
@@ -3087,6 +3185,7 @@ function tokHourlyMachine(m, h, w){   // one machine: a line per stream, its own
     if(tx < L + 14 || tx > L + pw - 14) continue;
     svg.append(sv("text",{x:f(tx), y:H - 3, "text-anchor":"middle"}, String(tick.getHours()).padStart(2, "0") + ":00"));
   }
+  svg.append(...nowLine(t0, end, step, t => L + pw * (t - t0) / (end - t0), L, pw, T, T + Hh));
   const path = v => v.map((p, i) => (i ? "L" : "M") + f(x(i)) + " " + f(y(p))).join(" ");
   lines.forEach((l, k) => svg.append(sv("path",{d:path(l.v), fill:"none", stroke:`var(${col(k)})`, "stroke-width":k ? 1.5 : 2})));
   const mark = sv("line",{x1:0, x2:0, y1:T, y2:T + Hh, stroke:"var(--ink)", "stroke-opacity":.35, visibility:"hidden"});
@@ -3551,12 +3650,12 @@ function paceAutoHint(u, pace){
     + " (it was " + name(a.from) + "): the overflow streams started using the Claude API credits. Pick a pace to change it; the hub drops it at most once a month.");
 }
 // HUB241: Turbo's flame (a canvas over its button, drawn only while it is hovered, focused or chosen, and only while the page is
-// visible) and the sparks of a click on it; neither runs under prefers-reduced-motion (the button's static glow stays)
+// visible) and the sparks of a click on it; the sparks do not run under prefers-reduced-motion (the button's static glow stays); the flame does (HUB295: the user turned it on deliberately)
 const paceCalm = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function paceFlame(cv, btn){
   const ctx = cv.getContext && cv.getContext("2d"); if(!ctx || !btn) return;
   const N = 300, ps = []; let raf = 0, over = false;
-  const want = () => cv.isConnected && !document.hidden && !paceCalm() && (over || btn.matches(":focus-visible") || btn.getAttribute("aria-pressed") === "true");
+  const want = () => cv.isConnected && !document.hidden && (over || btn.matches(":focus-visible") || btn.getAttribute("aria-pressed") === "true");
   const spawn = (p, w, h, fresh) => { p.x = Math.random() * w; p.y = h - Math.random() * (fresh ? 4 : h * .5); p.v = .5 + Math.random() * 1.4; p.l = fresh ? 0 : Math.random(); p.d = .012 + Math.random() * .02; p.s = 1 + Math.random() * 2; };
   const frame = () => {
     raf = 0;
@@ -5056,6 +5155,7 @@ function cardDecisionsEl(list){
       el("td",{}, COL_NAME[c.col] || c.col || ""))))));
 }
 function showTab(name, fromHash){
+  if(edDirty()){ edPrompt(() => showTab(name, fromHash)); return; }   // HUB293: unsaved card changes: Save or Discard first
   if(name === "manual") name = "decisions";   // HUB220: the old Manual actions tab's link opens Decisions
   const tab = TABS.includes(name) ? name : "board";
   filt.tab = tab; ls("kb.filters", filt);
@@ -5231,7 +5331,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
 });
 function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a confirmation
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
-  tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; rank = null; renderRank();
+  tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
