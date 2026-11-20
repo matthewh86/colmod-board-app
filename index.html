@@ -3406,7 +3406,7 @@ function usagePills(){   // the Gantt's: the limit that runs out first (else the
   }
   const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
   if(x) cp.push(el("span",{class:"pill" + (x.rising ? " over" : ""), title:extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : "")},
-    x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used"));
+    (x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used") + extraAge(x)));
   const rw = usageRunway(u), left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));   // the run-out times are in the title
   // HUB285: the three usage measurements in one box
   return [el("span",{class:"ubox", role:"group", "aria-label":"Usage"}, el("span",{class:"pill " + tokLevel(left), title:wins.map(usageLine).join("\n") + "\nRuns out" + runoutText(u, w).replace(/^ · /, ": ") + (rw && rw.why ? "\n(the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
@@ -3461,6 +3461,12 @@ function usageCredits(u){
 }
 // HUB272: the usage credits: the extra usage the user added to the plan, billed past its limits; kept for handovers
 // (CLAUDE.md "Usage order" stage 4). The desktop app's reading gives what is spent; a limit only when it gives one.
+// HUB290: the usage credits figure is a reading a session records by hand; one over an hour old says how old it is
+const EXTRA_STALE_MIN = 60;
+function extraAge(x){
+  const t = new Date(x.recorded).getTime(), m = (Date.now() - t) / 60000;
+  return isNaN(t) || m < EXTRA_STALE_MIN ? "" : " (as of " + (m < 1440 ? Math.round(m / 60) + " h" : Math.round(m / 1440) + " d") + " ago)";
+}
 function usageExtra(u){
   const x = u && u.extra && typeof u.extra === "object" ? u.extra : null;
   if(!x || x.spent == null || isNaN(Number(x.spent))) return null;
