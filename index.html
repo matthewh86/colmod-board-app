@@ -640,6 +640,8 @@ table.st td small{color:var(--muted)}
 .mach.ov > .mcard{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start}
 .mach.ov > .mcard > .mh{flex:1 0 100%}
 .mach.ov > .mcard > .ubox, .mach.ov > .mcard > .rbox, .mach.ov > .mcard > .cbox{flex:1 1 300px; margin-top:0}
+.mach.ov > .mcard > div > svg{max-width:100%; height:auto}   /* HUB291: a graph never spills into the next */
+.mach.ov > .mcard > .ubox, .mach.ov > .mcard > .rbox, .mach.ov > .mcard > .cbox{overflow:hidden}
 .tbox{margin-top:10px}
 table.arts tr.doomed td:first-child a, table.arts tr.doomed td:first-child span{text-decoration:line-through; color:var(--muted)}
 table.arts td:last-child{white-space:nowrap; text-align:right}
@@ -3305,10 +3307,14 @@ function drawMachines(host){
       b.addEventListener("click", () => { if(tokHours !== h){ tokHours = h; renderStatus(); } }); return b; };
     host.append(el("div",{class:"ohead"}, el("h2",{}, "Overview"),
       el("span",{class:"uleg", role:"group", "aria-label":"Span of every graph"}, "Last ", span(6, "6 h"), span(12, "12 h"), span(24, "Day"))), over);
-    for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the card's width
-    for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
-    for(const box of over.querySelectorAll(".rbox")) renderTokHourly(box);
-    for(const box of over.querySelectorAll(".cbox")) renderContext(box);
+    // HUB291: twice: the first pass shows the boxes that have data (each drawn while the ones after it were still
+    // hidden, so too wide for the row); the second draws each to the width it has beside the others
+    for(let pass = 0; pass < 2; pass++){
+      for(const box of over.querySelectorAll(".ubox:not(.tbox)")) renderUsage(box, box.dataset.machine);   // once attached: drawn to the box's width
+      for(const box of over.querySelectorAll(".tbox")) renderTokens(box, box.dataset.machine);
+      for(const box of over.querySelectorAll(".rbox")) renderTokHourly(box);
+      for(const box of over.querySelectorAll(".cbox")) renderContext(box);
+    }
     const allm = over.querySelector(".allm");
     if(allm && ![...allm.querySelectorAll(".ubox, .rbox")].some(b => !b.hidden)) allm.remove();   // no token file yet: no empty frame
     // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
@@ -3354,7 +3360,7 @@ function drawMachines(host){
 // ---------- the plan's token limits and the development pace (HUB128-130): status/usage.json, recorded by the coordinator
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
-  ["turbo", "Turbo", "Full speed: no limit on development streams nor on the coordinator's hub cards; the machines' game slots, the ComfyUI art pool and the limit on art Claude draws still apply"]];
+  ["turbo", "Turbo", "Full speed: no limit on development streams, the coordinator's hub cards or art Claude draws; only the paid usage credits, the local LLM, the ComfyUI art pool and the machines' game slots still apply"]];
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
   let pace = u && u.pace || "moderate";
@@ -3629,7 +3635,7 @@ function limitsSection(host){
     const sel = el("select",{id, "aria-describedby":id + "-what", disabled:readOnly ? true : null,
       onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits()[L.k]) change({id: "hub", upd: null}, "limit." + L.k, v); renderHubTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
     for(let v = L.min; v <= L.max; v++) sel.append(el("option",{value:String(v), selected:v === lim[L.k] ? true : null}, String(v) + (v === L.def ? " (default)" : "")));
-    const lifted = (L.k === "streams" || L.k === "coord") && pace === "turbo";   // HUB174, HUB196
+    const lifted = (L.k === "streams" || L.k === "coord" || L.k === "drawn") && pace === "turbo";   // HUB174, HUB196, HUB292
     return el("div",{class:"limrow" + (lifted ? " lifted" : "")},
       el("label",{for:id, class:"limname"}, L.name),
       el("div",{class:"limval"}, sel, lifted ? el("span",{class:"state"}, "lifted on Turbo") : null),
