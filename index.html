@@ -635,7 +635,11 @@ table.st td small{color:var(--muted)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70} }
 :root[data-theme="dark"]{--u-cpu:#3987e5; --u-mem:#d95926; --u-games:#199e70}
 .ubox, .rbox, .cbox{min-width:0}
-@media (min-width:760px){ .mach > .mcard.allm{grid-column:span 2} }   /* HUB179: the All machines frame, two cards wide */
+/* HUB288 (was HUB179's two-wide frame): the Overview has one machine a row, going down, with its graphs across */
+.mach.ov{grid-template-columns:1fr}
+.mach.ov > .mcard{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start}
+.mach.ov > .mcard > .mh{flex:1 0 100%}
+.mach.ov > .mcard > .ubox, .mach.ov > .mcard > .rbox, .mach.ov > .mcard > .cbox{flex:1 1 300px; margin-top:0}
 .tbox{margin-top:10px}
 table.arts tr.doomed td:first-child a, table.arts tr.doomed td:first-child span{text-decoration:line-through; color:var(--muted)}
 table.arts td:last-child{white-space:nowrap; text-align:right}
@@ -3285,7 +3289,7 @@ function drawMachines(host){
     const work = Array.isArray(hubStatus.work) ? hubStatus.work.filter(Boolean) : [];
     const names = new Set(machines.map(m => String(m.machine)));
     // Overview: every graph in one place, the total of all machines first
-    const over = el("div",{class:"mach"});
+    const over = el("div",{class:"mach ov"});   // HUB288: one machine a row, going down; its graphs across
     // HUB232 / HUB233: the All machines frame holds the machines' tokens per hour (one line a machine, was a card of its own and
     // a graph in each machine's card) and the same per session or agent; the token bars are there when two machines report
     over.append(el("div",{class:"mcard allm"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "All machines")),
