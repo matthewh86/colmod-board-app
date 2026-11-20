@@ -1368,6 +1368,7 @@ function cardEl(c, full=false){
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
   e.append(el("div",{class:"t"}, c.t||""));
   if(full){ const rl = releaseLinksEl(c); if(rl) e.append(rl); }   // HUB231
+  if(full){ const al = cardArtifactsEl(c); if(al) e.append(al); }   // HUB299
   if(!full && flags.length) e.append(el("div",{class:"flags"}, ...flags));   // HUB215
   const ep = epics.get(c.epic);
   const th = full ? themes.get(epicTheme(c.epic)) : null;   // card window: the theme before the epic pill (it follows the epic)
@@ -4821,6 +4822,13 @@ function artDel(doc){     // the exported mark with this page's change that is s
 function artLink(doc){    // only a claude.ai artifact link is ever made clickable
   const url = String(doc.url || "");
   return /^https:\/\/claude\.ai\/(code\/)?artifact\/[A-Za-z0-9_-]{8,80}$/.test(url) ? url : "";
+}
+function cardArtifactsEl(c){   // HUB299: the pages made in this card's work (recorded with --card), each a link; none: no section
+  const mine = [...artDocs.values()].filter(d => String(d.card || "") === String(c.id) && artLink(d))
+    .sort((x, y) => String(x.pub || "").localeCompare(String(y.pub || "")) || String(x.id).localeCompare(String(y.id)));
+  if(!mine.length) return null;
+  return el("div",{class:"rlinks calinks", "data-art-of":String(c.id), onclick:ev=>ev.stopPropagation()}, el("b",{}, "Artifacts (" + mine.length + "): "),
+    el("ul",{class:"rcards"}, ...mine.map(d => el("li",{}, el("a",{href:artLink(d), target:"_blank", rel:"noopener"}, String(d.t || d.id) + " ↗")))));
 }
 function renderArtifacts(){   // a fault in this tab must never stop the board from drawing
   const host = document.getElementById("artifacts");
