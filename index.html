@@ -116,6 +116,19 @@ body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .col.collapsed{align-self:start}
 .main > .board{align-self:stretch}   /* HUB187: as tall as the epics panel when that is longer: the columns (and the board's sideways scroll bar) reach the page's bottom */
 @media (max-width:720px){ .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+/* HUB302: swimlanes: a band per lane, the columns repeating inside it (docs/mockups/swimlanes.html, option A) */
+.board.lanes{display:block; cursor:auto}
+.lane{background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; min-width:calc(var(--ncol,8) * 270px)}
+.lane > .lh{display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; border:0; border-left:5px solid var(--lc,var(--line)); background:var(--surface); color:inherit; font:inherit; text-align:left; padding:8px 12px; cursor:pointer; user-select:none}
+.lane > .lh .ln{font-weight:700; font-size:.84rem}
+.lane > .lh .chev{color:var(--muted); display:inline-block; width:1em}
+.lane > .lh .lcount{font-family:var(--f-mono); font-size:.74rem; background:var(--sunk); border:1px solid var(--line); border-radius:999px; padding:0 8px; color:var(--muted)}
+.lane > .lh .mini{margin-left:auto; display:flex; gap:3px}
+.lane > .lh .mini i{font-style:normal; font-family:var(--f-mono); font-size:.66rem; border-radius:4px; padding:0 5px; background:var(--sunk); border:1px solid var(--line); border-bottom:2px solid var(--cc)}
+.lane > .lh .mini i.z{opacity:.4}
+.lane.collapsed > .lcols{display:none}
+.lcols{display:grid; grid-template-columns:repeat(var(--ncol,8), minmax(260px,1fr)); gap:10px; padding:8px; background:var(--bg)}
+@media (max-width:720px){ .board.lanes{overflow:visible} .lane{min-width:0} .lcols{grid-template-columns:1fr} .lcols .col.emptycol{display:none} .lane > .lh .mini{display:none} }
 .col{background:var(--sunk); border:1px solid var(--line); border-top:3px solid var(--cc); border-radius:8px; display:flex; flex-direction:column; min-width:0}
 .col > h2{margin:0; padding:8px 10px; font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none}
 .col > h2 .n{font-family:var(--f-mono); color:var(--muted); font-weight:400}
@@ -740,6 +753,7 @@ body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(420px,100%)) / 2
       <span class="qwrap"><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
       <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Low</option><option value="0">No priority</option></select>
       <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
+      <select id="fl" aria-label="Swimlanes" title="Swimlanes: a band per project, epic or priority, the columns repeating inside each (HUB302)"><option value="">No lanes</option><option value="project">Lanes: project</option><option value="epic">Lanes: epic</option><option value="pri">Lanes: priority</option></select>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="fq" style="flex:none"> Open questions</label>
       <label style="font-size:.8rem;display:flex;gap:4px;align-items:center" title="Cards that are blocked, not synced, refused by the board, or idle"><input type="checkbox" id="fx" style="flex:none"> Blocked or issue</label>
       <span class="fwrap">
@@ -830,7 +844,8 @@ const picked = new Set();          // ids selected in select mode
 
 function ls(k, v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); }catch(e){ return null; } }
 const collapsed = new Set(ls("kb.collapsed") || ["done","park","rej"]);
-const filt = Object.assign({q:"",p:"",t:"",e:"",j:"",y:"",qo:false,hide:{}}, ls("kb.filters") || {});
+const lcollapsed = new Set(ls("kb.lcollapsed") || []);   // HUB302: folded swimlanes, "field:lane"
+const filt = Object.assign({q:"",p:"",t:"",e:"",j:"",y:"",l:"",qo:false,hide:{}}, ls("kb.filters") || {});
 if(!filt.hide || typeof filt.hide !== "object") filt.hide = {};
 const tcollapsed = new Set(ls("kb.tcollapsed") || []);   // themes whose epics are folded away in the epics column
 
@@ -1876,6 +1891,51 @@ function renderSync(){
   if(conn.branch === LEGACY_BRANCH)   // a connection saved before the board data had its own repository
     sync.append(el("span",{class:"warn"}, " · old connection: the board data has moved to its own repository; sign out and connect to it (branch main)"));
 }
+// HUB302: the swimlane fields: a card's lane, its name, its colour and the lane order
+const LANE_FIELDS = ["project", "epic", "pri"];
+const PRI_LANE = {"1":"P1 Critical", "2":"P2 High", "3":"P3 Normal", "4":"P4 Low", "0":"No priority"};
+function laneOf(f, c){ return f === "project" ? cardProject(c) : f === "epic" ? String(c.epic || "") : String(c.pri || 0); }
+function laneName(f, k){
+  if(f === "pri") return PRI_LANE[k] || "P" + k;
+  if(f === "project") return k ? (projects.get(k)?.name || k) : "No project";
+  return k ? (epics.get(k)?.name || k) : "No epic";
+}
+function laneColour(f, k){
+  if(f === "pri") return ({"1":"var(--p1)", "2":"var(--p2)", "3":"var(--p3)", "4":"var(--p4)"})[k] || "var(--muted)";
+  if(f === "epic" && k && epics.get(k)) return "hsl(" + epics.get(k).hue + ",55%,50%)";
+  const i = f === "project" ? [...projects.keys()].indexOf(k) : -1;
+  return !k || (f === "project" && i < 0) ? "var(--muted)" : "hsl(" + (i * 67 + 210) % 360 + ",50%,50%)";
+}
+function laneOrder(f){
+  if(f === "pri") return ["1", "2", "3", "4", "0"];
+  if(f === "project") return [...projects.keys(), ""];
+  return [...sortedEpics().map(([k]) => k), ""];
+}
+// one column (all its cards `inCol`, the filtered ones `list`) appended to `host`; `lane` is the swimlane's key ("" = none)
+function buildCol(col, host, inCol, list, lane){
+  const total = inCol.length, lanes = host.classList.contains("lcols");
+  const isC = collapsed.has(col.k);
+  const sec = el("section",{class:"col"+(isC?" collapsed":"")+(lanes && !list.length?" emptycol":""), style:"--cc:var("+col.cc+")", "aria-label":col.name, "data-col":col.k});
+  const rankBtn = lanes ? null : ((col.k === "back" || col.k === "park" || col.k === "refining" || col.k === "refined") && !readOnly && total > 1)
+    ? el("button",{type:"button", class:"rankbtn", title:"Rank "+col.name+" by choosing between pairs of cards",
+        onclick:ev=>{ ev.stopPropagation(); startRank(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "\u21C5 Rank")
+    : (col.k === "next" && !readOnly && total > 1)   // the user, 2026-11-17: Next up sorted by priority in one click
+    ? el("button",{type:"button", class:"rankbtn", title:"Sort "+col.name+" by priority (P1 first; cards of the same priority keep their order)",
+        onclick:ev=>{ ev.stopPropagation(); sortByPriority(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "\u2193 Priority") : null;
+  const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, list.length===total?String(total):list.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"\u25B8":"\u25BE"));
+  const tog = ()=>{ isC?collapsed.delete(col.k):collapsed.add(col.k); ls("kb.collapsed",[...collapsed]); render(); };
+  h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
+  sec.append(h);
+  if(col.hint && !lanes) sec.append(el("p",{class:"hint"}, col.hint));
+  const ul = el("div",{class:"list", "data-col":col.k}); if(lanes) ul.dataset.lane = lane;
+  for(const c of list) ul.append(cardEl(c));
+  sec.append(ul);
+  const na = ARCH.items.filter(c=>c.col===col.k).length;
+  if(na && !isC && !lanes) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)"
+    + (col.k === "done" ? "; the latest 60 of the last 7 days are shown here." : ".")));   // HUB230 (hub/phone.py DONE_MAX)
+  host.append(sec);
+  return ul;
+}
 // Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
 // column's scroll and the open card window's scroll. Not while a text box in a card has the focus, nor during a drag.
 function render(){
@@ -1897,31 +1957,29 @@ function render(){
   if(!all.length) $("#empty").textContent = loaded ? "The board has no live cards." : "Loading…";
   const shown = COLS.filter(col => !(filt.hide && filt.hide[col.k]));
   board.style.setProperty("--ncol", Math.max(1, shown.length));
-  for(const col of shown){
-    const inCol = colCards(col.k);
-    const list = inCol.filter(matches);
-    const total = inCol.length;
-    const isC = collapsed.has(col.k);
-    const sec = el("section",{class:"col"+(isC?" collapsed":""), style:"--cc:var("+col.cc+")", "aria-label":col.name, "data-col":col.k});
-    const rankBtn = ((col.k === "back" || col.k === "park" || col.k === "refining" || col.k === "refined") && !readOnly && total > 1)
-      ? el("button",{type:"button", class:"rankbtn", title:"Rank "+col.name+" by choosing between pairs of cards",
-          onclick:ev=>{ ev.stopPropagation(); startRank(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "⇅ Rank")
-      : (col.k === "next" && !readOnly && total > 1)   // the user, 2026-11-17: Next up sorted by priority in one click
-      ? el("button",{type:"button", class:"rankbtn", title:"Sort "+col.name+" by priority (P1 first; cards of the same priority keep their order)",
-          onclick:ev=>{ ev.stopPropagation(); sortByPriority(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "↓ Priority") : null;
-    const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, list.length===total?String(total):list.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"▸":"▾"));
-    const tog = ()=>{ isC?collapsed.delete(col.k):collapsed.add(col.k); ls("kb.collapsed",[...collapsed]); render(); };
-    h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
-    sec.append(h);
-    if(col.hint) sec.append(el("p",{class:"hint"}, col.hint));
-    const ul = el("div",{class:"list", "data-col":col.k});
-    for(const c of list) ul.append(cardEl(c));
-    sec.append(ul);
-    const na = ARCH.items.filter(c=>c.col===col.k).length;
-    if(na && !isC) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)"
-      + (col.k === "done" ? "; the latest 60 of the last 7 days are shown here." : ".")));   // HUB230 (hub/phone.py DONE_MAX)
-    board.append(sec);
-    if(sc[col.k]) ul.scrollTop = sc[col.k];
+  const lf = LANE_FIELDS.includes(filt.l) ? filt.l : "";
+  board.classList.toggle("lanes", !!lf);
+  if(!lf){
+    for(const col of shown){
+      const inCol = colCards(col.k), ul = buildCol(col, board, inCol, inCol.filter(matches), "");
+      if(sc[col.k]) ul.scrollTop = sc[col.k];
+    }
+  } else {
+    const byCol = new Map(shown.map(col => [col.k, colCards(col.k)]));
+    const seen = new Set(); for(const [, l] of byCol) for(const c of l) if(matches(c)) seen.add(laneOf(lf, c));
+    for(const key of laneOrder(lf).filter(k => seen.has(k))){
+      const ck = lf + ":" + key, isL = lcollapsed.has(ck);
+      const lane = el("section",{class:"lane"+(isL?" collapsed":""), "data-lane":key, style:"--lc:"+laneColour(lf, key), "aria-label":laneName(lf, key)});
+      const mine = shown.map(col => ({col, all:byCol.get(col.k).filter(c => laneOf(lf, c) === key)})).map(x => ({...x, list:x.all.filter(matches)}));
+      const n = mine.reduce((t, x) => t + x.list.length, 0);
+      const tog = () => { isL ? lcollapsed.delete(ck) : lcollapsed.add(ck); ls("kb.lcollapsed", [...lcollapsed]); render(); };
+      lane.append(el("button",{type:"button", class:"lh", "aria-expanded":String(!isL), onclick:tog},
+        el("span",{class:"chev"}, isL ? "\u25B8" : "\u25BE"), el("span",{class:"ln"}, laneName(lf, key)), el("span",{class:"lcount"}, n + (n === 1 ? " card" : " cards")),
+        el("span",{class:"mini"}, ...mine.map(x => el("i",{class:x.list.length ? "" : "z", style:"--cc:var("+x.col.cc+")", title:x.col.name}, String(x.list.length))))));
+      const cols = el("div",{class:"lcols"});
+      for(const x of mine) buildCol(x.col, cols, x.all, x.list, key);
+      lane.append(cols); board.append(lane);
+    }
   }
   board.scrollLeft = sl;
   renderEpics(allA);
@@ -2010,6 +2068,8 @@ $("#fp").addEventListener("change", e=>{ filt.p=e.target.value; ls("kb.filters",
 for(const k of KINDS) $("#fy").append(el("option",{value:k}, KIND_ICON[k]+" "+k));   // the issue type filter
 $("#fy").append(el("option",{value:"-"}, "No type"));
 $("#fy").value = filt.y||"";
+$("#fl").value = LANE_FIELDS.includes(filt.l) ? filt.l : "";
+$("#fl").addEventListener("change", e=>{ filt.l=e.target.value; ls("kb.filters",filt); render(); });   // HUB302
 $("#fy").addEventListener("change", e=>{ filt.y=e.target.value; ls("kb.filters",filt); render(); });
 $("#fq").addEventListener("change", e=>{ filt.qo=e.target.checked; ls("kb.filters",filt); render(); });
 $("#fx").checked = !!filt.x;
@@ -2521,6 +2581,10 @@ function dragUp(ev){
     else { const vis = [...t.el.querySelectorAll(".card")].filter(x=>!moving.has(x.dataset.id)); before = vis.find(x=>{ const r=x.getBoundingClientRect(); return d.y < r.top + r.height/2; }); }
     const full = colCards(t.col).filter(c=>!moving.has(c.id));
     idx = before ? full.findIndex(c=>c.id===before.dataset.id) : full.length;
+    if(!before && t.el.dataset.lane !== undefined){   // HUB302: at the end of a lane's list: after that lane's last card, not the column's end
+      const last = [...t.el.querySelectorAll(".card")].filter(x=>!moving.has(x.dataset.id)).pop();
+      if(last) idx = full.findIndex(c=>c.id===last.dataset.id) + 1;
+    }
   }
   dragEnd(true);
   if(t && group){   // HUB246: a group drop moves the cards the board's move rules allow there; the rest stay put
