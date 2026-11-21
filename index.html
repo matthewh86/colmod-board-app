@@ -1393,7 +1393,8 @@ function cardEl(c, full=false){
     const epV = edVal(c, "epic", c.epic), epP = epics.get(epV);
     const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value){ edPut(c, "epic", ev.target.value, c.epic); renderModal(); } }});
     if(!epP) es.append(el("option",{value:"", selected:true}, c.epic ? c.epic : noEpicText(c)));
-    for(const [k,v] of sortedEpics()) es.append(el("option",{value:k, selected:k===epV}, v.name));
+    const ownTh = epicTheme(c.epic);   // HUB303: only epics of the card's theme (a card without a theme may take any)
+    for(const [k,v] of sortedEpics().filter(([k,v]) => !ownTh || k === epV || epicTheme(k) === ownTh)) es.append(el("option",{value:k, selected:k===epV}, v.name));
     e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
       el("span",{"aria-hidden":"true"}, (epP?epP.name:noEpicText(c))+" ▾"), es)));
   } else if(ep) e.append(el("div",{}, tpath, el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
@@ -2289,9 +2290,14 @@ function renderNew(){
   let read;
   if(newKind === "card"){
     const pj = projSelect("nProj", defProj), ep = el("select",{id:"nEpic"}), ar = el("select",{id:"nArea"});
+    const nth = el("select",{id:"nCardTheme"});   // HUB303: the theme comes first and filters the epics below it
     const fillEps = () => {
       const p = pj.value; ep.textContent = ""; ar.textContent = "";
-      const mine = byOrder(epics).filter(([, e]) => (!e.project || e.project === p) && !e.retired);
+      const inProj = byOrder(epics).filter(([, e]) => (!e.project || e.project === p) && !e.retired);
+      const keep = nth.value; nth.textContent = "";
+      nth.append(opt("", "(all themes)"));
+      for(const [k, t] of byOrder(themes).filter(([k]) => inProj.some(([, e]) => e.theme === k))) nth.append(opt(k, t.name || k, k === keep));
+      const mine = inProj.filter(([, e]) => !nth.value || e.theme === nth.value);
       if(!mine.length) ep.append(opt("", "(no epics in this project)"));
       for(const [k, e] of mine) ep.append(opt(k, (themes.get(e.theme)?.name ? themes.get(e.theme).name + " · " : "") + (e.name || k)));
       ep.append(opt(ADHOC_EPIC, "(ad hoc: no epic)"));   // HUB170: ad hoc and Release cards need no epic
@@ -2299,14 +2305,14 @@ function renderNew(){
       for(const [k, a] of byOrder(areas).filter(([, a]) => !a.project || a.project === p)) ar.append(opt(k, a.name || k));
       if(filt.e && mine.some(([k]) => k === filt.e)) ep.value = filt.e;
     };
-    pj.addEventListener("change", fillEps); fillEps();
+    pj.addEventListener("change", fillEps); nth.addEventListener("change", fillEps); fillEps();
     const ty = el("select",{id:"nType"}, ...KINDS.map(k => opt(k, k, k === "Feature")));
     const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Low"]].map(([k, t]) => opt(k, t, k === 3)));
     const co = el("select",{id:"nCol"}, ...CREATE_COLS.map(k => opt(k, COL_NAME[k], k === "back")));
     const ti = el("input",{id:"nTitle", maxlength:"200", autocomplete:"off", required:true});
     const de = el("textarea",{id:"nDesc", maxlength:"8000", placeholder:"What it is and why (optional)"});
     form.append(field("Title", ti), el("div",{class:"two"}, field("Type", ty), field("Priority", pr), field("Column", co)),
-      el("div",{class:"two"}, field("Project", pj), field("Epic", ep), field("Area", ar)), field("Description", de),
+      el("div",{class:"two"}, field("Project", pj), field("Theme", nth), field("Epic", ep)), el("div",{class:"two"}, field("Area", ar)), field("Description", de),
       el("p",{class:"hint"}, "The board gives the card its id from the project's letters."));
     read = () => ({kind:"card", t: ti.value.trim(), type: ty.value, pri: Number(pr.value), col: co.value, project: pj.value || null,
                    epic: ep.value && ep.value !== ADHOC_EPIC ? ep.value : null, adhoc: ep.value === ADHOC_EPIC || undefined,
