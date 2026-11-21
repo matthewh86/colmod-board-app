@@ -196,6 +196,9 @@ body.ro #selbtn{display:none}
 .card .pri:empty{display:none}
 /* a card whose change is still on its way to the desktop: the card takes the "on the way" tint and a bright band
    of light slides across it, left to right, once a second, until the change is applied */
+.ai.pending{position:relative; overflow:hidden; background:var(--pend-bg)}
+.ai.pending::before{content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%); transform:translateX(-100%); animation:sheen 1s infinite}
 .card.pending{overflow:hidden; background:var(--pend-bg)}
 .card.pending::before{content:""; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;
   background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%);
@@ -268,6 +271,14 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .ttw{position:absolute; top:5px; right:5px; width:22px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font:inherit; font-size:.85rem; line-height:22px; cursor:pointer}
 .ttw:hover{background:var(--surface); color:var(--accent)}
 /* HUB188: an epic's or theme's edit icon, shown while it is hovered (always on a touch screen); none when read-only */
+.projedit{flex:none; align-self:center; width:26px; height:26px; padding:0; margin:0 4px 0 -2px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--muted); font:inherit; cursor:pointer}
+.projedit:hover,.projedit:focus-visible{color:var(--accent); border-color:var(--accent)}
+.ro .projedit{display:none}
+.pedlist{display:grid; gap:4px; max-height:30vh; overflow:auto}
+.pedrow{display:flex; flex-wrap:wrap; gap:4px; align-items:center}
+.pedrow code{min-width:6em; font-size:.75rem; color:var(--muted)}
+.pedrow input{min-width:0; flex:1 1 9em}
+.pedrow input[type=number]{flex:none}
 .ewrap{position:relative; display:grid; min-width:0}
 .eedit{position:absolute; top:4px; right:4px; width:22px; height:22px; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--muted); font:inherit; font-size:.8rem; line-height:20px; cursor:pointer; opacity:0}
 .thead > .eedit{right:30px; top:5px}
@@ -316,8 +327,17 @@ ul.tasks li.done span:last-child{text-decoration:line-through; text-decoration-t
 .acts .ah{font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between}
 .acts .ah span{text-transform:none; letter-spacing:0; font-weight:500}
 .acts .ai{display:grid; gap:4px; border-left:3px solid var(--line); padding-left:8px}
-.acts .at{font-size:.72rem; color:var(--muted)}
+.acts .at{font-size:.72rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:0 6px}
+.acts .as{font-weight:600}
 .acts .ax{font-size:.82rem; white-space:pre-wrap; overflow-wrap:anywhere}
+.acts .md{white-space:normal; display:grid; gap:4px}
+.acts .md p, .acts .md h3, .acts .md h4, .acts .md h5, .acts .md h6, .acts .md ul, .acts .md ol, .acts .md blockquote, .acts .md pre{margin:0}
+.acts .md h3, .acts .md h4, .acts .md h5, .acts .md h6{font-size:.9rem}
+.acts .md ul, .acts .md ol{padding-left:1.3em}
+.acts .md blockquote{border-left:2px solid var(--line); padding-left:8px; color:var(--muted)}
+.acts .md code{font-family:ui-monospace,Consolas,monospace; background:rgba(127,127,127,.18); padding:0 3px; border-radius:3px}
+.acts .md pre{overflow:auto; background:rgba(127,127,127,.12); padding:6px; border-radius:4px}
+.acts .md pre code{background:none; padding:0}
 .acts .aimgs{display:flex; flex-wrap:wrap; gap:6px}
 .acts .aimgs img, .card .d img{display:block; max-width:min(100%,480px); height:auto; image-rendering:pixelated; border:1px solid var(--line); border-radius:3px; background:#000}
 #imgview{position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.82); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:16px; cursor:zoom-out}
@@ -410,7 +430,7 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 .mach.rows{grid-template-columns:1fr}
 .mcard h3{font-size:.9rem; margin:6px 0 0; color:var(--muted); font-weight:600}
 /* HUB263: the Decisions tab's headings step down in size, weight and colour: the page's title, then each section
-   (Manual actions, Decisions, Past manual actions), then its parts (Active, Snoozed, Your steps), then a project's
+   (Manual actions, Past manual actions, Decisions), then its parts (Active, Snoozed, Your steps), then a project's
    group; a rule between the sections */
 #decisions > h2:first-child{font:400 1.4rem/1.2 var(--f-display); text-transform:none; letter-spacing:0; color:var(--ink)}
 #decisions h2{font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink); margin:0}
@@ -459,6 +479,12 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .rst{display:inline-block; font-size:.72em; font-weight:600; padding:0 5px; border-radius:4px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
 .rst.done{color:var(--on-accent); background:var(--accent); border-color:var(--accent)}
 .rst.planned{border-style:dashed}
+.eplink{font:inherit; cursor:pointer; border:0; margin-left:6px; color:var(--accent); background:none; text-decoration:underline; font-size:.75rem}
+.chip.eplink{background:hsl(var(--h) var(--chip-s) var(--chip-l)); color:var(--chip-ink); font-size:.68rem; margin-left:0; border:1px solid var(--line)}
+.epview .ekids{display:grid; gap:4px; margin:0; padding:0; list-style:none}
+.epview .ekid{display:flex; gap:8px; align-items:baseline; width:100%; text-align:left; font:inherit; color:var(--ink); background:var(--sunk); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
+.epview .ekid .kt{flex:1; min-width:0}
+.epview .ekid .km{font-size:.7rem; color:var(--muted); white-space:nowrap}
 .mpanel.arch .march{margin:0 0 8px; color:var(--muted); font-size:.85rem}
 .ghead button.pill{font:inherit; font-size:.78rem; color:var(--ink); cursor:pointer}
 .ghead button.pill:hover{border-color:var(--accent)}
@@ -837,7 +863,7 @@ const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of th
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
 let ansAt = {};   // {card: {question: when it was answered}} (export ans_at, HUB102): Past decisions newest first
-let dragId = null, openId = null;
+let dragId = null, openId = null, openEpic = null;   // HUB310: openEpic = the epic view shown over the open card
 let selMode = false, dragGroup = null, selAnchor = null;
 let drag = null;                 // the card being pressed or dragged (see "card drag")
 const picked = new Set();          // ids selected in select mode
@@ -904,7 +930,7 @@ function rebuild(){
     }
     else if(f === "order"){ ch.value.forEach((id, n)=>{ const x = cards.get(id); if(x){ x.rank = (n + 1) * 1000; x._pending++; } }); continue; }
     else if(f === "comment"){   // HUB117: a comment on its way shows in the activity until the board has it
-      c.log = [...(Array.isArray(c.log) ? c.log : []), {ts: ch.ts, t: "Your comment (on its way): " + ch.value}];
+      c.log = [...(Array.isArray(c.log) ? c.log : []), {ts: ch.ts, t: ch.value, pend: true}];   // HUB308: shown at once, with the syncing swoosh
       c.log_n = (Number(c.log_n) || 0) + 1;
     }
     else if(f === "blocked") c.blk = ch.value || "";   // HUB222: blocked (or unblocked) here
@@ -1176,6 +1202,12 @@ function syncIssue(c){
   }
   return "";
 }
+// HUB312: split an activity row's text 'Source: text' into its source and text; no source when it has no short lead.
+function actSplit(t){
+  t = String(t == null ? "" : t);
+  const m = /^([^\n:]{1,60}): ([\s\S]*)$/.exec(t);
+  return m ? {src: m[1], text: m[2]} : {src: "", text: t};
+}
 // idle: a card in a working column with no activity for more than an hour (the board's rule, hub/pm/stages.py):
 // activity = an activity entry, a column move, an edit, or a job for the card (one queued or running = busy).
 // Worked out here from the data already read, so it is current without waiting for the board.
@@ -1299,6 +1331,51 @@ function colTip(c){
 // a text with its web addresses as links that open in a new tab (the user, 2026-11-17, HUB98: a card's link was plain
 // text). Only http(s) addresses; a trailing full stop, comma or bracket stays text. A tap on one never opens the card.
 const URL_RX = /\bhttps?:\/\/[^\s<>"'`]+/g;
+// >>> markdown (tests/test_app.py runs this block)
+// HUB313: a comment is Markdown. Everything is HTML-escaped first; only http(s) links; no raw HTML ever passes through.
+const COMMENT_PREFIX_RX = /^(Comment from the user \(App\): |Your comment \(on its way\): )/;
+const MD_ESC = {"&":"&amp;", "<":"&lt;", ">":"&gt;", [String.fromCharCode(34)]:"&quot;", [String.fromCharCode(39)]:"&#39;"};
+function mdEsc(s){ return String(s).replace(/[&<>\x22\x27]/g, c => MD_ESC[c]); }
+function mdInline(raw){
+  const codes = [];
+  let s = mdEsc(raw).replace(/\x60([^\x60\n]+)\x60/g, (_, c) => { codes.push("<code>" + c + "</code>"); return "\u0001" + (codes.length - 1) + "\u0001"; });
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, t, u) => '<a href="' + u + '" target="_blank" rel="noopener noreferrer" class="tlink">' + t + "</a>");
+  s = s.replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g, (_, a, b) => "<strong>" + (a || b) + "</strong>");
+  s = s.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)|(^|[^_\w])_([^_\n]+)_(?![_\w])/g, (_, p1, a, p2, b) => (p1 || p2 || "") + "<em>" + (a || b) + "</em>");
+  return s.replace(/\u0001(\d+)\u0001/g, (_, i) => codes[+i]);
+}
+function mdRender(text){
+  const lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n"), out = [];
+  const LI = /^\s*([-*+]|\d+[.)])\s+(.*)$/;
+  let i = 0, m;
+  while(i < lines.length){
+    const ln = lines[i];
+    if(/^\s*$/.test(ln)){ i++; continue; }
+    if(/^\x60{3}/.test(ln)){
+      const buf = []; i++;
+      while(i < lines.length && !/^\x60{3}/.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push("<pre><code>" + mdEsc(buf.join("\n")) + "</code></pre>"); continue;
+    }
+    if((m = /^(#{1,6})\s+(.*)$/.exec(ln))){ const n = Math.min(6, m[1].length + 2); out.push("<h" + n + ">" + mdInline(m[2]) + "</h" + n + ">"); i++; continue; }
+    if((m = LI.exec(ln))){
+      const ord = /\d/.test(m[1]), tag = ord ? "ol" : "ul", items = [];
+      while(i < lines.length && (m = LI.exec(lines[i])) && /\d/.test(m[1]) === ord){ items.push("<li>" + mdInline(m[2]) + "</li>"); i++; }
+      out.push("<" + tag + ">" + items.join("") + "</" + tag + ">"); continue;
+    }
+    if(/^>\s?/.test(ln)){
+      const buf = [];
+      while(i < lines.length && /^>\s?/.test(lines[i])) buf.push(lines[i++].replace(/^>\s?/, ""));
+      out.push("<blockquote>" + buf.map(mdInline).join("<br>") + "</blockquote>"); continue;
+    }
+    const buf = [];
+    while(i < lines.length && !/^\s*$/.test(lines[i]) && !/^(\x60{3}|#{1,6}\s|>\s?)/.test(lines[i]) && !LI.test(lines[i])) buf.push(lines[i++]);
+    out.push("<p>" + buf.map(mdInline).join("<br>") + "</p>");
+  }
+  return out.join("");
+}
+function mdEl(text){ const d = el("div",{class:"md"}); d.innerHTML = mdRender(text); return d; }
+// <<< markdown
+
 function linkify(text){
   const s = String(text == null ? "" : text), out = [];
   let i = 0, m;
@@ -1396,8 +1473,10 @@ function cardEl(c, full=false){
     const ownTh = epicTheme(c.epic);   // HUB303: only epics of the card's theme (a card without a theme may take any)
     for(const [k,v] of sortedEpics().filter(([k,v]) => !ownTh || k === epV || epicTheme(k) === ownTh)) es.append(el("option",{value:k, selected:k===epV}, v.name));
     e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
-      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEpicText(c))+" ▾"), es)));
-  } else if(ep) e.append(el("div",{}, tpath, el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
+      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEpicText(c))+" ▾"), es),
+      epP ? el("button",{type:"button", class:"eplink", title:"Open this epic and its cards", onclick:ev=>{ ev.stopPropagation(); showEpic(epV); }}, "Open epic ›") : null));
+  } else if(ep) e.append(el("div",{}, tpath, full ? el("button",{type:"button", class:"chip eplink", style:"--h:"+ep.hue, title:(ep.blurb||"")+" (open this epic and its cards)", onclick:ev=>{ ev.stopPropagation(); showEpic(c.epic); }}, ep.name)
+    : el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
   else if(c.adhoc === true) e.append(el("div",{}, el("span",{class:"chip", style:"--h:0", title:"Ad hoc: outside any epic (HUB170)"}, "Ad hoc")));
   if(c.st && full) e.append(el("div",{class:"st"}, linkify(c.st)));   // board cards stay short: details in the card window
   if(c.link && /^https:\/\/[\w.-]+\//.test(c.link))        // the change-log entry for this card
@@ -1492,10 +1571,13 @@ function cardEl(c, full=false){
       const box = el("div",{class:"acts", onclick:ev=>ev.stopPropagation()}, el("div",{class:"ah"}, "Activity",
         el("span",{}, actN > acts.length ? "the latest "+acts.length+" of "+actN+" updates" : actN+(actN===1?" update":" updates"))));
       for(const a of acts.slice().reverse()){
+        const sp = actSplit(a.t);   // HUB312: the source (before "Source: text") stands left of the date and time
         const imgs = (Array.isArray(a.img) ? a.img : a.img ? [a.img] : []).map(mediaImg).filter(Boolean);
-        box.append(el("div",{class:"ai"},
-          el("div",{class:"at"}, a.ts ? fmtTime(a.ts) : ""),
-          a.t ? el("div",{class:"ax"}, linkify(a.t)) : null,
+        box.append(el("div",{class:"ai"+(a.pend ? " pending" : "")},   // HUB308: a comment on its way carries the swoosh
+          el("div",{class:"at"}, sp.src ? el("span",{class:"as"}, sp.src) : null, a.ts ? fmtTime(a.ts) : "", a.pend ? el("span",{class:"lab pend", title:"Your comment is kept here until the board shows it"}, "Syncing") : null),
+          sp.text ? (COMMENT_PREFIX_RX.test(sp.text)   // HUB313: a comment renders as Markdown, other lines stay plain
+            ? el("div",{class:"ax"}, sp.text.match(COMMENT_PREFIX_RX)[0], mdEl(sp.text.replace(COMMENT_PREFIX_RX, "")))
+            : el("div",{class:"ax"}, linkify(sp.text))) : null,
           imgs.length ? el("div",{class:"aimgs"}, ...imgs.map(src => pic(src, {alt:a.t||"screenshot", loading:"lazy", class:"zoom", tabindex:"0", title:"Click to enlarge"}))) : null));
       }
       e.append(box);
@@ -1536,16 +1618,13 @@ function cardEl(c, full=false){
       el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
-    // HUB211: the typed text is kept per card (a redraw of the card brings it back), the button does not take the
-    // focus (taking it ran the held-back redraw, which removed the button before its click), and the box is only
-    // emptied once the comment is on its way
+    // HUB211: the typed text is kept per card (a redraw of the card brings it back). HUB309: it is an unsaved change
+    // like the others: nothing is posted on Enter or on leaving the box, only by the card view's Save; Discard drops it
     const ta = el("textarea",{placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
-                              onclick:ev=>ev.stopPropagation(), oninput:()=>draftSet(c.id, ta.value)});
+                              onclick:ev=>ev.stopPropagation(), oninput:()=>{ draftSet(c.id, ta.value); edPut(c, "comment", ta.value.trim(), ""); }});
     ta.value = draftGet(c.id);
-    const post = () => { const v = ta.value.trim(); if(!v) return; if(write(c.id,{comment:v})){ ta.value = ""; draftSet(c.id, ""); } };
-    ta.addEventListener("keydown", ev=>{ if(ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); post(); } });
-    more.append(ta, el("div",{class:"row"}, el("button",{type:"button", class:"cpost", title:"Add the comment to the activity (Ctrl+Enter)",
-      onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); post(); }}, "Comment")));
+    if(ta.value.trim() && edVal(c, "comment", null) === null) edPut(c, "comment", ta.value.trim(), "");   // a kept draft is an unsaved change
+    more.append(ta);
     if(!readOnly && cards.has(c.id)) more.append(edBarEl(c));   // HUB293
     e.append(more); return e;
   }
@@ -1576,7 +1655,7 @@ function draftSet(id, v){
 let EDIT = {id: null, v: new Map()};   // the open card's unsaved changes: "epic", "pri", "col", "ans.<id>" -> new value
 function edVal(c, key, cur){ return EDIT.id === c.id && EDIT.v.has(key) ? EDIT.v.get(key) : cur; }
 function edDirty(){ return !!openId && EDIT.id === openId && EDIT.v.size > 0; }
-function edReset(){ EDIT = {id: null, v: new Map()}; }
+function edReset(){ if(EDIT.id && EDIT.v.has("comment")) draftSet(EDIT.id, ""); EDIT = {id: null, v: new Map()}; }
 function edPut(c, key, val, cur){
   if(readOnly){ toast("This view is read-only."); return; }
   if(EDIT.id !== c.id) EDIT = {id: c.id, v: new Map()};
@@ -1590,6 +1669,7 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
   const show = (key, v) => {
     if(v == null || v === "") return "(none)";
     if(key === "epic") return epics.get(v)?.name || v;
+    if(key === "comment") return edShort(v);
     if(key === "pri") return v ? (PRI[v] || v) : "(none)";
     if(key === "col") return COL_NAME[v] || v;
     const o = opts.find(x => x && x.id === key.slice(4));
@@ -1601,6 +1681,7 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
     if(key === "epic"){ field = "Epic"; was = c.epic; }
     else if(key === "pri"){ field = "Priority"; was = c.pri || 0; }
     else if(key === "col"){ field = "Column"; was = c.col; }
+    else if(key === "comment"){ field = "Comment"; was = ""; }
     else {
       const id = key.slice(4), note = id.endsWith(OTHER), base = note ? id.slice(0, -OTHER.length) : id;
       const q = (opts.find(x => x && x.id === base) || qs.find(x => x.id === base) || {}).q || base;
@@ -1623,7 +1704,7 @@ function edSave(){   // true when everything was sent (or there was nothing to s
   const c = openId && cards.get(openId);
   if(!c || !edDirty()) return true;
   const patch = {}, ans = {};
-  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "pri" || k === "epic") patch[k] = x; }
+  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "pri" || k === "epic" || k === "comment") patch[k] = x; }
   if(Object.keys(ans).length) patch.ans = ans;
   if(Object.keys(patch).length){
     if(!write(c.id, patch, true)){ render(); return false; }
@@ -1649,24 +1730,50 @@ function edPrompt(then){   // unsaved changes: summary, then Save, Discard or Ca
 function edGuard(then){ if(edDirty()) edPrompt(then); else then(); }
 // <<< card-editor
 function openCard(id){
-  const go = () => { if(EDIT.id !== id) edReset(); lastFocus = document.activeElement; openId = id; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); };
+  const go = () => { if(EDIT.id !== id) edReset(); lastFocus = document.activeElement; openId = id; openEpic = null; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); };
   if(openId && openId !== id) edGuard(go); else go();
 }
-function closeCard(){ edGuard(() => { edReset(); openId = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }); }
+function showEpic(k){ if(!epics.has(k)) return; openEpic = k; renderModal(); const b = $("#modal .epback"); if(b) b.focus({preventScroll:true}); }   // HUB310
+function backFromEpic(){ openEpic = null; renderModal(); }
+// HUB310: the epic's view: name, theme, project, blurb, progress, then its cards as children, each opening its card
+function epicViewEl(k){
+  const ep = epics.get(k), th = themes.get(epicTheme(k)), proj = ep.project && projects.get(ep.project);
+  const kids = [...cards.values()].filter(c => c.epic === k).sort((a,b) => COLS.findIndex(x=>x.k===a.col) - COLS.findIndex(x=>x.k===b.col) || (a.pri||9) - (b.pri||9) || a.id.localeCompare(b.id));
+  const st = cardStats([...cards.values()], c => c.epic === k && countsForEpic(c));
+  const view = el("div",{class:"epview", style:"--h:"+ep.hue},
+    el("div",{}, el("span",{class:"chip", style:"--h:"+ep.hue}, "Epic")),
+    el("h3",{class:"t"}, ep.name),
+    el("div",{class:"st"}, el("b",{}, "Theme: "), th ? th.name : "(none)", "  ", el("b",{}, "Project: "), proj ? (proj.name || ep.project) : (ep.project || "(none)")),
+    ep.blurb ? el("div",{class:"st"}, linkify(ep.blurb)) : null,
+    el("div",{class:"estat"}, ...statKids(st)),
+    el("h4",{}, "Cards (" + kids.length + ")"));
+  const ul = el("ul",{class:"ekids"});
+  for(const c of kids){
+    const col = COLS.find(x=>x.k===c.col);
+    ul.append(el("li",{}, el("button",{type:"button", class:"ekid", "data-id":c.id, onclick:()=>{ openEpic = null; openCard(c.id); }},
+      el("b",{}, c.id), el("span",{class:"kt"}, c.t||""), el("span",{class:"km"}, (col?col.name:c.col) + (c.pri ? " · " + PRI[c.pri] : "")))));
+  }
+  view.append(kids.length ? ul : el("p",{class:"hint"}, "No cards in this epic yet."));
+  return view;
+}
+function closeCard(){ edGuard(() => { edReset(); openId = null; openEpic = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }); }
 function renderModal(){
   const box = $("#modal");
   const c = openId && (cards.get(openId) || REL_DOCS.get(openId));   // HUB199: an archived Release card opens too
   if(!c){ openId = null; edReset(); box.hidden = true; box.textContent = ""; if(!rank) document.body.classList.remove("modal-open"); return; }
   const arch = !cards.has(c.id);
+  if(openEpic && !epics.has(openEpic)) openEpic = null;
   const old = box.querySelector(".mpanel");
   const keepScroll = old ? old.scrollTop : 0, keepBox = box.scrollTop, same = old && old.dataset.id === c.id;
   box.textContent = "";
   const col = COLS.find(x=>x.k===c.col);
   const panel = el("div",{class:"mpanel" + (arch ? " arch" : ""), role:"dialog", "aria-modal":"true", "aria-label":c.id+" "+(c.t||""), "data-id":c.id},
     el("div",{class:"mhead"}, el("span",{class:"mcol", style:"--cc:var("+(col?col.cc:"--muted")+")"}, col?col.name:""),
+      openEpic ? el("button",{type:"button", class:"epback", onclick:backFromEpic}, "‹ Back to " + c.id) : null,
       el("button",{type:"button", class:"mclose", "aria-label":"Close", onclick:closeCard}, "Close")),
-    arch ? el("p",{class:"march"}, "Archived: the board keeps this card in its archive; it is shown here read-only.") : null,
-    cardEl(c, true));
+    openEpic ? epicViewEl(openEpic) : null,
+    openEpic ? null : arch ? el("p",{class:"march"}, "Archived: the board keeps this card in its archive; it is shown here read-only.") : null,
+    openEpic ? null : cardEl(c, true));
   box.append(panel);
   box.hidden = false; document.body.classList.add("modal-open");
   if(same){ panel.scrollTop = keepScroll; box.scrollTop = keepBox; }   // a redraw of the open card keeps its place
@@ -2092,10 +2199,11 @@ function setProject(j){   // the project switcher; an epic or a theme of another
   if(filt.t && j && !sortedEpics().some(([k])=>epicTheme(k)===filt.t) && themes.get(filt.t)?.project !== j) filt.t = "";
   syncFilters();
 }
-let projSel = null;   // the project switcher, at the top of the Projects panel (the user, 2026-11-17)
+let projSel = null, projEditBtn = null;   // the project switcher, at the top of the Projects panel (the user, 2026-11-17)
 function placeProjSel(){   // HUB148 (the user, 2026-11-18): beside the main title, left of "Board as of"
   const row = document.querySelector(".hrow"), sync = document.getElementById("sync");
   if(projSel && row && sync && projSel.parentNode !== row) row.insertBefore(projSel, sync);
+  if(projEditBtn && row && projSel && projEditBtn.parentNode !== row) row.insertBefore(projEditBtn, projSel.nextSibling);
 }
 function fillProjects(){
   const sel = projSel || (projSel = el("select",{id:"fj", class:"projsel", "aria-label":"Project", title:"Show one project or all of them (the board and Decisions)"}));
@@ -2104,6 +2212,8 @@ function fillProjects(){
   for(const [k,v] of [...projects.entries()].sort((a,b)=>(a[1].order??99)-(b[1].order??99)))
     sel.append(el("option",{value:k, selected:k===filt.j}, v.name || k));
   sel.hidden = projects.size < 2;
+  if(!projEditBtn) projEditBtn = el("button",{type:"button", id:"projedit", class:"projedit", title:"Edit the projects and areas", "aria-label":"Edit the projects and areas", onclick:()=>openProjAreaEdit()}, "\u270E");
+  projEditBtn.hidden = readOnly || projects.size < 1;   // none when read-only (HUB188 icons)
   placeProjSel();
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
@@ -2352,8 +2462,6 @@ function renderNew(){
     f.value = v;
     if(f.id === "nProj") f.dispatchEvent(new Event("change"));
   }
-  if(fields.some(f => f.tagName !== "SELECT" && f.value.trim()))
-    form.insertBefore(el("p",{class:"hint"}, "Kept from before: Cancel clears it."), err);
   const keep = () => { newDraft[newKind] = Object.fromEntries(fields.map(f => [f.id, f.value])); saveNewDraft(); };
   form.addEventListener("input", keep); form.addEventListener("change", keep);
   form.addEventListener("submit", ev => {
@@ -2378,11 +2486,12 @@ document.addEventListener("keydown", ev=>{ if(ev.key === "Escape" && !$("#newm")
 // `pm.py epic add`; an epic's theme stays in its project). Until the board has it (only `applied` settles it, as for a
 // new thing), the page shows the edit over the exported details (overlayMeta).
 // >>> edit-rules (tests/test_app.py runs this block)
-const META_EDIT = {epic: ["name", "blurb", "hue", "order", "theme"], theme: ["name", "blurb", "hue", "order"]};
+const META_EDIT = {epic: ["name", "blurb", "hue", "order", "theme"], theme: ["name", "blurb", "hue", "order"],
+  area: ["name", "blurb", "hue", "order"], project: ["name", "blurb", "hue", "order"]};   // HUB306: the projects and areas editor
 // why this edit would be refused, or "": kind "epic" | "theme", key, v = the fields sent; ctx = {themes, epics} (Maps)
 function metaEditProblem(kind, key, v, ctx){
   if(!META_EDIT[kind]) return "Only an epic or a theme can be edited here.";
-  const own = (kind === "epic" ? ctx.epics : ctx.themes).get(key);
+  const own = ({epic: ctx.epics, theme: ctx.themes, area: ctx.areas, project: ctx.projects}[kind] || new Map()).get(key);
   if(!own) return "That " + kind + " is not on the board.";
   const keys = Object.keys(v || {});
   if(!keys.length) return "Nothing changed.";
@@ -2404,18 +2513,20 @@ function metaEditProblem(kind, key, v, ctx){
   return "";
 }
 // <<< edit-rules
-const metaBase = {ready: false, epics: new Map(), themes: new Map()};   // the exported details, before this page's edits
+const metaBase = {ready: false, epics: new Map(), themes: new Map(), areas: new Map(), projects: new Map()};   // the exported details, before this page's edits
 function snapMeta(){   // load(): keep the export's epics and themes, so an edit that is refused falls back to them
   metaBase.epics = new Map([...epics].map(([k, v]) => [k, Object.assign({}, v)]));
   metaBase.themes = new Map([...themes].map(([k, v]) => [k, Object.assign({}, v)]));
+  metaBase.areas = new Map([...areas].map(([k, v]) => [k, Object.assign({}, v)]));
+  metaBase.projects = new Map([...projects].map(([k, v]) => [k, Object.assign({}, v)]));
   metaBase.ready = true;
 }
 function overlayMeta(){   // rebuild(): the exported details with the edits on their way drawn over them
   if(!metaBase.ready) return;
-  for(const [m, base] of [[epics, metaBase.epics], [themes, metaBase.themes]]){ m.clear(); for(const [k, v] of base) m.set(k, Object.assign({}, v)); }
+  for(const [m, base] of [[epics, metaBase.epics], [themes, metaBase.themes], [areas, metaBase.areas], [projects, metaBase.projects]]){ m.clear(); for(const [k, v] of base) m.set(k, Object.assign({}, v)); }
   for(const ch of [...changes.values()].filter(x => x.field === "edit").sort((a, b) => String(a.ts || "").localeCompare(String(b.ts || "")))){
     const [kind, key] = [String(ch.card).split(":")[0], String(ch.card).slice(String(ch.card).indexOf(":") + 1)];
-    const x = (kind === "epic" ? epics : kind === "theme" ? themes : new Map()).get(key);
+    const x = ({epic: epics, theme: themes, area: areas, project: projects}[kind] || new Map()).get(key);
     if(x && ch.value && typeof ch.value === "object") Object.assign(x, ch.value, {_pending: true});
   }
 }
@@ -2463,13 +2574,73 @@ function openMetaEdit(kind, key){
     const v = {};   // only what changed, so an edit made on the desktop meanwhile to another field stays
     for(const [k, x] of Object.entries(now)) if(!sameValue(x, k === "hue" ? hue0 : cur[k])) v[k] = x;
     if(!Object.keys(v).length){ closeEd(); toast("Nothing changed."); return; }
-    const why = metaEditProblem(kind, key, v, {themes, epics});
+    const why = metaEditProblem(kind, key, v, {themes, epics, areas, projects});
     if(why){ err.textContent = why; return; }
     metaSend(kind, key, v);
     closeEd(); rebuild(); render();
     toast("Sent: the board updates the " + kind + " within about a minute.");
   });
   nm.focus({preventScroll:true});
+}
+// ---------- HUB306: the projects and areas editor. An edit icon beside the Project select opens one dialog: the projects
+// (name, blurb, hue, order) and the areas of the chosen project, each row editable, one Save. Each changed row is one
+// `edit` change {card: "project:KEY" | "area:KEY"} through metaSend (the same path, checks and syncing swoosh as an epic's
+// or a theme's); the keys, a project's prefixes, folder and lead stay the desktop's.
+function openProjAreaEdit(){
+  if(readOnly){ toast("This view is read-only."); return; }
+  const err = el("p",{class:"err", role:"alert"});
+  const rows = [];   // {kind, key, cur, hue0, nm, bl, hn, or}
+  const rowOf = (kind, key, cur) => {
+    const hue0 = Number.isInteger(cur.hue) ? cur.hue : 210;
+    const sw = el("i",{style:"--h:" + hue0, "aria-hidden":"true"});
+    const nm = el("input",{maxlength:"200", autocomplete:"off", value: cur.name || key, "aria-label":"Name of " + kind + " " + key});
+    const bl = el("input",{maxlength:"600", value: cur.blurb || "", placeholder:"Blurb (optional)", "aria-label":"Blurb of " + kind + " " + key});
+    const hn = el("input",{type:"number", min:"0", max:"359", step:"1", value:String(hue0), inputmode:"numeric", style:"width:5em", "aria-label":"Hue of " + kind + " " + key});
+    hn.addEventListener("input", () => { if(hn.value !== "" && Number(hn.value) >= 0 && Number(hn.value) <= 359) sw.style.setProperty("--h", hn.value); });
+    const or = el("input",{type:"number", min:"0", max:"9999", step:"1", inputmode:"numeric", style:"width:5em", value: Number.isInteger(cur.order) ? String(cur.order) : "", placeholder:"(none)", "aria-label":"Order of " + kind + " " + key});
+    rows.push({kind, key, cur, hue0, nm, bl, hn, or});
+    return el("div",{class:"pedrow"}, el("code",{title:"The key stays"}, key), nm, bl, el("span",{class:"hue"}, sw, hn), or);
+  };
+  const byOrder = m => [...m.entries()].sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[0]).localeCompare(String(b[0])));
+  const proj0 = filt.j && projects.has(filt.j) ? filt.j : (byOrder(projects)[0] || [""])[0];
+  const areaBox = el("div",{class:"pedlist"});
+  const fillAreas = pk => {
+    for(let i = rows.length - 1; i >= 0; i--) if(rows[i].kind === "area") rows.splice(i, 1);
+    areaBox.textContent = "";
+    const list = byOrder(areas).filter(([, a]) => !pk || !a.project || a.project === pk);
+    areaBox.append(...(list.length ? list.map(([k, a]) => rowOf("area", k, a)) : [el("p",{class:"hint"}, "No areas for this project.")]));
+  };
+  const pick = el("select",{id:"pedProj", "aria-label":"Project whose areas are listed"},
+    ...byOrder(projects).map(([k, v]) => el("option",{value:k, selected: k === proj0 ? true : null}, v.name || k)));
+  pick.addEventListener("change", () => fillAreas(pick.value));
+  const projBox = el("div",{class:"pedlist"}, ...byOrder(projects).map(([k, v]) => rowOf("project", k, v)));
+  fillAreas(proj0);
+  const form = edForm("Edit projects and areas",
+    el("h3",{}, "Edit projects and areas"),
+    el("h4",{}, "Projects"), projBox,
+    el("h4",{}, "Areas of ", pick), areaBox,
+    el("p",{class:"hint"}, "Name, blurb, colour (hue 0-359) and order change; the keys stay. Adding one is in New."),
+    err,
+    el("div",{class:"acts"}, el("button",{type:"button", onclick:closeEd}, "Cancel"), el("button",{type:"submit", class:"pri"}, "Save")));
+  form.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const sends = [];
+    for(const r of rows){
+      const now = {name: r.nm.value.trim(), blurb: r.bl.value.trim(), hue: Number(r.hn.value)};
+      if(r.or.value !== "") now.order = Number(r.or.value);
+      const v = {};   // only what changed, so an edit made on the desktop meanwhile to another field stays
+      for(const [k, x] of Object.entries(now)) if(!sameValue(x, k === "hue" ? r.hue0 : r.cur[k])) v[k] = x;
+      if(!Object.keys(v).length) continue;
+      const why = metaEditProblem(r.kind, r.key, v, {themes, epics, areas, projects});
+      if(why){ err.textContent = r.kind + " " + r.key + ": " + why; return; }
+      sends.push([r.kind, r.key, v]);
+    }
+    if(!sends.length){ closeEd(); toast("Nothing changed."); return; }
+    for(const [kind, key, v] of sends) metaSend(kind, key, v);
+    closeEd(); rebuild(); render();
+    toast("Sent: the board updates " + sends.length + " item" + (sends.length > 1 ? "s" : "") + " within about a minute.");
+  });
+  const f = form.querySelector("input"); if(f) f.focus({preventScroll:true});
 }
 // one epic's or theme's edit on its way to the board (the editor's; the Gantt's drag of an epic or a theme, HUB163)
 function metaSend(kind, key, v){
@@ -4737,7 +4908,7 @@ function gApply(src, tgt, rows){
     if(before === key) return "";
     const ch = gReorder(list, key, before), n = Object.keys(ch).length;
     for(const [k, o] of Object.entries(ch)){
-      const v = {order: o}, why = metaEditProblem(src.g, k, v, {themes, epics});
+      const v = {order: o}, why = metaEditProblem(src.g, k, v, {themes, epics, areas, projects});
       if(why){ toast(why); return ""; }
     }
     for(const [k, o] of Object.entries(ch)) metaSend(src.g, k, {order: o});
@@ -5173,6 +5344,7 @@ function drawDecisions(){
   host.replaceChildren(el("h2",{}, total ? "Decisions: " + [nSteps ? nSteps+(nSteps===1?" step":" steps") : "", n ? n+(n===1?" decision":" decisions") : "", nMan ? nMan+(nMan===1?" manual action":" manual actions") : ""].filter(Boolean).join(", ")
     : "Nothing is waiting for you"));
   host.append(manHost, el("hr",{class:"secrule"}));   // HUB238: 1. Manual actions (Active, Snoozed), kept between redraws (renderManual fills it); HUB263: a rule after it
+  host.append(manPastHost, el("hr",{class:"secrule"}));   // HUB307: 2. Past manual actions, directly below the Manual actions (a rule hidden while it is empty)
   host.append(el("h2",{id:"decsec"}, "Decisions"), el("h3",{}, "Active"));
   if(!nSteps && !sess.length && !list.length && !nParked) host.append(el("p",{class:"note"}, "No decision is waiting on you."));
   if(nSteps) host.append(el("h3",{}, "Your steps"),
@@ -5191,9 +5363,7 @@ function drawDecisions(){
     if(parkedQs.length) d.append(cardDecisionsEl(parkedQs));
     host.append(d);
   }
-  host.append(pastDecisionsEl());   // 2. Decisions: Past decisions
-  host.append(el("hr",{class:"secrule"}));   // HUB263: hidden while the section after it is empty
-  host.append(manPastHost);         // 3. Past manual actions
+  host.append(pastDecisionsEl());   // 3. Decisions: Past decisions
 }
 // the decisions already made: the sessions' and the live cards' (an archived card keeps its own on the desktop)
 function answerText(o, a){
