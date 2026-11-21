@@ -2303,6 +2303,7 @@ function renderNew(){
       ep.append(opt(ADHOC_EPIC, "(ad hoc: no epic)"));   // HUB170: ad hoc and Release cards need no epic
       ar.append(opt("", "(none)"));
       for(const [k, a] of byOrder(areas).filter(([, a]) => !a.project || a.project === p)) ar.append(opt(k, a.name || k));
+      ep.value = ADHOC_EPIC;   // HUB304: a new card defaults to ad hoc; a filtered epic still wins
       if(filt.e && mine.some(([k]) => k === filt.e)) ep.value = filt.e;
     };
     pj.addEventListener("change", fillEps); nth.addEventListener("change", fillEps); fillEps();
