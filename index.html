@@ -590,6 +590,11 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .rspin{display:inline-block; width:.8em; height:.8em; margin-left:.4em; vertical-align:-.1em; border-radius:50%;
   background:conic-gradient(var(--accent, var(--muted)) var(--p, 0%), color-mix(in srgb, var(--muted) 30%, transparent) 0);
   -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
+/* HUB346: beside the comment field's title while a comment is on its way */
+.cspin{display:inline-flex; align-items:center; gap:6px; font-size:.7rem; color:var(--pend-fg)}
+.cspin::before{content:""; width:11px; height:11px; border-radius:50%; border:2px solid var(--pend-bg); border-top-color:var(--pend-fg); animation:cspin .8s linear infinite}
+@keyframes cspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){ .cspin::before{animation:none} }
 .gbar.planned{background:color-mix(in srgb, var(--gc) 45%, transparent)}
 /* HUB144: hatched from the gate pass (--gsplit) to the merge (--gend), solid before and after */
 /* HUB146: Merged, in testing: solid only while it was worked on, hatched while it waited for the merge, then pale
@@ -1186,10 +1191,11 @@ function changeSettled(id, ch, sent, exp){
 function settleChanges(data){
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
-    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at,
-      doc: raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null});
+    const doc = raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null;
+    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at, doc});
     if(!why) continue;
     changes.delete(k); sentAt.delete(k);
+    if(why === "expired" && draftBack(v, doc)) refusedAdd(v.card, v.field, "the board did not take it");   // HUB346
     if(why === "expired") aiRefused(k, "the board did not take it");   // HUB322: an Exarch AI item's tap: its buttons again
     if(why === "expired") toast(`The board did not take your change to ${v.card} (${v.field}). It shows what the board has.`);
   }
@@ -1752,10 +1758,13 @@ function cardEl(c, full=false){
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
     // HUB211: the typed text is kept per card (a redraw of the card brings it back). HUB309: it is an unsaved change
     // like the others: nothing is posted on Enter or on leaving the box, only by the card view's Save; Discard drops it
-    const ta = el("textarea",{placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
-                              onclick:ev=>ev.stopPropagation(), oninput:()=>{ draftSet(c.id, ta.value); edPut(c, "comment", ta.value.trim(), ""); }});
+    const ta = el("textarea",{id:"cmtbox", "data-card":c.id, placeholder:"Add a comment to the activity", "aria-label":"Comment", maxlength:"4000",
+                              onclick:ev=>ev.stopPropagation(), oninput:()=>{   // HUB346: a late input event of a box already redrawn is no typing
+                                if(!ta.isConnected) return; draftSet(c.id, ta.value); edPut(c, "comment", ta.value.trim(), ""); }});
     ta.value = draftGet(c.id);
     if(ta.value.trim() && edVal(c, "comment", null) === null) edPut(c, "comment", ta.value.trim(), "");   // a kept draft is an unsaved change
+    more.append(el("div",{class:"row"}, el("label",{class:"lbl", for:"cmtbox"}, "Comment"),   // HUB346: the spinner beside the title until the board has the comment
+      el("span",{class:"cspin", id:"cmtspin", role:"status", "data-card":c.id, hidden:!cmtSending(c.id), title:"Your comment is on its way to the board"}, "Saving")));
     more.append(ta);
     if(!readOnly && cards.has(c.id)) more.append(edBarEl(c));   // HUB293
     e.append(more); return e;
@@ -1804,6 +1813,22 @@ function draftSet(id, v){
   if(v) drafts.set(id, String(v)); else drafts.delete(id);
   try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.fromEntries(drafts))); }catch(e){}
 }
+// HUB346: a comment of this card is on its way: not on the board yet, nor refused
+function cmtSending(id){ for(const ch of changes.values()) if(ch.card === id && ch.field === "comment") return true; return false; }
+function cmtSpin(){ const s = document.getElementById("cmtspin"); if(s) s.hidden = !cmtSending(s.dataset.card); }
+// HUB346: a comment the board refused (or never took) is a draft of its card again, after what was typed since; false
+// for any other change, and for a comment that `doc` (the exported card) shows in its activity after all
+function draftBack(ch, doc){
+  if(!ch || ch.field !== "comment" || !ch.value) return false;
+  const flat = s => String(s || "").replace(/\s+/g, " ").trim();
+  if(doc && Array.isArray(doc.log) && doc.log.some(a => a && flat(a.t).endsWith(": " + flat(ch.value)) && Date.parse(a.ts || "") >= Date.parse(ch.ts || "") - 60000)) return false;
+  const cur = draftGet(ch.card).trimEnd(), text = cur ? cur + "\n\n" + ch.value : String(ch.value);
+  draftSet(ch.card, text);
+  if(EDIT.id === ch.card && EDIT.v.has("comment")) EDIT.v.set("comment", text.trim());
+  const ta = document.getElementById("cmtbox");
+  if(ta && ta.dataset.card === ch.card){ const at = [ta.selectionStart, ta.selectionEnd]; ta.value = text; ta.setSelectionRange(...at); }
+  return true;
+}
 // <<< comment-drafts
 // >>> card-editor (tests/test_app.py runs this block)
 // HUB293: the card editor holds its changes (EDIT) until the Save button; closing, opening another card or switching
@@ -1850,15 +1875,17 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
   }
   return out;
 }
-function edBarFill(box, c){
+function edBarFill(box, c){   // HUB346: a press on a button leaves the focus in the text box: the redraw held back until then would replace the button before its click
   const n = EDIT.id === c.id ? EDIT.v.size : 0;
   box.replaceChildren(
-    el("button",{type:"button", class:"pri edsave", disabled:!n, title:"Send every change to the board", onclick:ev=>{ ev.stopPropagation(); edSave(); }}, "Save"),
-    el("button",{type:"button", class:"eddiscard", disabled:!n, title:"Throw the changes away", onclick:ev=>{ ev.stopPropagation(); edReset(); renderModal(); }}, "Discard"),
+    el("button",{type:"button", class:"pri edsave", disabled:!n, title:"Send every change to the board", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); edSave(); }}, "Save"),
+    el("button",{type:"button", class:"eddiscard", disabled:!n, title:"Throw the changes away", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); edReset(); renderModal(); }}, "Discard"),
     el("span",{class:"hint"}, n ? n + (n === 1 ? " unsaved change" : " unsaved changes") : "No unsaved changes"));
 }
 function edBarEl(c){ const box = el("div",{class:"row edbar", id:"edbar"}); edBarFill(box, c); return box; }
 function edSave(){   // true when everything was sent (or there was nothing to send)
+  const ae = document.activeElement;   // HUB346: render() waits for a text box that has the focus, and it still has it here
+  if(ae && ae.tagName === "TEXTAREA") ae.blur();
   const c = openId && cards.get(openId);
   if(!c || !edDirty()) return true;
   const patch = {}, ans = {};
@@ -1866,6 +1893,7 @@ function edSave(){   // true when everything was sent (or there was nothing to s
   if(Object.keys(ans).length) patch.ans = ans;
   if(Object.keys(patch).length){
     if(!write(c.id, patch, true)){ render(); return false; }
+    if(patch.comment !== undefined) draftSet(c.id, "");   // HUB346: sent: it is no draft any more, so no redraw puts it back as an unsaved change
     for(const k of [...EDIT.v.keys()]) if(k !== "col") EDIT.v.delete(k);
   }
   const col = EDIT.v.get("col");
@@ -2206,6 +2234,7 @@ function buildCol(col, host, inCol, list, lane){
 // Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
 // column's scroll and the open card window's scroll. Not while a text box in a card has the focus, nor during a drag.
 function render(){
+  cmtSpin();   // HUB346: also while the redraw is held back by a text box in use
   const ae = document.activeElement;
   const focusId = ae && ae.closest && ae.closest(".card") && ae.closest(".card").dataset.id;
   const focusTa = ae && ae.tagName==="TEXTAREA";
@@ -5672,6 +5701,7 @@ async function load(sha){
     for (const x of refused) aiRefused(String(x.change), x.why);   // HUB322: a tap the node refused shows why, with its buttons again
     for (const x of fresh){
       const name = String(x.change).split("__");
+      draftBack(changes.get(x.change));   // HUB346: a refused comment's text is in the box again
       changes.delete(x.change); sentAt.delete(x.change);
       refusedAdd(name[0], name[1] || "", x.why);          // the card shows "Sync refused" for a day (HUB68)
       toast(`Not applied (${name[0]} ${name[1] || ""}): ${x.why}`);
