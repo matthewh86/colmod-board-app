@@ -5784,7 +5784,7 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
 // proposal sends the item's own change (HUB331, docs/EXARCH.md B); a plan or the ▼ menu is a change on card "exarch";
 // all go through the pending path (change(), pendSave), like
 // every other edit here; Exarch AI creates nothing without that tap. The chats, their order and the hidden set are kept
-// in this browser (per device). Tabs: Chat (the Exarch tab first, then the user's ✉︎ chats; the ✪ Lead tabs are hidden, chatLeads()),
+// in this browser (per device). Tabs: Chat (the Exarch tab first, then one ✪ tab per Lead, chatLeads(), and the user's ✉︎ chats),
 // Status (export/status.json exarch.history) and Archived (archived here, kept 90 days, never sent to the AI).
 const AI_KEY = "hub.exarch", AI_OLD = "hub.assistant", AI_MSGS = 60, AI_ARCH_DAYS = 90, AI_CONV = /^[a-z0-9]{6,32}$/;
 const AI_WAIT_MS = 6 * 60 * 1000, AI_POLL_UNTIL_MS = 60 * 60 * 1000;   // "No answer yet" after 6 min; a late answer still lands for an hour
@@ -5850,7 +5850,7 @@ function aiClear(){    // Disconnect, or this device was removed: nothing of the
   if(!$("#aipanel").hidden) aiDraw(); else renderExarchHeader();
 }
 // >>> drawer-rules (tests/test_app.py runs this block)
-// The Leads (EXARCH D; their tabs are hidden, chatLeads()): active for a project with a lead whose Lead state is active
+// The Leads (EXARCH D): active for a project with a lead whose Lead state is active
 // (hub/exarch/core.py project_state: lead_state, snooze_until); the hub's own Lead is the Exarch tab.
 function isHubProject(k, p){ return k === "hub" || (Array.isArray(p && p.id_prefixes) && p.id_prefixes.includes("HUB")); }
 function leadState(p, now){   // "active" | "snoozed" | "not_needed" | "none" (no Lead yet)
@@ -5879,7 +5879,6 @@ function chatMove(chats, from, to){
 }
 // the Status tab's filter (hub/exarch/history.py tags): all, waiting on the user ("user"), failures ("fail")
 function histShown(lines, f){ return (Array.isArray(lines) ? lines : []).filter(x => x && (f === "user" ? x.tag === "user" : f === "fail" ? x.tag === "fail" : true)); }
-// the notifications (EXARCH J12): only a plan to approve and an escalation the user must act on
 // HUB327: the board's project with the Lead state Exarch AI works with (export/status.json exarch.projects, the core's
 // last tick): a project with no Lead charter installed is not needed, whatever the board says
 function leadRow(k, p, rows){
@@ -5888,7 +5887,23 @@ function leadRow(k, p, rows){
   const st = r.charter === false ? "not_needed" : String(r.lead_state || "");
   return st ? Object.assign({}, p, {lead_state: st, snooze_until: r.snooze_until || null, snooze_after: r.snooze_after || null}) : p;
 }
-function notifyKind(m){ return m && m.role === "assistant" && !m.wait && m.plan && !m.plan.done ? "plan" : ""; }
+// HUB343: the Leads with a tab: a project other than the hub, with a Lead charter (the core's last tick), whose Lead is
+// active or snoozed (a message wakes a snoozed Lead to answer it); each Lead once
+function leadTabs(projects, rows, now){
+  const out = [];
+  for(const [k, p] of projects){
+    const r = (Array.isArray(rows) ? rows : []).find(x => x && x.key === k), role = String(p && p.lead || "").trim();
+    if(!r || r.charter !== true || isHubProject(k, p) || out.includes(role)) continue;
+    if(["active", "snoozed"].includes(leadState(leadRow(k, p, rows), now))) out.push(role);
+  }
+  return out;
+}
+// the notifications (EXARCH J12): a plan to approve, a Lead's reply in its own chat, and an escalation (exarchWatch)
+function notifyKind(m, c){
+  if(!m || m.role !== "assistant" || m.wait) return "";
+  if(m.plan) return m.plan.done ? "" : "plan";
+  return c && c.kind === "lead" && m.by && m.by === c.lead ? "lead" : "";
+}
 // the tabs' shared chats: `mine` (this tab's) with what another tab stored (`theirs`) since both had `base`, by chat and by
 // message. Removed on one side: gone. Changed on one side: that side; on both: this tab's, but an answer beats a wait.
 // This tab's objects are changed in place, so a running poll keeps its chat.
@@ -5931,8 +5946,7 @@ function aiMerge(mine, theirs, base){
 }
 // <<< drawer-rules
 function leadRows(){ const x = exarchNow().x; return x && Array.isArray(x.projects) ? x.projects : []; }
-// The Lead tabs are hidden until a Lead chat reaches its Lead (no card sends one yet): no tab, no message, no notification.
-function chatLeads(){ return []; }
+function chatLeads(){ return leadTabs(projects, leadRows(), Date.now()); }   // HUB343: none before the core's first tick is in the export
 function leadProject(role){ for(const [k, p] of projects) if(String(p.lead) === role) return [k, p]; return ["", null]; }
 function aiEnsure(){   // the Exarch chat always first; one chat per Lead that has a tab
   if(!ai.chats.some(c => c.kind === "exarch")) ai.chats.unshift({conv: aiId(), kind: "exarch", lead: "", project: "", title: "Exarch", n: 0, msgs: [], hidden: false});
@@ -6141,10 +6155,10 @@ function notify(title, body, conv){
     n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = "chat"; } else ai.tab = "status"; aiOpen(true); n.close(); };
   }catch(e){ /* a phone browser that shows notifications only from a service worker: the compass count still says it */ }
 }
-function aiWaiting(){   // the compass count: plans to approve, and escalations since the drawer was last open
+function aiWaiting(){   // the compass count: plans to approve, Leads' replies, and escalations since the drawer was last open
   let n = 0;
   const leads = chatLeads();
-  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs) if(notifyKind(m) && !m.seen) n++;
+  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs) if(notifyKind(m, c) && !m.seen) n++;
   const since = ai.seen.status || "";
   n += exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since).length;
   return n;
@@ -6195,7 +6209,7 @@ function aiDraw(){
   const pend = exConfirmCards(), pb = $("#aipair");   // HUB338: a new device waits for its code to be confirmed here
   pb.hidden = !pend.length; pb.replaceChildren(...pend);
   if(!nb.hidden) nb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Notify this device?")),
-    el("span",{class:"small"}, "Exarch AI can tell this device when a plan needs approving, or something fails and needs the user. Nothing else."),
+    el("span",{class:"small"}, "Exarch AI can tell this device when a plan needs approving, a Lead replies, or something fails and needs the user. Nothing else."),
     el("span",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:notifyAsk}, "Turn on"), el("button",{type:"button", onclick:() => { ls(NOTE_KEY, "off"); aiDraw(); }}, "Not now")));
   if(ai.tab === "chat") aiDrawChat(c, row, leads);
   else if(ai.tab === "status"){ aiDrawStatus(s); ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status; }
@@ -6226,8 +6240,9 @@ function aiDrawChat(c, row, leads){
   aiDrawMenu(c); aiDrawChatsPop(leads);
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
-    : c.kind === "lead" ? "Talking to " + c.lead + aiLeadWoken(c) : "";
+    : c.kind === "lead" ? "Talking to " + c.lead + (leadSnoozed(c) ? " · snoozed: a message wakes it to answer" : "") + aiLeadWoken(c) : "";
   who.hidden = !who.textContent;
+  $("#aiplan").closest("label").hidden = !!c && c.kind === "lead";   // a Lead proposes; it makes no plan to approve
   const box = $("#aimsgs"), foc = document.activeElement && document.activeElement.classList.contains("dedit") ? document.activeElement : null;
   const typing = foc ? [foc.dataset.item, foc.selectionStart, foc.selectionEnd] : null, atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   box.replaceChildren(...[ex.note ? el("div",{class:"sline"}, ico("lock"), ex.note) : null, ...aiItems(c)].filter(Boolean));
@@ -6239,8 +6254,9 @@ function aiDrawChat(c, row, leads){
   const busy = c && c.msgs.some(m => m.wait && !m.late);
   $("#aisend").disabled = !c || !!busy;
   $("#aiq").placeholder = !c ? "" : c.kind === "exarch" ? "Ask about or change the Hub and Exarch" : c.kind === "lead" ? "Message " + c.lead : "Ask Exarch AI, or list work to add";
-  if(!$("#aipanel").hidden) for(const m of c ? c.msgs : []) if(notifyKind(m)) m.seen = true;   // shown: no longer counted on the compass
+  if(!$("#aipanel").hidden) for(const m of c ? c.msgs : []) if(notifyKind(m, c)) m.seen = true;   // shown: no longer counted on the compass
 }
+function leadSnoozed(c){ return leadState(leadRow(c.project, projects.get(c.project), leadRows()), Date.now()) === "snoozed"; }
 function aiLeadWoken(c){
   const w = exarchNow().history.find(h => h.kind === "lead_wake" && (h.project === c.project || String(h.text || "").includes(c.lead)));
   return w && w.at ? " · last woken " + new Date(w.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : "";
@@ -6510,7 +6526,7 @@ async function aiAsk(text){
   const n = ++c.n, at = new Date().toISOString();
   c.msgs.push({role: "user", text, at, n}); c.msgs.push({role: "assistant", text: "", wait: true, n, sent: at, at});
   aiDraw.jump = true; aiDraw();
-  const doc = {conv: c.conv, n, text, history, ts: at, plan: $("#aiplan").checked, chat: c.kind};
+  const doc = {conv: c.conv, n, text, history, ts: at, plan: c.kind !== "lead" && $("#aiplan").checked, chat: c.kind};
   if(c.kind === "lead"){ doc.lead = c.lead; doc.project = c.project; }
   if(ai.revise && ai.revise.conv === c.conv){ doc.revise = ai.revise; const pm = c.msgs.find(m => m.plan && m.n === ai.revise.n); if(pm) pm.plan.done = "revise"; ai.revise = null; }
   try{
@@ -6540,7 +6556,8 @@ function aiLand(c, n, r){   // a reply into its own chat (shown or not); a moved
     c.hidden = false;   // a hidden chat shows again when a new message arrives in it
   }
   const where = to || c;
-  if(notifyKind(msg)) notify("Plan ready to approve", (msg.plan && msg.plan.title ? msg.plan.title + ": " : "") + msg.text, where.conv);
+  const nk = notifyKind(msg, where);
+  if(nk) notify(nk === "lead" ? where.lead + " replied" : "Plan ready to approve", (msg.plan && msg.plan.title ? msg.plan.title + ": " : "") + msg.text, where.conv);
   aiDraw();
 }
 async function aiPoll(conv){   // every 4 s while waiting (every 30 s once late); a late answer still lands for an hour
