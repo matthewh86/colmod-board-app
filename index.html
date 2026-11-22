@@ -832,7 +832,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aipanel .seg button{border:0; border-radius:0; background:none; padding:3px 9px}
 .aipanel .seg button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
 /* the Sync popup: under the Sync indicator on a desktop, the full width on a phone */
-.syncpop{position:fixed; z-index:16; top:64px; left:max(16px, min(var(--spx,16px), calc(100vw - 396px))); width:min(380px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
+.syncpop{position:fixed; z-index:16; top:64px; left:var(--spx,16px); width:min(380px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
 .syncpop .phead b{flex:1}
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
@@ -6219,8 +6219,19 @@ function syncPopOpen(v){
   const p = $("#syncpop"), b = $("#syncind");
   if(v === undefined) v = p.hidden;
   p.hidden = !v; b.setAttribute("aria-expanded", String(v));
-  if(v){ exStart(); renderSyncPop(); }
+  if(v){ exStart(); renderSyncPop(); placeSyncPop(); }
 }
+// HUB353: on a desktop the popup's left edge is the status box's (#syncind, the box it opens from), kept 8 px inside the window; a phone's is the CSS's
+// >>> syncpop-left
+const syncPopLeft = (box, w, win) => Math.max(8, Math.min(box, win - 8 - w));
+// <<< syncpop-left
+function placeSyncPop(){
+  const p = $("#syncpop"); if(!p || p.hidden) return;
+  p.style.setProperty("--spx", syncPopLeft($("#syncind").getBoundingClientRect().left, p.getBoundingClientRect().width, document.documentElement.clientWidth) + "px");
+}
+addEventListener("resize", placeSyncPop);   // a browser zoom is a resize too
+addEventListener("scroll", placeSyncPop, {passive:true});
+if(window.ResizeObserver){ const o = new ResizeObserver(placeSyncPop); [$("#app"), $("#syncind"), $(".hrow h1")].forEach(x => o.observe(x)); }   // the drawer opened or dragged, the status text, the title's font loaded
 function popSec(title, ...kids){ return el("div",{class:"psec"}, el("h3",{}, title), ...kids); }
 function kv(k, v, attrs){ return el("div",Object.assign({class:"kv"}, attrs || {}), el("span",{class:"kk"}, k), el("span",{class:"vv"}, v)); }
 function renderSyncPop(){
