@@ -3874,7 +3874,7 @@ function drawMachines(host){
 // ---------- the plan's token limits and the development pace (HUB128-130): status/usage.json, recorded by the coordinator
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
-  ["turbo", "Turbo", "Full speed: no limit on development streams, the coordinator's hub cards or art Claude draws; only the paid usage credits, the local LLM, the ComfyUI art pool and the machines' game slots still apply"]];
+  ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM, the ComfyUI art pool and the machines' game slots still apply"]];
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
   let pace = u && u.pace || "moderate";
@@ -3891,8 +3891,8 @@ const HUB_LIMITS = [
   {k: "drawn", name: "Art Claude draws", def: 2, min: 1, max: 6,
    what: "Artwork cards Claude draws itself (SVG, pixel art or images written by code) at once, apart from the development streams and the ComfyUI art, on every pace.",
    hint: "Suggested: 2 on Moderate and Turbo, 1 on Conservative. Drawing art by code spends the plan's tokens like a development stream, and every picture waits for the user's sign-off, so more at once mostly adds to the pictures waiting."},
-  {k: "coord", name: "Coordinator's hub cards", def: 2, min: 1, max: 6,
-   what: "Hub cards the coordinator's agents work at once. Turbo lifts it.",
+  {k: "coord", name: "Exarch's hub cards", def: 2, min: 1, max: 6,
+   what: "Hub cards Exarch's agents work at once. Turbo lifts it.",
    hint: "Suggested: 2. Hub cards change the hub's own code and documents, so more at once means more of them touch the same files and wait on each other's merge."},
   {k: "art", name: "ComfyUI art streams", def: 3, min: 1, max: 6,
    what: "Artwork cards made with ComfyUI at once, apart from the development streams, on every pace.",
@@ -4028,7 +4028,7 @@ function usageSection(host){
     ...defaultModelSec(),
     el("h3",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's, beside the Pace
   limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
-  if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake."), ...creditsTable(u)); return; }
+  if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: Exarch records the plan's limits on each wake."), ...creditsTable(u)); return; }
   host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, el("th",{}, "Limit"), el("th",{}, "Used"), el("th",{}, "Refreshes"), el("th",{}, "Runs out (at the present rate)"))),
     el("tbody",{}, wins.map(w => el("tr",{}, el("td",{}, w.label), el("td",{}, Math.round(Number(w.pct) || 0) + " %"),
@@ -4149,8 +4149,8 @@ function renderHubTab(){
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
     // what stops it (T50)
     const appPub = String(fact("Published App") || "");
-    if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This App is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
-    else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this App is the hub's is " + appPub));
+    if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This Hub page is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
+    else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this Hub page is the hub's is " + appPub));
     const hb = facts.filter(f => f.group === "hub").map(f => el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
     host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
     // the hub's own jobs (the user, 2026-11-17, HUB96): for a HUB card, or for no card (summaries, syncs)
@@ -4871,9 +4871,9 @@ function drawGantt(host){
       "ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; at most " + hubLimits().art + " at once (the Limits above)"],
     drawn: [dNow > dLim, "Drawn art: " + dNow + " of " + dLim + " now",
       "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"],
-    coord: [cNow > cLim, "Coordinator: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
-      "The coordinator's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
-  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Coordinator"]]){
+    coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
+      "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
+  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Exarch"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
     let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
     const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
@@ -5231,7 +5231,7 @@ function drawArtifacts(host){
   }
   const doomed = docs.filter(artDel).length;
   host.append(el("p",{class:"note"}, `${docs.length} published page${docs.length === 1 ? "" : "s"} from this work`
-    + (doomed ? `; ${doomed} marked for deletion: the coordinator session deletes ${doomed === 1 ? "it" : "them"} and the row then leaves this list.` : ". Mark one for deletion and the coordinator session deletes it.")));
+    + (doomed ? `; ${doomed} marked for deletion: Exarch deletes ${doomed === 1 ? "it" : "them"} and the row then leaves this list.` : ". Mark one for deletion and Exarch deletes it.")));
   const groups = new Map();   // by project (the user, 2026-11-17): the artifact's, else its card's, else its session's
   for(const d of docs){ const k = artProject(d); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
   const keys = [...groups.keys()].sort((a, b) => (a === "") - (b === "") || manProjOrder(a) - manProjOrder(b) || a.localeCompare(b));
@@ -6033,9 +6033,11 @@ function renderSyncPop(){
       : (s.state === "halting" ? "Halting · " : "Active · ") + streams;
     return kv(String(pr.name || k), el("span",{class:st === "active" || isHubProject(k, pr) ? "" : "mu"}, txt));
   });
-  const tg = el("button",{type:"button", class:"toggle" + (s.on ? "" : " off"), role:"switch", "aria-checked":String(s.on), id:"exarchsw",
-    "aria-describedby":"exarchwarn", disabled:readOnly ? true : null, title:s.on ? "Turn Exarch AI off" : "Turn Exarch AI on", onclick:() => exarchSet(!s.on)});
-  const ex = [el("div",{class:"row"}, tg, el("label",{for:"exarchsw"}, s.on ? "On" : "Off")),
+  const known = s.state !== "unknown";   // no exarch section in the export yet: neither on nor off
+  const tg = el("button",{type:"button", class:"toggle" + (s.on && known ? "" : " off"), role:"switch", "aria-checked":String(s.on && known), id:"exarchsw",
+    "aria-describedby":"exarchwarn", disabled:readOnly || !known ? true : null,
+    title:!known ? "The export has no Exarch AI state yet" : s.on ? "Turn Exarch AI off" : "Turn Exarch AI on", onclick:() => exarchSet(!s.on)});
+  const ex = [el("div",{class:"row"}, tg, el("label",{for:"exarchsw"}, !known ? "Not known yet" : s.on ? "On" : "Off")),
     el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
@@ -6052,11 +6054,12 @@ const USAGE_STAGES = {1: "Plan to 95 %: business as usual", 2: "Cutover: the API
 function syncPopExtra(){
   const {u, pace} = usageNow(), st = Number(u && u.stage), live = Number(u && u.streams_live);
   const a = u && u.allowed_streams, cap = hubLimits().streams;
-  const allowed = pace === "turbo" || a === null ? "no limit (Turbo)" : String(Number(a) > 0 ? Math.min(cap, Number(a)) : Number(a) === 0 ? 0 : cap);
+  const allowed = pace === "turbo" ? "no limit (Turbo)" : String(a != null && Number(a) >= 0 ? Math.min(cap, Number(a)) : cap);
+  const inUse = u && u.streams_live != null && live >= 0 ? live + " of " + allowed : "-";   // "-" alone while there is no reading
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
   return [popSec("Pace", paceSelector(pace, "syncpop"),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
-    kv("Streams in use", (live >= 0 && u && u.streams_live != null ? live : "-") + " of " + allowed, {title: u && u.allowance ? "Now: " + u.allowance : null}),
+    kv("Streams in use", inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
 function syncPopRuns(){ return [popSec("Exarch AI runs", runsTable(exarchNow().runs))]; }
