@@ -189,6 +189,19 @@ body.ro #selbtn{display:none}
 .card .kind{font-size:.8rem; line-height:1}   /* the kind's sign in its own colours, tinted with the kind's colour (HUB127) */
 .kind, .gk{position:relative; display:inline-block}
 .kind::after, .gk::after{content:attr(data-i); position:absolute; inset:0; color:transparent; text-shadow:0 0 0 var(--tc,var(--muted)); opacity:.5; pointer-events:none}
+/* HUB349: the type icon is a button that opens the list of types */
+.kindbtn{font:inherit; color:inherit; background:none; border:0; border-radius:5px; padding:3px; margin:-3px; line-height:1; cursor:pointer}
+.kindbtn:hover,.kindbtn[aria-expanded="true"]{background:var(--sunk); outline:1px solid var(--line)}
+.kindbtn:focus-visible{outline:2px solid var(--accent)}
+.kindbtn .nokind{display:inline-block; width:.8rem; height:.8rem; border:1px dashed var(--muted); border-radius:4px; vertical-align:middle}
+@media (pointer:coarse){ .kindbtn{padding:9px; margin:-9px} }
+.typeback{position:fixed; inset:0; z-index:1000}
+.typemenu{position:fixed; min-width:190px; max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); overflow:auto; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:4px}
+.typemenu button{display:flex; align-items:center; gap:9px; width:100%; min-height:32px; font:inherit; font-size:.85rem; text-align:left; color:inherit; background:none; border:0; border-radius:6px; padding:4px 10px; cursor:pointer}
+.typemenu button:hover,.typemenu button:focus{background:var(--sunk); outline:none}
+.typemenu button[aria-checked="true"]{font-weight:700}
+.typemenu .cur{margin-left:auto; color:var(--accent)}
+@media (pointer:coarse){ .typemenu button{min-height:42px} }
 .card[class*=" t-"]{border-left-color:var(--tc,var(--line))}   /* the side only: the card itself keeps its plain surface */
 .card .top{display:flex; gap:6px; align-items:baseline}
 .card .id{font-family:var(--f-mono); font-size:.72rem; font-weight:600; color:var(--tc,var(--muted))}   /* the id in the kind's colour too */
@@ -246,6 +259,7 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .chip{display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:500; padding:1px 7px; border-radius:999px; background:hsl(var(--h) var(--chip-s) var(--chip-l)); color:var(--chip-ink); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 .chipedit{position:relative; cursor:pointer; padding-right:8px}
 .chipedit:hover,.chipedit:focus-within{outline:2px solid hsl(var(--h) 60% 45%); outline-offset:1px}
+.projnote{font-size:.76rem; color:var(--q); margin-top:4px}   /* HUB350: what a project change does to the card */
 .chipedit select{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; font:inherit}   /* covers the whole pill */
 .chip::before{content:""; width:6px; height:6px; border-radius:50%; background:hsl(var(--h) 60% 45%); flex:none}
 .epics{display:flex; flex-direction:column; gap:6px; padding-bottom:4px}
@@ -1055,7 +1069,12 @@ function rebuild(){
       c.log_n = (Number(c.log_n) || 0) + 1;
     }
     else if(f === "blocked") c.blk = ch.value || "";   // HUB222: blocked (or unblocked) here
-    else c[f] = ch.value;   // un, pri, rank, epic
+    else if(f === "project"){   // HUB350: the epic goes with it; an area of another project is cleared
+      c.project = ch.value;
+      if(ch.epic !== undefined) c.epic = ch.epic || "";
+      const ap = c.cat && areas.get(c.cat)?.project; if(ap && ap !== ch.value) c.cat = "";
+    }
+    else c[f] = ch.value;   // un, pri, rank, epic, type
     c._pending++;
   }
 }
@@ -1090,6 +1109,8 @@ function changeText(ch){
   if(f.startsWith("step.")) return v ? "your step marked done" : "your step reopened";
   if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
+  if(f === "type") return "type: " + String(v);   // HUB349
+  if(f === "project") return "project: " + (projects.get(v)?.name || String(v));   // HUB350
   if(f === "model") return "model: " + String(v || "auto");   // HUB337
   if(f === "blocked") return v ? "blocked: " + String(v).slice(0, 80) : "unblocked";
   if(f === "order") return "new order";
@@ -1175,6 +1196,8 @@ function changeSettled(id, ch, sent, exp){
     else if(f === "snooze"){ if((doc.snoozed === true) === (ch.value === true) || doc.done === true) return "shown"; }
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
     else if(f === "model"){ if((doc.model || "auto") === (ch.value || "auto")) return "shown"; }   // HUB337
+    else if(f === "type"){ if(sameValue(doc.type, ch.value)) return "shown"; }   // HUB349
+    else if(f === "project"){ if(sameValue(doc.project, ch.value) && (ch.epic === undefined || sameValue(doc.epic, ch.epic))) return "shown"; }   // HUB350
     else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
     else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
     else if(f === "blocked"){ if(sameValue(doc.blk, ch.value)) return "shown"; }   // HUB222
@@ -1274,7 +1297,12 @@ function write(id, patch, quiet){   // returns true when the patch became change
   if(patch.model !== undefined) change(base, "model", patch.model);   // HUB337
   if(patch.un !== undefined) change(base, "un", patch.un);
   if(patch.comment) change(base, "comment", patch.comment);
-  if(patch.epic !== undefined) change(base, "epic", patch.epic);
+  // HUB349, HUB350: each change must stand on its own: a Release needs no epic, so its type goes before an epic is
+  // cleared; any other type goes after the epic it needs
+  if(patch.type === "Release") change(base, "type", patch.type);
+  if(patch.project !== undefined) change(base, "project", patch.project, patch.epic !== undefined ? {epic: patch.epic || ""} : null);   // the epic in the same change
+  else if(patch.epic !== undefined) change(base, "epic", patch.epic);
+  if(patch.type !== undefined && patch.type !== "Release") change(base, "type", patch.type);
   if(patch.col !== undefined && patch.col !== c.col) change(base, "column", COL_NAME[patch.col], patch.rank !== undefined ? {rank: patch.rank} : null);
   else if(patch.rank !== undefined) change(base, "rank", patch.rank);
   rebuild();
@@ -1563,8 +1591,89 @@ function cardKind(c){
 const ART_TOOL = {comfy: ["ComfyUI", "Made with ComfyUI: counted in the art pool (one graphics card)"],
   drawn: ["Drawn", "Drawn by Claude (SVG, pixel art or images written by code): an ordinary stream, not in the art pool"]};
 function artTool(c){ return cardKind(c) !== "Artwork" ? "" : c.art_tool === "drawn" ? "drawn" : "comfy"; }
+// HUB349: the type icon of a board card and of the card window opens the list of types. A board card's pick is sent at
+// once; the card window's is held until Save, like its other fields.
+let typeFor = null;   // the open list's card: {id, full}
+function kindBtn(c, kind, full){
+  const icon = kind ? el("span",{class:"kind", role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : el("span",{class:"nokind"});
+  return el("button",{type:"button", class:"kindbtn", "aria-haspopup":"menu", "aria-expanded":String(!!typeFor && typeFor.id === c.id && typeFor.full === full), draggable:"false",
+    title:(kind || "No type") + " (click to change the type)", "aria-label":"Type of " + c.id + ": " + (kind || "none") + ". Change it",
+    onclick:ev=>{ if(selMode && !full) return; ev.stopPropagation(); openTypes(c.id, full, ev.currentTarget); }}, icon);   // selecting: the click selects the card
+}
+function typeBtn(){   // the open list's own icon (the board may have been redrawn under it)
+  return typeFor && [...document.querySelectorAll(".card .kindbtn")].find(b => { const k = b.closest(".card"); return k.dataset.id === typeFor.id && k.classList.contains("full") === typeFor.full && !k.classList.contains("ghost"); });
+}
+function closeTypes(back){
+  const box = document.getElementById("typeback"), b = typeBtn();
+  typeFor = null; if(box) box.remove();
+  if(b){ b.setAttribute("aria-expanded", "false"); if(back) b.focus({preventScroll:true}); }
+}
+function openTypes(id, full, at){
+  const c = cards.get(id); if(!c) return;
+  if(readOnly){ toast("This view is read-only."); return; }
+  closeTypes(false);
+  typeFor = {id, full};
+  const cur = full ? edVal(c, "type", cardKind(c)) : cardKind(c);
+  const items = KINDS.map(k => el("button",{type:"button", role:"menuitemradio", tabindex:"-1", "aria-checked":String(k === cur), class:"g-t-" + k.toLowerCase(), onclick:()=>pickType(k)},
+    el("span",{class:"kind", "aria-hidden":"true", "data-i":KIND_ICON[k]}, KIND_ICON[k]), k, k === cur ? el("span",{class:"cur", "aria-hidden":"true"}, "✓") : null));
+  const menu = el("div",{class:"typemenu", role:"menu", "aria-label":"Type of " + id}, ...items);
+  const box = el("div",{class:"typeback", id:"typeback"}, menu);
+  box.addEventListener("click", ev=>{ ev.stopPropagation(); if(ev.target === box) closeTypes(true); });
+  menu.addEventListener("keydown", ev=>{
+    const i = items.indexOf(document.activeElement), n = items.length;
+    const to = {ArrowDown: (i + 1) % n, ArrowUp: (i - 1 + n) % n, Home: 0, End: n - 1}[ev.key];
+    if(to !== undefined){ ev.preventDefault(); items[to].focus(); return; }
+    if(ev.key === "Tab"){ ev.preventDefault(); closeTypes(true); return; }
+    if(ev.key.length === 1 && ev.key !== " " && !ev.ctrlKey && !ev.metaKey && !ev.altKey){   // the first letter goes to the next type that starts with it
+      const hit = [...items.keys()].map(k => (i + 1 + k) % n).find(k => KINDS[k][0].toLowerCase() === ev.key.toLowerCase());
+      if(hit !== undefined){ ev.preventDefault(); items[hit].focus(); }
+    }
+  });
+  document.body.append(box);
+  const r = at.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight, vw = document.documentElement.clientWidth, vh = innerHeight;
+  menu.style.left = Math.max(8, Math.min(r.left, vw - w - 8)) + "px";
+  menu.style.top = Math.max(8, r.bottom + 4 + h > vh - 8 && r.top - 4 - h >= 8 ? r.top - 4 - h : Math.min(r.bottom + 4, vh - h - 8)) + "px";
+  at.setAttribute("aria-expanded", "true");
+  (items[KINDS.indexOf(cur)] || items[0]).focus({preventScroll:true});
+}
+function pickType(k){
+  const {id, full} = typeFor || {}, c = id && cards.get(id);
+  if(!c){ closeTypes(false); return; }
+  if(full) edPut(c, "type", k, cardKind(c));
+  else if(k !== cardKind(c)){
+    const why = cardProblem(c, {type: k}, newCtx());
+    if(why) toast(id + ": " + why); else write(id, {type: k}, true);
+  }
+  if(full) renderModal(); else render();
+  closeTypes(true);   // after the redraw: the focus goes to the card's new icon
+}
+// Esc closes only the list, not the card window under it (capture: before the page's own Esc)
+addEventListener("keydown", ev=>{ if(ev.key === "Escape" && typeFor){ ev.preventDefault(); ev.stopImmediatePropagation(); closeTypes(true); } }, true);
+// HUB350: the live epics a card of project `p` may take (an epic not given a project yet is offered everywhere)
+function projEpics(p){ return [...epics.entries()].filter(([, v]) => !v.retired && (!v.project || v.project === p)).sort((a,b)=>(a[1].order??99)-(b[1].order??99) || String(a[1].name||a[0]).localeCompare(String(b[1].name||b[0]))); }
+function projList(){ return [...projects.entries()].sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[1].name || a[0]).localeCompare(String(b[1].name || b[0]))); }
+function projName(k){ return projects.get(k)?.name || k || "(no project)"; }
+function pickProject(c, p){   // the card window: a project chosen; an epic of another project is cleared (nothing is sent before Save)
+  const own = cardProject(c);
+  if(!p || !projects.has(p)) return;   // every card keeps a project
+  edPut(c, "project", p, own);
+  const ep = edVal(c, "epic", c.epic), of = epics.get(ep)?.project;
+  if(p === own) edPut(c, "epic", c.epic, c.epic);   // back to its own project: its epic as it was
+  else if(ep && of && of !== p) edPut(c, "epic", "", c.epic);
+  renderModal();
+}
+function projectNotes(c, projV, epV){   // what the project change does to the card, in words
+  const own = cardProject(c); if(projV === own) return [];
+  const out = [], was = epics.get(c.epic), ar = c.cat && areas.get(c.cat);
+  if(c.epic && epV !== c.epic) out.push("Its epic " + (was?.name || c.epic) + " is of " + projName(own) + (epV ? ": replaced." : ": cleared."));
+  if(ar && ar.project && ar.project !== projV) out.push("Its area " + (ar.name || c.cat) + " is cleared too.");
+  const why = cardProblem(c, {project: projV, epic: epV, type: edVal(c, "type", cardKind(c))}, newCtx());
+  if(why) out.push(why);
+  out.push("The id " + c.id + " stays.");
+  return out;
+}
 function cardEl(c, full=false){
-  const kind = cardKind(c);
+  const kind = full ? edVal(c, "type", cardKind(c)) : cardKind(c);
   const e = el("div",{class:"card"+(c.pri?" p"+c.pri:"")+(kind?" t-"+kind.toLowerCase():"")+(c._pending&&!full?" pending":"")+(full?" open full":""), tabindex:"0", "data-id":c.id});
   if(kind && !full && !e.title) e.title = kind;
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
@@ -1575,7 +1684,8 @@ function cardEl(c, full=false){
     refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
     handback(c) ? el("span",{class:"lab pend", title:"Handed back to the Lead by "+handback(c).by+": "+handback(c).why}, "⏳ Handed back") : null].filter(Boolean);
   e.append(el("div",{class:"top"},
-    kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null,
+    !readOnly && cards.has(c.id) && (kind || full) ? kindBtn(c, kind, full)   // HUB349
+      : kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null,
     el("span",{class:"id"},c.id),
     artTool(c) ? el("span",{class:"lab arttool", title:ART_TOOL[artTool(c)][1]}, ART_TOOL[artTool(c)][0]) : null,
     ...(full ? flags : []),
@@ -1604,14 +1714,27 @@ function cardEl(c, full=false){
   const tpath = th ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th.name+" ›") : null;
   if(full && !readOnly && epics.size){   // card window: the epic pill is a drop-down
     // HUB293: a change is held in the editor (EDIT) until Save
+    const own = cardProject(c), projV = edVal(c, "project", own), moved = projV !== own;   // HUB350
     const epV = edVal(c, "epic", c.epic), epP = epics.get(epV);
     const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value){ edPut(c, "epic", ev.target.value, c.epic); renderModal(); } }});
-    if(!epP) es.append(el("option",{value:"", selected:true}, c.epic ? c.epic : noEpicText(c)));
-    const ownTh = epicTheme(c.epic);   // HUB303: only epics of the card's theme (a card without a theme may take any)
-    for(const [k,v] of sortedEpics().filter(([k,v]) => !ownTh || k === epV || epicTheme(k) === ownTh)) es.append(el("option",{value:k, selected:k===epV}, v.name));
-    e.append(el("div",{}, tpath, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
-      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEpicText(c))+" ▾"), es),
-      epP ? el("button",{type:"button", class:"eplink", title:"Open this epic and its cards", onclick:ev=>{ ev.stopPropagation(); showEpic(epV); }}, "Open epic ›") : null));
+    const noEp = epV ? String(epV) : moved && cardProblem(c, {project: projV, epic: "", type: kind}, newCtx()) ? "(choose an epic)" : noEpicText(c);
+    if(!epP) es.append(el("option",{value:"", selected:true}, noEp));
+    const ownTh = moved ? "" : epicTheme(c.epic);   // HUB303: only epics of the card's theme (a card without a theme, or one changing its project, may take any)
+    const eps = projEpics(projV).filter(([k,v]) => !ownTh || k === epV || epicTheme(k) === ownTh);   // HUB350: never another project's
+    if(epP && !eps.some(([k]) => k === epV)) eps.unshift([epV, epP]);   // the card's own, also when retired
+    for(const [k,v] of eps) es.append(el("option",{value:k, selected:k===epV}, (moved && themes.get(epicTheme(k))?.name ? themes.get(epicTheme(k)).name + " · " : "") + v.name));
+    const ps = el("select",{id:"card-project", "aria-label":"Project of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>pickProject(c, ev.target.value)});
+    if(!projects.has(projV)) ps.append(el("option",{value:"", selected:true, disabled:true}, projName(projV)));
+    for(const [k, p] of projList()) ps.append(el("option",{value:k, selected:k===projV}, p.name || k));
+    const pchip = projects.size && cards.has(c.id) ? el("label",{class:"chip chipedit", style:"--h:"+(projects.get(projV)?.hue ?? 210), title:"Change this card's project (kept until you Save)"},
+      el("span",{"aria-hidden":"true"}, projName(projV)+" ▾"), ps) : null;
+    const th2 = moved ? themes.get(epicTheme(epV)) : null;
+    const tpath2 = moved ? (th2 ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th2.name+" ›") : null) : tpath;
+    const notes = projectNotes(c, projV, epV);
+    e.append(el("div",{class:"eprow"}, pchip, pchip ? " " : null, tpath2, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
+      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEp)+" ▾"), es),
+      epP ? el("button",{type:"button", class:"eplink", title:"Open this epic and its cards", onclick:ev=>{ ev.stopPropagation(); showEpic(epV); }}, "Open epic ›") : null,
+      notes.length ? el("div",{class:"projnote", role:"status"}, notes.join(" ")) : null));
   } else if(ep) e.append(el("div",{}, tpath, full ? el("button",{type:"button", class:"chip eplink", style:"--h:"+ep.hue, title:(ep.blurb||"")+" (open this epic and its cards)", onclick:ev=>{ ev.stopPropagation(); showEpic(c.epic); }}, ep.name)
     : el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
   else if(c.adhoc === true) e.append(el("div",{}, el("span",{class:"chip", style:"--h:0", title:"Ad hoc: outside any epic (HUB170)"}, "Ad hoc")));
@@ -1850,6 +1973,8 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
   const show = (key, v) => {
     if(v == null || v === "") return "(none)";
     if(key === "epic") return epics.get(v)?.name || v;
+    if(key === "project") return projects.get(v)?.name || v;
+    if(key === "type") return v;
     if(key === "comment") return edShort(v);
     if(key === "pri") return v ? (PRI[v] || v) : "(none)";
     if(key === "model") return modelName(v);
@@ -1861,6 +1986,8 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
   for(const [key, now] of EDIT.id === c.id ? EDIT.v : []){
     let field, was;
     if(key === "epic"){ field = "Epic"; was = c.epic; }
+    else if(key === "project"){ field = "Project"; was = cardProject(c); }   // HUB350
+    else if(key === "type"){ field = "Type"; was = cardKind(c); }   // HUB349
     else if(key === "pri"){ field = "Priority"; was = c.pri || 0; }
     else if(key === "col"){ field = "Column"; was = c.col; }
     else if(key === "model"){ field = "Model"; was = c.model || "auto"; }
@@ -1889,7 +2016,11 @@ function edSave(){   // true when everything was sent (or there was nothing to s
   const c = openId && cards.get(openId);
   if(!c || !edDirty()) return true;
   const patch = {}, ans = {};
-  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "model" || k === "pri" || k === "epic" || k === "comment") patch[k] = x; }
+  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "model" || k === "pri" || k === "epic" || k === "type" || k === "project" || k === "comment") patch[k] = x; }
+  if(patch.type !== undefined || patch.project !== undefined){   // HUB349, HUB350: e.g. the epic the card must have is not chosen yet
+    const why = cardProblem(c, patch, newCtx());
+    if(why){ toast(why); render(); return false; }
+  }
   if(Object.keys(ans).length) patch.ans = ans;
   if(Object.keys(patch).length){
     if(!write(c.id, patch, true)){ render(); return false; }
@@ -2519,6 +2650,24 @@ const NEW_CARD = {id: "new"};
 // >>> create-rules (tests/test_app.py runs this block)
 const CREATE_COLS = ["park", "back", "refining", "refined", "next"];   // where a new card may start (as the desktop)
 const EPIC_NAME_MAX = 24;
+// HUB170: ad hoc and Release cards need no epic, nor does a card of a project without live epics; v = {type, adhoc, project}
+function needsEpic(v, ctx){
+  return v.adhoc !== true && v.type !== "Release" && [...ctx.epics.values()].some(e => e && e.project === v.project && !e.retired);
+}
+// HUB349, HUB350: why the change `patch` ({type?, project?, epic?}) of the card `c` would be refused, or ""
+function cardProblem(c, patch, ctx){
+  const has = k => patch[k] !== undefined;
+  if(has("type") && !ctx.kinds.includes(patch.type)) return "Choose one of the board's types.";
+  if(has("project") && !ctx.projects.has(patch.project)) return "Every card has a project: choose one.";
+  const own = cardProject(c), project = has("project") ? patch.project : own, epic = (has("epic") ? patch.epic : c.epic) || "";
+  const of = epic ? ctx.epics.get(epic)?.project : "";
+  if((has("epic") || has("project")) && of && project && of !== project) return "That epic is of another project: choose one of the card's project.";
+  // (a card that has no epic today, against the rule, may still change between the types that need one)
+  const asked = project !== own || (has("type") && c.type === "Release" && patch.type !== "Release");
+  if(asked && !epic && needsEpic({type: has("type") ? patch.type : c.type, adhoc: c.adhoc, project}, ctx))
+    return "Choose an epic of " + (ctx.projects.get(project)?.name || project || "its project") + " first: every card has one, except an ad hoc or Release card.";
+  return "";
+}
 // why this new thing would be refused, or "": v = {kind, ...} as sent; ctx = {projects, themes, epics, kinds} (Maps / a list)
 function createProblem(v, ctx){
   const txt = k => typeof v[k] === "string" ? v[k].trim() : "";
@@ -2529,14 +2678,15 @@ function createProblem(v, ctx){
     if(!ctx.kinds.includes(v.type)) return "Choose the card's type.";
     if(![1, 2, 3, 4].includes(v.pri)) return "Choose a priority.";
     if(!CREATE_COLS.includes(v.col)) return "A new card starts in Parked, Backlog, In refinement, Refined or Next up.";
+    if(v.project && !ctx.projects.has(v.project)) return "Choose the card's project: every card has one.";   // HUB350
     if(v.epic){
       if(!ctx.epics.has(v.epic)) return "That epic is not on the board.";
+      if(v.project && (ctx.epics.get(v.epic)?.project || v.project) !== v.project) return "That epic is of another project: choose one of the card's project.";
       if(ctx.epics.get(v.epic)?.retired) return "That epic is retired: choose a live one.";
     }
     else {
-      if(!v.project || !ctx.projects.has(v.project)) return "Choose the card's epic.";
-      const free = v.adhoc === true || v.type === "Release";   // HUB170: ad hoc and Release cards need no epic
-      if(!free && [...ctx.epics.values()].some(e => e && e.project === v.project && !e.retired)) return "Choose the card's epic: every card of this project has one, except an ad hoc or Release card.";
+      if(!v.project) return "Choose the card's project: every card has one.";
+      if(needsEpic(v, ctx)) return "Choose the card's epic: every card of this project has one, except an ad hoc or Release card.";
     }
     return "";
   }
@@ -2589,6 +2739,8 @@ function renderNew(){
   if(newKind === "card"){
     const pj = projSelect("nProj", defProj), ep = el("select",{id:"nEpic"}), ar = el("select",{id:"nArea"});
     const nth = el("select",{id:"nCardTheme"});   // HUB303: the theme comes first and filters the epics below it
+    const said = el("p",{class:"hint", id:"nProjNote", role:"status"});   // HUB350: what a project change cleared
+    let pick = null;   // the choice before a refill
     const fillEps = () => {
       const p = pj.value; ep.textContent = ""; ar.textContent = "";
       const inProj = byOrder(epics).filter(([, e]) => (!e.project || e.project === p) && !e.retired);
@@ -2597,21 +2749,32 @@ function renderNew(){
       for(const [k, t] of byOrder(themes).filter(([k]) => inProj.some(([, e]) => e.theme === k))) nth.append(opt(k, t.name || k, k === keep));
       const mine = inProj.filter(([, e]) => !nth.value || e.theme === nth.value);
       if(!mine.length) ep.append(opt("", "(no epics in this project)"));
+      else ep.append(opt("", "(choose an epic)"));   // HUB350
       for(const [k, e] of mine) ep.append(opt(k, (themes.get(e.theme)?.name ? themes.get(e.theme).name + " · " : "") + (e.name || k)));
       ep.append(opt(ADHOC_EPIC, "(ad hoc: no epic)"));   // HUB170: ad hoc and Release cards need no epic
       ar.append(opt("", "(none)"));
       for(const [k, a] of byOrder(areas).filter(([, a]) => !a.project || a.project === p)) ar.append(opt(k, a.name || k));
       ep.value = ADHOC_EPIC;   // HUB304: a new card defaults to ad hoc; a filtered epic still wins
       if(filt.e && mine.some(([k]) => k === filt.e)) ep.value = filt.e;
+      if(pick !== null && pick !== ADHOC_EPIC){   // still offered: kept; else a choice is asked for (it does not turn ad hoc by it)
+        if(mine.some(([k]) => k === pick)) ep.value = pick; else if(ep.value === ADHOC_EPIC) ep.value = "";
+      }
     };
-    pj.addEventListener("change", fillEps); nth.addEventListener("change", fillEps); fillEps();
+    const newProj = () => {   // HUB350: an epic of another project is cleared, and the form says so
+      const gone = epics.get(pick = ep.value), of = gone && gone.project;
+      fillEps();
+      said.textContent = "";
+      if(of && of !== pj.value) said.textContent = "The epic " + (gone.name || pick) + " is of " + projName(of) + ": cleared.";
+    };
+    pj.addEventListener("change", newProj); nth.addEventListener("change", () => { pick = ep.value; fillEps(); }); fillEps();
+    ep.addEventListener("change", () => { said.textContent = ""; });
     const ty = el("select",{id:"nType"}, ...KINDS.map(k => opt(k, k, k === "Feature")));
     const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Low"]].map(([k, t]) => opt(k, t, k === 3)));
     const co = el("select",{id:"nCol"}, ...CREATE_COLS.map(k => opt(k, COL_NAME[k], k === "back")));
     const ti = el("input",{id:"nTitle", maxlength:"200", autocomplete:"off", required:true});
     const de = el("textarea",{id:"nDesc", maxlength:"8000", placeholder:"What it is and why (optional)"});
     form.append(field("Title", ti), el("div",{class:"two"}, field("Type", ty), field("Priority", pr), field("Column", co)),
-      el("div",{class:"two"}, field("Project", pj), field("Theme", nth), field("Epic", ep)), el("div",{class:"two"}, field("Area", ar)), field("Description", de),
+      el("div",{class:"two"}, field("Project", pj), field("Theme", nth), field("Epic", ep)), said, el("div",{class:"two"}, field("Area", ar)), field("Description", de),
       el("p",{class:"hint"}, "The board gives the card its id from the project's letters."));
     read = () => ({kind:"card", t: ti.value.trim(), type: ty.value, pri: Number(pr.value), col: co.value, project: pj.value || null,
                    epic: ep.value && ep.value !== ADHOC_EPIC ? ep.value : null, adhoc: ep.value === ADHOC_EPIC || undefined,
@@ -2650,6 +2813,7 @@ function renderNew(){
     f.value = v;
     if(f.id === "nProj") f.dispatchEvent(new Event("change"));
   }
+  const note = form.querySelector("#nProjNote"); if(note) note.textContent = "";   // the kept text put back is no change of project
   const keep = () => { newDraft[newKind] = Object.fromEntries(fields.map(f => [f.id, f.value])); saveNewDraft(); };
   form.addEventListener("input", keep); form.addEventListener("change", keep);
   form.addEventListener("submit", ev => {
