@@ -5888,7 +5888,7 @@ function leadRow(k, p, rows){
   return st ? Object.assign({}, p, {lead_state: st, snooze_until: r.snooze_until || null, snooze_after: r.snooze_after || null}) : p;
 }
 // HUB343: the Leads with a tab: a project other than the hub, with a Lead charter (the core's last tick), whose Lead is
-// active or snoozed (a message wakes a snoozed Lead to answer it); each Lead once
+// active or snoozed (a message a snoozed Lead has answered ends its snooze); each Lead once
 function leadTabs(projects, rows, now){
   const out = [];
   for(const [k, p] of projects){
@@ -6240,7 +6240,7 @@ function aiDrawChat(c, row, leads){
   aiDrawMenu(c); aiDrawChatsPop(leads);
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
-    : c.kind === "lead" ? "Talking to " + c.lead + (leadSnoozed(c) ? " · snoozed: a message wakes it to answer" : "") + aiLeadWoken(c) : "";
+    : c.kind === "lead" ? "Talking to " + c.lead + (leadSnoozed(c) ? " · snoozed: a message ends the snooze" : "") + aiLeadWoken(c) : "";
   who.hidden = !who.textContent;
   $("#aiplan").closest("label").hidden = !!c && c.kind === "lead";   // a Lead proposes; it makes no plan to approve
   const box = $("#aimsgs"), foc = document.activeElement && document.activeElement.classList.contains("dedit") ? document.activeElement : null;
