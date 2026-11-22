@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex">
 <title>Primarch Project Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Jost:wght@300&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* The old Work Board's page (legacy/work-board/index.html) on the hub's data: the page scrolls as a whole; the filter bar
    sticks to the top, the epic column sits left of the board, columns grow to fit their cards (drag the board to pan
@@ -53,6 +53,7 @@ header.top{padding-block:14px 4px; display:grid; gap:8px}
 .tally:empty{display:none}
 .budget{display:inline-flex; align-items:center; gap:4px; margin-left:6px; white-space:nowrap}   /* HUB272 */
 .budget .budgetin{width:7em; padding:2px 6px; font:inherit}   /* HUB274: the empty tally row added a gap above the tabs */
+header.top h1{font-family:"Jost",var(--f-body); font-weight:300; letter-spacing:.01em}   /* EXARCH F: the Hub's name in Jost Light */
 h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
 .hrow .projsel{width:auto; max-width:46vw; margin:0; align-self:center}   /* HUB148: beside the title */
@@ -718,47 +719,137 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .usage .utip .ut{color:var(--ink)}
 .usage .note{margin:0}
 .usage details{font-size:.8rem} .usage summary{cursor:pointer; color:var(--muted)}
-/* HUB252: the AI Assistant panel (right side; answers and suggests only) */
-.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px 3px 8px; cursor:pointer; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px}   /* HUB254: top right */
+/* HUB322: the Exarch AI drawer, the Sync indicator and the Sync popup (docs/EXARCH.md section F; docs/mockups/exarch-ai.html) */
+:root{--ok:#2e8b3e; --warn-y:#b38a00; --warn-o:#d0661a; --warn-r:#c4362c; --dw:420px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--ok:#5cc46c; --warn-y:#e3c040; --warn-o:#f0924a; --warn-r:#ff7468} }
+:root[data-theme="dark"]{--ok:#5cc46c; --warn-y:#e3c040; --warn-o:#f0924a; --warn-r:#ff7468}
+.ico{display:inline-flex; align-items:center; flex:none} .ico svg.i, svg.i{width:16px; height:16px; flex:none}
+.ok{color:var(--ok)} .wy{color:var(--warn-y)} .wo{color:var(--warn-o)} .wr{color:var(--warn-r)} .mu{color:var(--muted)} .err{color:var(--warn-r)}
+.small{font-size:.78rem} .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.syncind{display:inline-flex; align-items:center; gap:5px; font:inherit; font-size:.8rem; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:3px 9px; cursor:pointer; align-self:center}
+.syncind:hover,.syncind[aria-expanded="true"]{border-color:var(--accent)}
+.syncind .savest.ok{background:none; padding:0; color:var(--ink); font-weight:500}
+.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px 3px 8px; cursor:pointer; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; position:relative}   /* HUB254: top right */
 .aibtn svg{width:18px; height:18px; flex:none}
 .aibtn[aria-expanded="true"]{background:var(--sunk)}
-/* HUB254: the open panel pushes the board left so it stays in view; on a narrow screen it covers the board instead */
-body.ai-open .wrap{margin-right:min(420px,100%)}
-body.ai-open .aibtn{visibility:hidden; position:absolute}   /* HUB254: the panel grows out of it; HUB258: out of the row too, so a narrower board never wraps it onto a line of its own above the tabs */
-.aihead{box-sizing:border-box}
-body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(420px,100%)) / 2)}
-@media (max-width:820px){ body.ai-open .wrap{margin-right:0} body.ai-open .selbar, body.ai-open .toast{left:50%} .aipanel{width:100%; border-left:0; box-shadow:none} body.ai-open{overflow:hidden} }   /* HUB254: on a phone the panel takes the whole screen */
-.aipanel{position:fixed; top:0; right:0; bottom:0; width:min(420px,100%); z-index:15; background:var(--surface); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column}
+.aibtn.off{color:var(--muted); opacity:.75}   /* EXARCH F: greyed with "off" while Exarch AI is off */
+.aibtn .dot{position:absolute; top:-6px; right:-6px; display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--warn-r); color:#fff; font-size:10px; font-weight:600; line-height:1}
+/* the drawer: pushes the board left on a desktop; resizable from its left edge; full-screen on a phone */
+body.ai-open .wrap{margin-right:min(var(--dw),100%)}
+body.ai-open .aibtn{visibility:hidden; position:absolute}   /* HUB254: the drawer grows out of it; HUB258: out of the row too */
+body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(var(--dw),100%)) / 2)}
+.aipanel{position:fixed; top:0; right:0; bottom:0; width:min(var(--dw),100%); z-index:15; background:var(--surface); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column; min-width:0}
 .aipanel[hidden]{display:none}
-.aihead{display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
+.aipanel > *{min-width:0}
+.airesize{position:absolute; left:-3px; top:0; bottom:0; width:8px; cursor:ew-resize; z-index:2; touch-action:none; border-left:3px solid transparent}
+.airesize:hover,.airesize.on,.airesize:focus-visible{border-left-color:var(--accent); outline:none}
+body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none !important}
+@media (max-width:820px){ body.ai-open .wrap{margin-right:0} body.ai-open .selbar, body.ai-open .toast{left:50%} .aipanel{width:100%; border-left:0; box-shadow:none} .airesize{display:none} body.ai-open{overflow:hidden} }   /* HUB254: on a phone the drawer takes the whole screen */
+.aihead{box-sizing:border-box; display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
 .aihead h2{font-size:.95rem; margin:0; flex:1; display:flex; align-items:center; gap:7px}
-.aihead h2 svg{width:20px; height:20px; flex:none}   /* HUB261: the compass beside the title */
-.aihead .aiplus{font-size:1.1rem; line-height:1; width:30px; height:28px; padding:0; font-weight:600}   /* HUB259 */
-.aitabs{display:flex; gap:4px; padding:6px 12px 0; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:thin}
-.aitabs[hidden]{display:none}
-.aitabs button{font:inherit; font-size:.76rem; color:var(--muted); background:none; border:1px solid transparent; border-bottom:0; border-radius:6px 6px 0 0; padding:4px 10px; cursor:pointer; white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; flex:none}
-.aitabs button:hover{color:var(--accent)}
-.aitabs button[aria-selected=true]{color:var(--ink); background:var(--bg); border-color:var(--line); margin-bottom:-1px; font-weight:600}
-.aitabs button.busy::after{content:" \2026"}
-.aifoot{display:flex; justify-content:center; padding:0 12px 10px}
-.aifoot button{font:inherit; font-size:.78rem; color:var(--muted); background:none; border:1px solid var(--line); border-radius:6px; padding:4px 12px; cursor:pointer}
-.aifoot button:hover:not(:disabled){color:var(--accent); border-color:var(--accent)}
-.aifoot button:disabled{opacity:.5; cursor:default}
-.aihead button,.aisend{font:inherit; font-size:.8rem; color:var(--ink); background:var(--sunk); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer}
+.aihead h2 .ico svg{width:20px; height:20px}
+.aipanel button{font:inherit; font-size:.8rem; color:var(--ink); background:var(--sunk); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer; display:inline-flex; gap:5px; align-items:center}
+.aipanel button:disabled{opacity:.5; cursor:default}
+.aipanel .pbtn, .syncpop .pbtn{background:var(--accent); border-color:var(--accent); color:var(--on-accent); min-height:0}
+.dtabs{display:flex; gap:18px; padding:0 12px; border-bottom:1px solid var(--line)}
+.aipanel .dtabs button{background:none; border:0; border-bottom:2px solid transparent; border-radius:0; padding:7px 0; color:var(--muted)}
+.aipanel .dtabs button[aria-selected="true"]{color:var(--ink); font-weight:600; border-bottom-color:var(--ink)}
+.dtabs .right{margin-left:auto}
+.aichat{display:flex; flex-direction:column; flex:1; min-height:0}
+.ctabs{display:flex; gap:6px; align-items:flex-start; padding:6px 12px; border-bottom:1px solid var(--line); font-size:.76rem}
+.ctabs .strip{flex:1; min-width:0; display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; padding-bottom:3px; scroll-snap-type:x proximity; overscroll-behavior-x:contain}
+.ctabs .strip.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)}
+.ctabs .tools{display:flex; gap:4px; flex:none}
+.aipanel .ctabs .ct{flex:none; scroll-snap-align:start; box-sizing:border-box; width:100px; height:26px; padding:4px 8px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:6px; white-space:nowrap; overflow:hidden; cursor:grab; position:relative; display:flex; gap:3px; justify-content:flex-start; --pc:var(--accent); font-size:.76rem}
+.ctabs .ct .ctn{overflow:hidden; text-overflow:ellipsis; min-width:0}
+.ctabs .ct .ico, .ctabs .ct .cic, .crow .ico, .crow .cic{color:var(--pc)}
+.ctabs .ct.lead{border:1.5px solid var(--pc)}
+.ctabs .ct.ex{cursor:pointer}
+.aipanel .ctabs .ct.on{color:var(--ink); font-weight:600; background:color-mix(in srgb, var(--pc) 16%, var(--surface)); padding-right:20px}
+.ctabs .ct .tm{position:absolute; right:3px; top:4px; width:15px; height:16px; line-height:16px; text-align:center; font-size:9px; font-weight:400; color:var(--muted); border-radius:4px; cursor:pointer}
+.ctabs .ct .tm:hover,.ctabs .ct .tm.open{background:color-mix(in srgb, var(--pc) 30%, var(--surface)); color:var(--ink)}
+.ctabs .ct.drag,.crow.drag{outline:1px dashed var(--accent); opacity:.6}
+.ctabs .ct.over,.crow.over{box-shadow:-3px 0 0 var(--accent)}
+.crow.over{box-shadow:0 -2px 0 var(--accent)}
+.cnt{font-variant-numeric:tabular-nums}
+.tmenu{margin:6px 12px 0; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:4px; display:grid; gap:2px; font-size:.78rem; box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.aipanel .tmenu .it{display:grid; grid-template-columns:auto 1fr; gap:2px 8px; padding:5px 8px; border-radius:6px; background:none; border:0; text-align:left; justify-items:start}
+.tmenu .it:hover{background:color-mix(in srgb, var(--accent) 10%, var(--surface))}
+.tmenu .it .small{grid-column:2}
+.confirm{font-size:.78rem; border:1px solid var(--warn-o); border-radius:8px; padding:6px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.chatspop{border:1px solid var(--line); border-radius:8px; margin:6px 12px 0; padding:6px 8px; display:grid; gap:2px; font-size:.78rem; background:var(--surface); box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.crow{display:flex; gap:8px; align-items:center; padding:3px 4px; border-radius:6px}
+.crow .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.crow .grip{color:var(--muted); cursor:grab; letter-spacing:-2px; width:12px; touch-action:none; user-select:none}
+.crow .lock{width:12px}
+.aiwho{padding:6px 12px 0; font-size:.78rem; color:var(--muted)}
+.offpanel{margin:10px 12px 0; border:1px solid var(--line); border-radius:10px; padding:10px; display:grid; gap:6px; background:var(--sunk)}
+.nbanner{margin:10px 12px 0; border:1px solid var(--accent); border-radius:10px; padding:8px 10px; display:grid; gap:6px; font-size:.85rem; background:color-mix(in srgb, var(--accent) 7%, var(--surface))}
 .aimsgs{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
-.aimsg{max-width:92%; padding:7px 10px; border-radius:10px; font-size:.85rem; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line)}
-.aimsg.user{justify-self:end; background:var(--sunk)}
+.aimsg{max-width:92%; padding:7px 10px; border-radius:10px; font-size:.85rem; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line); display:grid; gap:6px; min-width:0}
+.aimsg.user{justify-self:end; background:var(--sunk); display:block}
 .aimsg.assistant{justify-self:start}
+.aimsg.plan{border-color:var(--accent)}
 .aimsg.wait{color:var(--muted); font-style:italic}
-.aimsg .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); padding:0; cursor:pointer}
-.aiform{display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--line)}
-.aiform textarea{flex:1; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; min-height:2.6em}
+.aimsg .meta{white-space:normal}
+.aimsg .aicard,.hl .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); border-radius:0; padding:0; cursor:pointer; display:inline}
+.draft{border:1px solid var(--line); border-radius:8px; padding:6px 8px; display:grid; gap:4px; white-space:normal}
+.draft .dedit{font:inherit; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); min-width:0}
+.dup{font-size:.78rem; color:var(--warn-o)}
+.prop{display:grid; gap:6px; white-space:normal}
+.moved{font-size:.78rem; color:var(--muted); border:1px dashed var(--line); border-radius:8px; padding:5px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.sline{font-size:.78rem; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-self:center; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); padding:3px 8px; max-width:100%}
+.aiform{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; padding:10px 12px; border-top:1px solid var(--line)}
+.aiform textarea{flex:1 1 180px; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; min-height:2.6em}
 .aihint{color:var(--muted); font-size:.8rem}
+.aipane{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
+.aipane .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
+.aipane .hl .t{color:var(--muted); font-size:.75rem; font-variant-numeric:tabular-nums; min-width:36px; flex:none}
+.aipane .arow{display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); padding:6px 0}
+.seg{display:inline-flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:.78rem; justify-self:start}
+.seg.mdl button{border:0; border-radius:0; background:none; padding:3px 9px; font:inherit; color:var(--ink); cursor:pointer}   /* HUB337 */
+.seg.mdl button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
+.seg.mdl button:disabled{cursor:default; opacity:.7}
+.aipanel .seg button{border:0; border-radius:0; background:none; padding:3px 9px}
+.aipanel .seg button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
+/* the Sync popup: under the Sync indicator on a desktop, the full width on a phone */
+.syncpop{position:fixed; z-index:16; top:64px; left:max(16px, min(var(--spx,16px), calc(100vw - 396px))); width:min(380px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
+.syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
+.syncpop .phead b{flex:1}
+.syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
+.runs{display:grid}   /* HUB332: Exarch AI runs, two lines each (the Sync popup and the Hub tab) */
+.runs > div{display:grid; grid-template-columns:auto 1fr auto; gap:0 8px; padding:5px 0; border-bottom:1px solid var(--line); font-size:.8rem; font-variant-numeric:tabular-nums}
+.runs > div:last-child{border-bottom:0}
+.runs .t{color:var(--muted)} .runs .d{grid-column:2 / 4; color:var(--muted)}
+.runs .err .d, .runs .err .took{color:var(--warn-r)}
+.psec{padding:10px 12px; border-top:1px solid var(--line); display:grid; gap:6px; min-width:0}
+.psec:first-of-type{border-top:0}
+.psec h3{margin:0; font-size:.82rem; font-weight:600}
+.kv{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 8px; font-variant-numeric:tabular-nums; min-width:0}
+.kv > span{min-width:0; overflow-wrap:anywhere}
+.toggle, .row button.toggle{width:36px; height:20px; border-radius:999px; background:var(--ok); position:relative; flex:none; border:0; padding:0; cursor:pointer}
+.toggle::after{content:""; position:absolute; top:2px; left:18px; width:16px; height:16px; border-radius:50%; background:var(--surface)}
+.toggle.off, .row button.toggle.off{background:var(--line)} .toggle.off::after{left:2px}
+.toggle:disabled{opacity:.5; cursor:default}
+.warnbox{font-size:.78rem; color:var(--muted); border-left:3px solid var(--warn-o); padding-left:8px}
+.syncpop .dev{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 8px}
+.syncpop .note{margin:0}
+@media (max-width:820px){ .syncpop{left:16px; width:calc(100vw - 32px)} }
+.expair{display:grid; gap:6px; padding:10px; border:1px solid var(--line); border-radius:10px; font-size:.82rem; background:var(--sunk)}
+.expair b{font-size:.88rem}
+.excode{font:600 1.6rem/1.1 ui-monospace, Menlo, Consolas, monospace; letter-spacing:.12em; text-align:center; padding:6px 0}
+.expair .exrow{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.expair button{font:inherit; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+.expair button.p{border-color:var(--ink); font-weight:600}
+.expair .mu, .exlocked{color:var(--muted); font-size:.78rem}
+.exdev{display:flex; gap:2px 8px; align-items:center; justify-content:space-between; flex-wrap:wrap; font-size:.8rem}
+.exdev button{font:inherit; padding:2px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+.aichat.locked > :not(.aimsgs){display:none}   /* HUB338: this device is not paired yet: the pairing card only */
 </style>
 
 <div class="wrap" id="app">
   <header class="top">
-    <div class="hrow"><h1>Primarch Project Manager</h1><div class="sync" id="sync">Connecting to the board data…</div><span class="savest" id="savest" role="status"></span><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Ask the AI Assistant about the board"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>AI Assistant</button></div>
+    <div class="hrow"><h1>Primarch Project Manager</h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -821,12 +912,37 @@ body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(420px,100%)) / 2
 <div class="modal" id="newm" hidden></div>
 <div class="modal" id="edm" hidden></div>
 <div class="selbar" id="selbar" role="toolbar" aria-label="Selected cards" hidden></div>
-<aside class="aipanel" id="aipanel" role="complementary" aria-label="AI Assistant" hidden>
-  <div class="aihead"><h2><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>AI Assistant</h2><button type="button" class="aiplus" id="ainew" title="New conversation (the earlier ones stay as tabs)" aria-label="New conversation">+</button><button type="button" id="aiclose" aria-label="Close the assistant">×</button></div>
-  <div class="aitabs" id="aitabs" role="tablist" aria-label="Conversations" hidden></div>
-  <div class="aimsgs" id="aimsgs" aria-live="polite"></div>
-  <form class="aiform" id="aiform"><textarea id="aiq" rows="2" placeholder="Ask about the cards… (Enter sends, Shift+Enter a new line)" aria-label="Message"></textarea><button type="submit" class="aisend" id="aisend">Send</button></form>
-  <div class="aifoot"><button type="button" id="aiend" title="Close this conversation and remove its tab">End conversation</button></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><!-- HUB322: Tabler-style icons (outline, 24 px grid) -->
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 16l2-6 6-2-2 6z"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20h12M6 4h12M7 20v-2a5 5 0 0 1 10 0v2M7 4v2a5 5 0 0 0 10 0V4"/></symbol>
+  <symbol id="i-zzz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h6l-6 8h6M14 4h6l-6 8h6"/></symbol>
+  <symbol id="i-tabs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M10 4v5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.1 6.1C3.6 7.8 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 4.4-1.1"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-device" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="13" height="10" rx="1"/><path d="M7 18h5"/><rect x="17" y="8" width="5" height="12" rx="1"/></symbol>
+</svg>
+<div class="syncpop" id="syncpop" role="dialog" aria-label="Sync, usage and Exarch AI" hidden></div>
+<aside class="aipanel" id="aipanel" role="complementary" aria-label="Exarch AI" hidden>
+  <div class="airesize" id="airesize" role="separator" aria-orientation="vertical" aria-label="Width of the Exarch AI drawer" tabindex="0" title="Drag to resize (arrow keys too; double-click resets it)"></div>
+  <div class="aihead"><h2><span class="ico" id="aihico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg></span>Exarch AI</h2><button type="button" id="aiclose" aria-label="Close the drawer">✕</button></div>
+  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-status">Status</button><button type="button" role="tab" id="aitab-arch" class="right">Archived</button></div>
+  <div class="offpanel" id="aioff" role="status" hidden></div>
+  <div class="nbanner" id="ainotify" hidden></div>
+  <div class="nbanner" id="aipair" hidden></div>
+  <div class="aichat" id="aichat">
+    <div class="ctabs"><div class="strip" id="aitabs" role="tablist" aria-label="Chats"></div><span class="tools"><button type="button" id="aichats" aria-haspopup="true" aria-expanded="false" title="Chats: show, hide and reorder"><svg class="i" aria-hidden="true"><use href="#i-tabs"/></svg><span class="cnt" id="aicnt">0</span></button><button type="button" id="ainew" title="New chat" aria-label="New chat">+</button></span></div>
+    <div class="tmenu" id="aimenu" hidden></div>
+    <div class="chatspop" id="aichatspop" hidden></div>
+    <div class="aiwho" id="aiwho" hidden></div>
+    <div class="aimsgs" id="aimsgs" aria-live="polite"></div>
+    <form class="aiform" id="aiform"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><button type="submit" class="pbtn aisend" id="aisend">Send</button></form>
+  </div>
+  <div class="aipane" id="aistatus" hidden></div>
+  <div class="aipane" id="aiarch" hidden></div>
 </aside>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -969,11 +1085,18 @@ function changeText(ch){
   if(f.startsWith("step.")) return v ? "your step marked done" : "your step reopened";
   if(f === "column") return "moved to " + (COL_NAME[COL_BY_NAME[v] || v] || v);
   if(f === "pri") return "priority " + (v ? "P" + v : "none");
+  if(f === "model") return "model: " + String(v || "auto");   // HUB337
   if(f === "blocked") return v ? "blocked: " + String(v).slice(0, 80) : "unblocked";
   if(f === "order") return "new order";
   if(f === "comment") return "comment: " + String(v || "").slice(0, 80);
   if(f === "create") return "new " + String((v && v.kind) || "thing") + ": " + String((v && (v.t || v.name)) || "").slice(0, 80);
   if(f === "edit") return "details edited: " + Object.keys(v || {}).join(", ");   // HUB188: an epic's or theme's
+  if(f === "item") return "Exarch AI item dismissed";
+  if(f === "lead") return "Lead " + String((v && v.state) || v || "").replace(/_/g, " ");   // HUB331
+  if(f === "exarch.on") return "Exarch AI turned " + (v ? "on" : "off");
+  if(f === "exarch.model") return "default model: " + String(v);
+  if(f === "exarch.plan") return "plan " + (v && v.act === "approve" ? "approved" : "discarded");
+  if(f === "exarch.chat") return "chat " + (v && v.act === "clear" ? "cleared" : v && v.act === "archive" ? "archived" : "message put back");
   if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
 }
@@ -1026,9 +1149,10 @@ function changeSettled(id, ch, sent, exp){
   if(!sent) return "";
   if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
-  if(f !== "queue" && f !== "create" && f !== "edit" && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
-                                                    // (a queue order or a new thing (HUB120) has no doc in the export to compare
-                                                    // with: only `applied` settles it)
+  // a queue order, a new or edited thing (HUB120, HUB188), an Exarch AI chat item or Lead state (HUB331) and what is set
+  // on Exarch AI itself (exarch.on, .model, .plan, .chat) have no doc in the export to compare with: only `applied` settles them
+  const named = ["queue", "create", "edit", "item", "lead"].includes(f) || f.startsWith("exarch.");
+  if(!named && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
       const q = f.slice(4), base = q.endsWith(OTHER) ? q.slice(0, -OTHER.length) : q;
@@ -1045,6 +1169,7 @@ function changeSettled(id, ch, sent, exp){
     else if(f === "done"){ if((doc.done === true) === (ch.value === true)) return "shown"; }
     else if(f === "snooze"){ if((doc.snoozed === true) === (ch.value === true) || doc.done === true) return "shown"; }
     else if(f === "pri"){ if((doc.pri || 0) === (ch.value || 0)) return "shown"; }
+    else if(f === "model"){ if((doc.model || "auto") === (ch.value || "auto")) return "shown"; }   // HUB337
     else if(f === "un"){ if(sameValue(doc.un, ch.value)) return "shown"; }
     else if(f === "epic"){ if(sameValue(doc.epic, ch.value)) return "shown"; }
     else if(f === "blocked"){ if(sameValue(doc.blk, ch.value)) return "shown"; }   // HUB222
@@ -1065,21 +1190,23 @@ function settleChanges(data){
       doc: raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null});
     if(!why) continue;
     changes.delete(k); sentAt.delete(k);
+    if(why === "expired") aiRefused(k, "the board did not take it");   // HUB322: an Exarch AI item's tap: its buttons again
     if(why === "expired") toast(`The board did not take your change to ${v.card} (${v.field}). It shows what the board has.`);
   }
 }
 function change(card, field, value, extra){
-  if(readOnly){ toast("This view is read-only."); return; }
-  if(card && REL_DOCS.has(card.id) && !cards.has(card.id)){ toast("An archived card is read-only here."); return; }   // HUB199
+  if(readOnly){ toast("This view is read-only."); return ""; }
+  if(card && REL_DOCS.has(card.id) && !cards.has(card.id)){ toast("An archived card is read-only here."); return ""; }   // HUB199
   lastStamp = Math.max(Date.now(), lastStamp + 1);   // one per millisecond: the stamp is in the file's name
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
   const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
-  if(field !== "comment" && field !== "create")   // each comment (HUB117) and each new thing (HUB120) is its own; for any other field the later edit wins on screen
+  if(!["comment", "create", "item", "exarch.plan", "exarch.chat"].includes(field))   // each comment (HUB117), each new thing (HUB120), each Exarch AI item's dismissal (HUB322), plan tap and chat change is its own; for any other field the later edit wins on screen
     for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }
   changes.set(id, doc);
   pendSave();
   queueSend(id);
+  return id;   // the change file's name: what the export names as applied or refused
 }
 function queueSend(id){
   if(queued.has(id)) return;
@@ -1113,8 +1240,8 @@ function saveState(){
   const n = changes.size, unsent = [...changes.keys()].filter(k => !sentAt.has(k)).length, s = $("#savest");
   // HUB264: changes on their way are said once, by the sync chip beside this ("N changes syncing to the desktop")
   s.textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : n ? "" : loaded ? "Synced" : "";
-  const ok = s.textContent === "Synced";   // HUB255/HUB265: everything is on the board: "✓ Synced" in one chip
-  s.classList.toggle("ok", ok); if(ok) s.textContent = "✓ Synced";
+  const ok = s.textContent === "Synced";   // HUB255/HUB265: everything is on the board: "Synced" in one chip
+  s.classList.toggle("ok", ok);   // HUB322: the circled check beside it is the Sync indicator's icon
   s.title = ok ? "Synced: every change is on the board" : "";
 }
 // how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
@@ -1138,6 +1265,7 @@ function write(id, patch, quiet){   // returns true when the patch became change
   }
   if(patch.ans) for(const [k, v] of Object.entries(patch.ans)) change(base, "ans." + k, v);
   if(patch.pri !== undefined) change(base, "pri", patch.pri);
+  if(patch.model !== undefined) change(base, "model", patch.model);   // HUB337
   if(patch.un !== undefined) change(base, "un", patch.un);
   if(patch.comment) change(base, "comment", patch.comment);
   if(patch.epic !== undefined) change(base, "epic", patch.epic);
@@ -1181,6 +1309,8 @@ function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q)
 // why a card's latest text is not synced: the card's own flag (a clashing edit kept as a copy), or a machine's report
 // that the privacy rule keeps the card's newest version there (that version never reaches this page)
 // HUB68: a card with a problem to look at: a blocker, a sync issue, a change the board refused, idle
+// HUB320: the card's open hand-back to its Lead ({by, why, at}), drawn as the hourglass
+function handback(c){ const h = c.handback; return h && typeof h === "object" && h.at ? h : null; }
 function cardIssue(c){ return !!(c.blk || syncIssue(c) || refusedNote(c.id) || idleMin(c)); }
 // the board's refusals of changes made here (export/phone-refused.json), kept a day so the card can show it
 const REFUSED_KEY = "cb.refused", REFUSED_KEEP_MS = 24 * 3600 * 1000;
@@ -1436,7 +1566,8 @@ function cardEl(c, full=false){
   // own under the title
   const flags = [c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
-    refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null].filter(Boolean);
+    refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
+    handback(c) ? el("span",{class:"lab pend", title:"Handed back to the Lead by "+handback(c).by+": "+handback(c).why}, "⏳ Handed back") : null].filter(Boolean);
   e.append(el("div",{class:"top"},
     kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null,
     el("span",{class:"id"},c.id),
@@ -1612,6 +1743,7 @@ function cardEl(c, full=false){
     const priV = edVal(c, "pri", c.pri || 0);
     for(const p of [1,2,3,4]) pr.append(el("button",{type:"button", "aria-pressed":String(priV===p), onclick:ev=>{ev.stopPropagation(); edPut(c, "pri", priV===p?0:p, c.pri || 0); renderModal();}}, PRI[p]));
     more.append(pr);
+    if(c.col !== "done") more.append(modelRow(c));   // HUB337
     const sel = el("select",{"aria-label":"Column", onclick:ev=>ev.stopPropagation(), onchange:ev=>{ edPut(c, "col", ev.target.value, c.col); renderModal(); }});
     for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===edVal(c, "col", c.col)}, col.name));
     more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
@@ -1638,6 +1770,30 @@ function cardEl(c, full=false){
   return e;
 }
 
+// ---------- HUB337: the stream model (docs/mockups/exarch-ai.html section 4): the card's own in the card view, the default on the Hub tab
+const MODELS = ["auto", "sonnet", "opus", "fable"];
+function modelName(v){ const m = String(v || "auto").toLowerCase(); return MODELS.includes(m) ? m[0].toUpperCase() + m.slice(1) : String(v); }
+function defaultModel(){   // the Hub's default stream model: the change on its way, else the node's setting in the export
+  let m = hubStatus && hubStatus.exarch && hubStatus.exarch.model;
+  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "exarch.model") m = ch.value;
+  return MODELS.includes(m) ? m : "auto";
+}
+function modelSeg(cur, label, pick, autoText){
+  return el("span",{class:"seg mdl", role:"group", "aria-label":label}, ...MODELS.map(m => el("button",{type:"button", "aria-pressed":String(m === cur),
+    disabled:readOnly ? true : null, onclick:ev => { ev.stopPropagation(); if(m !== cur) pick(m); }}, m === "auto" && autoText ? autoText : modelName(m))));
+}
+function modelRow(c){   // the card view: the model Exarch AI builds this card with
+  const own = MODELS.includes(c.model) ? c.model : "auto", cur = edVal(c, "model", own), dflt = defaultModel();
+  const run = exarchNow().runs.find(r => r.card === c.id && r.state === "running" && r.kind === "build");
+  const said = [own !== "auto" ? "Set on the card; logged in its activity." : null,
+    run ? "Running on " + String(run.model_name || modelName(run.model_key || run.model)) + (run.started ? " since " + fmtTime(run.started) : "") + "." : null].filter(Boolean).join(" ");
+  return el("div",{class:"row"}, el("span",{class:"lbl"}, "Model"), modelSeg(cur, "Model", m => { edPut(c, "model", m, own); renderModal(); }, dflt === "auto" ? "Auto" : "Auto (" + modelName(dflt) + ")"),
+    said ? el("span",{class:"small mu"}, said) : null);
+}
+function defaultModelSec(){   // the Hub tab, under the pace
+  return [el("h3",{}, "Default stream model"), el("div",{class:"row"}, modelSeg(defaultModel(), "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); })),
+    el("p",{class:"note"}, "Auto: Sonnet for docs and cards of 1 h or less; Opus for other builds; Fable for spikes, cards over a day and a retry after an Opus bounce (on API credits, the retry only). A card's own model wins.")];
+}
 let lastFocus = null;
 // >>> comment-drafts (tests/test_app.py runs this block)
 // HUB211: comment text typed but not posted yet, per card; kept in this browser (through a redraw and a reload)
@@ -1671,6 +1827,7 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
     if(key === "epic") return epics.get(v)?.name || v;
     if(key === "comment") return edShort(v);
     if(key === "pri") return v ? (PRI[v] || v) : "(none)";
+    if(key === "model") return modelName(v);
     if(key === "col") return COL_NAME[v] || v;
     const o = opts.find(x => x && x.id === key.slice(4));
     const ch = o && (o.choices || []).find(x => x.v === v);
@@ -1681,6 +1838,7 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
     if(key === "epic"){ field = "Epic"; was = c.epic; }
     else if(key === "pri"){ field = "Priority"; was = c.pri || 0; }
     else if(key === "col"){ field = "Column"; was = c.col; }
+    else if(key === "model"){ field = "Model"; was = c.model || "auto"; }
     else if(key === "comment"){ field = "Comment"; was = ""; }
     else {
       const id = key.slice(4), note = id.endsWith(OTHER), base = note ? id.slice(0, -OTHER.length) : id;
@@ -1704,7 +1862,7 @@ function edSave(){   // true when everything was sent (or there was nothing to s
   const c = openId && cards.get(openId);
   if(!c || !edDirty()) return true;
   const patch = {}, ans = {};
-  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "pri" || k === "epic" || k === "comment") patch[k] = x; }
+  for(const [k, x] of EDIT.v){ if(k.startsWith("ans.")) ans[k.slice(4)] = x; else if(k === "model" || k === "pri" || k === "epic" || k === "comment") patch[k] = x; }
   if(Object.keys(ans).length) patch.ans = ans;
   if(Object.keys(patch).length){
     if(!write(c.id, patch, true)){ render(); return false; }
@@ -1998,6 +2156,7 @@ function renderSync(){
       el("b",{}, String(changes.size)), changes.size === 1 ? " change syncing to the desktop" : " changes syncing to the desktop") : "");
   if(conn.branch === LEGACY_BRANCH)   // a connection saved before the board data had its own repository
     sync.append(el("span",{class:"warn"}, " · old connection: the board data has moved to its own repository; sign out and connect to it (branch main)"));
+  renderExarchHeader();   // HUB322: the Sync indicator and the compass
 }
 // HUB302: the swimlane fields: a card's lane, its name, its colour and the lane order
 const LANE_FIELDS = ["project", "epic", "pri"];
@@ -3752,27 +3911,6 @@ function usageLine(w){   // "Weekly · all models 78 %: refreshes ..., runs out 
   return w.label + " " + Math.round(Number(w.pct) || 0) + " %: refreshes " + (w.resets_at ? fmtTime(w.resets_at) : "-")
     + (w.runs_out_at ? ", runs out " + fmtTime(w.runs_out_at) : ", lasts to the refresh");
 }
-function usagePills(){   // the Gantt's: the limit that runs out first (else the weekly one)
-  const {u, wins} = usageNow();
-  if(!u || !wins.length) return [el("span",{class:"pill", title:"The coordinator records the plan's limits on each wake (hub/usage.py)"}, "Tokens: no reading yet")];
-  const out = wins.filter(w => w.runs_out_at).sort((a, b) => String(a.runs_out_at).localeCompare(String(b.runs_out_at)));
-  const w = out[0] || wins.find(x => /^weekly/i.test(x.label)) || wins[0];
-  // HUB281: the API credits in one pill: what is really left under the cap (spent only) | the budget still free (the
-  // cap less what is spent and what running runs hold); HUB283: coloured by the budget figure, what new runs can use
-  const c = usageCredits(u), cp = [];
-  if(c){
-    const pc = v => c.cap ? Math.round(100 * v / c.cap) : 0, real = Math.max(0, c.cap - c.spent);
-    cp.push(el("span",{class:"pill " + tokLevel(pc(c.left)), title:creditLine(c) + "\nReal: the cap less what is spent. Budget: the cap less what is spent and what running runs hold until they end."},
-      "API Tokens: " + pc(real) + " % / $" + real.toFixed(2) + " (Real) | " + pc(c.left) + " % / $" + c.left.toFixed(2) + " (Budget)"));
-  }
-  const x = usageExtra(u);   // HUB272: the usage credits (extra usage past the plan), apart from the API credits
-  if(x) cp.push(el("span",{class:"pill" + (x.rising ? " over" : ""), title:extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : "")},
-    (x.left != null ? "Usage credits $" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "Usage credits $" + x.spent.toFixed(2) + " used") + extraAge(x)));
-  const rw = usageRunway(u), left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));   // the run-out times are in the title
-  // HUB285: the three usage measurements in one box
-  return [el("span",{class:"ubox", role:"group", "aria-label":"Usage"}, el("span",{class:"pill " + tokLevel(left), title:wins.map(usageLine).join("\n") + "\nRuns out" + runoutText(u, w).replace(/^ · /, ": ") + (rw && rw.why ? "\n(the plan, then the API credits): " + rw.why : "") + "\nRecorded " + fmtTime(u.recorded)},
-    "Plan Tokens Remaining: " + left + " %"), ...cp)];
-}
 // HUB283: a token pill's colour by the share left: blue from 90 %, green under 90, yellow under 50, orange under 30,
 // red under 10
 function tokLevel(pct){
@@ -3884,9 +4022,11 @@ function usageSection(host){
       usageExtra(u).left != null ? el("b",{}, "$" + usageExtra(u).left.toFixed(2) + " left") : el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"),
       usageExtra(u).left != null ? " of $" + usageExtra(u).limit.toFixed(0) + " ($" + usageExtra(u).spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
       extraBudgetInput(u)) : null,
-    paceSelector(pace), paceAutoHint(u, pace),
+    paceSelector(pace, "hub"), paceAutoHint(u, pace),
     u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
-    rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null);
+    rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null,
+    ...defaultModelSec(),
+    el("h3",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's, beside the Pace
   limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
   if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: the coordinator records the plan's limits on each wake."), ...creditsTable(u)); return; }
   host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
@@ -3955,10 +4095,12 @@ function paceSparks(x, y){
 }
 // HUB175: the pace as one segmented control; the help below it says what the hovered (or focused) pace does, and goes
 // back to the chosen one's when the pointer or focus leaves
-function paceSelector(pace){
+function paceSelector(pace, where){   // HUB332: where = "hub" (the Hub tab) or "syncpop" (the Sync popup): its own help id
+  where = where === "syncpop" ? "syncpop" : "hub";
+  const helpId = "pace-help-" + where;
   const desc = k => PACES.find(x => x[0] === k) || PACES[1];
   // HUB257: all three texts stay in the box (one cell), only the hovered one visible: its height never changes
-  const help = el("p",{class:"note pacehelp", id:"pace-help", "aria-live":"polite"}, ...PACES.map(([key, name, text]) =>
+  const help = el("p",{class:"note pacehelp", id:helpId, "aria-live":"polite"}, ...PACES.map(([key, name, text]) =>
     el("span",{"data-k":key}, el("b",{}, name + (key === pace ? "" : " (not chosen)") + ": "), text + ". P1 and hub cards always go first, whatever the pace.")));
   const say = k => {
     const key = desc(k)[0];
@@ -3968,9 +4110,9 @@ function paceSelector(pace){
   };
   const back = () => say(pace);
   const group = el("div",{class:"pacesel", role:"group", "aria-label":"Development pace"}, ...PACES.map(([k, name]) => {
-    const b = el("button",{type:"button", "data-k":k, "aria-pressed":String(k === pace), "aria-describedby":"pace-help",
-      onclick:(e)=>{ if(k === "turbo") paceSparks(e.clientX, e.clientY); if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderHubTab();
-        const again = document.querySelector('#hub .pacesel button[data-k="' + k + '"]'); if(again) again.focus({preventScroll:true}); }}, name);
+    const b = el("button",{type:"button", "data-k":k, "aria-pressed":String(k === pace), "aria-describedby":helpId,
+      onclick:(e)=>{ if(k === "turbo") paceSparks(e.clientX, e.clientY); if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderHubTab(); renderSyncPop();
+        const again = document.querySelector('#' + where + ' .pacesel button[data-k="' + k + '"]'); if(again) again.focus({preventScroll:true}); }}, name);
     b.addEventListener("pointerenter", () => say(k));
     b.addEventListener("focus", () => say(k));
     b.addEventListener("blur", back);
@@ -4001,7 +4143,7 @@ function limitsSection(host){
       + (u && u.limits_set ? " Last set " + fmtTime(u.limits_set) + "." : "")));
 }
 function renderHubTab(){
-  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits()], host => {
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly], host => {
     usageSection(host);      // HUB172: tokens and pace first; HUB193: the limits inside it, right under the pace
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
@@ -4689,12 +4831,11 @@ function drawGantt(host){
   host.append(el("div",{class:"ghead"},
     ganttKey(shown),   // HUB203: the key, folded into an info icon; HUB266: left of the Gantt title
     el("h2",{}, "Gantt"),
-    ganttFilters(),   // the controls first: the pills after them change in number, so these stay put
+    ganttFilters(),   // HUB322: the usage pills moved to the Sync popup
     el("button",{type:"button", class:"grel", "aria-pressed":String(gRel), title:gRel ? "Hide the Release cards and the release lines" : "Show the Release cards and the release lines", onclick:gRelToggle}, "\u{1F4E6} Releases"),
     noEst ? el("button",{type:"button", class:"pill gnoest", "aria-pressed":String(gNoEst), onclick:()=>{ gNoEst = !gNoEst; host.dataset.sig = ""; renderGantt(); },
       title:(gNoEst ? "Showing only these cards: click to go back to the view before" : "Show only these cards (click again to go back)") + ". They are drawn " + fmtDur(GANTT_DEFAULT_MIN * G_MIN) + " long with a dashed outline"},
-      noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null,
-    ...usagePills()));
+      noEst + (noEst === 1 ? " card" : " cards") + " without an estimate", gNoEst ? " \u2715" : "") : null));
   if(!shown.length){ host.append(el("p",{class:"note"}, "No live cards to plan" + (filt.j || gSelCount() || !gRel ? " with these filters." : "."))); return; }
   // the time range: from a little before now (or the earliest start, at most 3 days back) to the end of the plan
   const day0 = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
@@ -5470,7 +5611,7 @@ async function gh(path, {method = "GET", body = null, raw = false, etag = null} 
 
 // A poll that finds no new commit redraws nothing (only the "checked" time in the header changes).
 async function check(){
-  if (!conn || document.hidden) return;
+  if (!conn || (document.hidden && !notifyOn())) return;
   sendPending();                                                         // a change whose file did not get through goes again
   try {
     const r = await gh(`git/ref/heads/${branch()}`, {etag: refEtag});      // a 304 costs no API quota
@@ -5528,6 +5669,7 @@ async function load(sha){
     const refused = await (await gh(`contents/export/phone-refused.json?ref=${sha}`, {raw: true})).json();
     const fresh = refused.filter(x => changes.has(x.change) || (seenRefused !== null && x.time > seenRefused));
     seenRefused = refused.length ? refused[refused.length - 1].time : (seenRefused || "");
+    for (const x of refused) aiRefused(String(x.change), x.why);   // HUB322: a tap the node refused shows why, with its buttons again
     for (const x of fresh){
       const name = String(x.change).split("__");
       changes.delete(x.change); sentAt.delete(x.change);
@@ -5537,6 +5679,9 @@ async function load(sha){
   } catch { if (seenRefused === null) seenRefused = ""; }
   pendSave();
   rebuild();
+  exarchWatch(); if(!$("#aipanel").hidden) aiDraw();   // HUB322: a new export: escalations notified, the drawer redrawn
+  aiSettled();   // HUB331: the chats whose taps the board has settled are read again: the node's item states rule
+  aiPlans();   // HUB330: the refinement plans' chats
 }
 const POLL_MS = 6000;
 let nextCheck = null;   // when the next look at the board is due (HUB135: the ring beside "checked")
@@ -5593,6 +5738,8 @@ document.getElementById("setup").addEventListener("submit", async ev => {
 });
 function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a confirmation
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
+  ex.doc = null; ex.at = 0; ex.was = false; ex.asked = 0; ex.note = ""; ex.missing = 0;
+  aiClear();   // HUB338: the chats and their content keys leave this browser with the connection
   tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
@@ -5600,101 +5747,878 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
   render(); showSetup("");
 }
 
-render();
-setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
-conn = loadConn();
-if (conn) pendLoad();                 // the changes of an earlier visit that the board has not shown yet
-// another tab of the App in this browser made or settled a change: both show the same
-window.addEventListener("storage", ev => { if (ev.key === PEND_KEY && conn){ pendLoad(); rebuild(); render(); saveState(); } });
-if (conn){ setRO(false); startPolling(); } else showSetup("");
-
-// ---------- HUB252: the AI Assistant. It answers and suggests only (the user, 2026-11-19). A message is a file in
-// inbox/assistant/ of the board data; the primary node answers it with its local LLM and writes
-// export/assistant/<conv>.json, which this panel polls. The conversation is kept in this browser over a reload (the
-// user, 2026-11-19: keeping it is fine); "+" starts a fresh one with no earlier context, and the earlier ones stay as
-// tabs; "End conversation" closes one (HUB259). A card id in an answer opens that card.
-const AI_KEY = "hub.assistant", AI_TABS = 8;
-// HUB259: every conversation is a tab of the panel ({conv, n, msgs}); "+" starts one, "End conversation" closes the
-// shown one. An earlier visit's single conversation ({conv, n, msgs}) becomes the first tab.
-const ai = {convs: [], cur: "", rect: null};
-(() => { const k = ls(AI_KEY), ok = c => c && typeof c.conv === "string" && c.conv && Array.isArray(c.msgs);
-  const list = k && Array.isArray(k.convs) ? k.convs.filter(ok) : ok(k) ? [k] : [];
-  ai.convs = list.slice(-AI_TABS).map(c => ({conv: c.conv, n: Number(c.n) || 0, msgs: c.msgs.filter(m => m && !m.wait), busy: false}));
-  ai.cur = k && ai.convs.some(c => c.conv === k.cur) ? k.cur : ai.convs.length ? ai.convs[ai.convs.length - 1].conv : ""; })();
-function aiConv(){ return ai.convs.find(c => c.conv === ai.cur) || null; }
-function aiSave(){ ls(AI_KEY, {cur: ai.cur, convs: ai.convs.map(c => ({conv: c.conv, n: c.n, msgs: c.msgs.filter(m => !m.wait).slice(-40)}))}); }
-function aiNewConv(){
+// ---------- HUB322: the Exarch AI drawer (docs/EXARCH.md section F; docs/mockups/exarch-ai.html sections 2, 5, 6).
+// A message is a file in inbox/assistant/ of the board data ({conv, n, text, history, plan, chat, lead, project}); the
+// primary node's desk (hub/exarch/desk.py) answers it into export/assistant/<conv>.json ({conv, replies: [{n, text,
+// cards, at, tier, tokens, model, paid, by, plan, items, queued, moved}]}), which the drawer polls. A tap on a draft or
+// proposal sends the item's own change (HUB331, docs/EXARCH.md B); a plan or the ▼ menu is a change on card "exarch";
+// all go through the pending path (change(), pendSave), like
+// every other edit here; Exarch AI creates nothing without that tap. The chats, their order and the hidden set are kept
+// in this browser (per device). Tabs: Chat (the Exarch tab first, then the user's ✉︎ chats; the ✪ Lead tabs are hidden, chatLeads()),
+// Status (export/status.json exarch.history) and Archived (archived here, kept 90 days, never sent to the AI).
+const AI_KEY = "hub.exarch", AI_OLD = "hub.assistant", AI_MSGS = 60, AI_ARCH_DAYS = 90, AI_CONV = /^[a-z0-9]{6,32}$/;
+const AI_WAIT_MS = 6 * 60 * 1000, AI_POLL_UNTIL_MS = 60 * 60 * 1000;   // "No answer yet" after 6 min; a late answer still lands for an hour
+const DW_KEY = "hub.drawer.w", DW_MIN = 320, DW_DEF = 420, DW_MAX = .7;   // the drawer's width on a desktop, kept per device
+const ai = {chats: [], arch: [], cur: "", tab: "chat", hfilt: "all", menu: false, confirm: "", pop: false, rect: null, seen: {}, polling: new Set(), notes: [], gone: [],
+            gen: 0, stored: null, last: "", lastCur: ""};   // gen: raised when the chats are cleared; stored: the text this tab last read or wrote; last: its content
+const aiId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+function ico(name, cls, title){   // a Tabler-style icon from the sprite at the top of the page
+  const s = el("span",{class:"ico" + (cls ? " " + cls : ""), title:title || null, "aria-hidden":title ? null : "true", role:title ? "img" : null, "aria-label":title || null});
+  s.innerHTML = '<svg class="i" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
+  return s;
+}
+// >>> drawer-store (tests/test_app.py runs this block)
+function aiParse(k){   // the stored chats as they are kept, or null
+  const ok = c => c && typeof c.conv === "string" && AI_CONV.test(c.conv) && Array.isArray(c.msgs);
+  const norm = c => ({conv: c.conv, kind: ["exarch", "lead", "user"].includes(c.kind) ? c.kind : "user", lead: String(c.lead || ""),
+    project: String(c.project || ""), title: String(c.title || ""), n: Number(c.n) || 0, hidden: !!c.hidden, archived: c.archived || "",
+    ref: String(c.ref || ""), k: typeof c.k === "string" ? c.k : "", msgs: c.msgs.filter(m => m && typeof m === "object" && (!m.wait || m.n))});
+  if(k && Array.isArray(k.chats)) return {chats: k.chats.filter(ok).map(norm), arch: Array.isArray(k.arch) ? k.arch.filter(ok).map(norm) : [], cur: String(k.cur || ""),
+    seen: k.seen && typeof k.seen === "object" ? k.seen : {}, gone: Array.isArray(k.gone) ? k.gone.map(String) : []};
+  // HUB252/HUB259: an earlier visit's AI Assistant conversations become the user's chats
+  const list = k && Array.isArray(k.convs) ? k.convs : ok(k) ? [k] : [];
+  return {chats: list.filter(ok).map(c => norm(Object.assign({}, c, {kind: "user"}))), arch: [], cur: "", seen: {}, gone: []};
+}
+function aiText(s){ try{ return aiParse(JSON.parse(s)); }catch(e){ return aiParse(null); } }
+function aiSnap(){ return {chats: ai.chats, arch: ai.arch, seen: ai.seen, gone: ai.gone.slice(-60)}; }
+(function aiLoad(){
+  try{ ai.stored = localStorage.getItem(AI_KEY); }catch(e){}
+  Object.assign(ai, ai.stored === null ? aiParse(ls(AI_OLD)) : aiText(ai.stored));
+  ai.last = ai.stored === null ? "" : aiCanon(aiSnap()); ai.lastCur = ai.cur;
+  const cut = Date.now() - AI_ARCH_DAYS * 864e5;
+  ai.arch = ai.arch.filter(c => !(Date.parse(c.archived) < cut));
+  if(ls(AI_OLD)){ aiSave(); if(ai.stored !== null) try{ localStorage.removeItem(AI_OLD); }catch(e){} }   // taken over: the old copy goes
+})();
+// Several tabs of the Hub share the stored chats: what another tab wrote since this one last read or wrote them is merged
+// in (by chat and message) before anything is written, and only a change is written. The open chat is each tab's own.
+function aiSync(){   // true when another tab's chats changed what this one shows
+  let s = null;
+  try{ s = localStorage.getItem(AI_KEY); }catch(e){ return false; }
+  if(s === ai.stored) return false;
+  if(s === null){ aiForget(); return true; }       // cleared in another tab (Disconnect, or this device was removed)
+  const was = aiCanon(aiSnap()), theirs = aiText(s);
+  Object.assign(ai, aiMerge(aiSnap(), theirs, ai.stored === null ? {} : aiText(ai.stored)));
+  ai.stored = s; ai.last = aiCanon({chats: theirs.chats, arch: theirs.arch, seen: theirs.seen, gone: theirs.gone});
+  return aiCanon(aiSnap()) !== was;
+}
+function aiSave(){
+  for(const c of ai.chats.concat(ai.arch)) if(c.msgs.length > AI_MSGS) c.msgs = c.msgs.slice(-AI_MSGS);
+  aiSync();
+  const text = aiCanon(aiSnap());
+  if(text === ai.last && ai.cur === ai.lastCur) return;
+  const s = JSON.stringify(Object.assign({cur: ai.cur}, aiSnap()));
+  try{ localStorage.setItem(AI_KEY, s); ai.stored = s; ai.last = text; ai.lastCur = ai.cur; }catch(e){}
+}
+function aiForget(){   // the chats and their keys leave this page; what is on its way for them lands nowhere
+  ai.gen++; ai.chats = []; ai.arch = []; ai.seen = {}; ai.gone = []; ai.cur = ""; ai.confirm = ""; ai.revise = null;
+  ai.stored = null; ai.last = "";
+}
+// <<< drawer-store
+function aiClear(){    // Disconnect, or this device was removed: nothing of the chats stays in this browser
+  aiForget();
+  try{ for(const k of [AI_KEY, AI_OLD, EX_IMP, EX_PAIRED]) localStorage.removeItem(k); }catch(e){}
+  if(!$("#aipanel").hidden) aiDraw(); else renderExarchHeader();
+}
+// >>> drawer-rules (tests/test_app.py runs this block)
+// The Leads (EXARCH D; their tabs are hidden, chatLeads()): active for a project with a lead whose Lead state is active
+// (hub/exarch/core.py project_state: lead_state, snooze_until); the hub's own Lead is the Exarch tab.
+function isHubProject(k, p){ return k === "hub" || (Array.isArray(p && p.id_prefixes) && p.id_prefixes.includes("HUB")); }
+function leadState(p, now){   // "active" | "snoozed" | "not_needed" | "none" (no Lead yet)
+  if(!p || !String(p.lead || "").trim()) return "none";
+  const st = String(p.lead_state || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if(st === "snoozed"){ const u = Date.parse(p.snooze_until || ""); return !isNaN(u) && u <= (now || Date.now()) ? "active" : "snoozed"; }
+  if(st === "not_needed" || st === "not_needed_yet" || st === "none") return "not_needed";
+  return "active";
+}
+// the order of the tab row: the Exarch chat first whatever was stored, then the rest in the user's order; hidden chats
+// and the tabs of Leads that are not active are left out of the row (the Chats popup lists every one)
+function chatRow(chats, activeLeads){
+  const live = c => c.kind !== "lead" || activeLeads.includes(c.lead);
+  const ex = chats.filter(c => c.kind === "exarch").slice(0, 1);
+  return ex.concat(chats.filter(c => c.kind !== "exarch" && live(c) && !c.hidden));
+}
+function hiddenCount(chats, activeLeads){ return chats.filter(c => c.kind !== "exarch" && c.hidden && (c.kind !== "lead" || activeLeads.includes(c.lead))).length; }
+// a drag in the Chats popup or the row: `from` moves to `to`; the Exarch chat stays first
+function chatMove(chats, from, to){
+  const out = chats.slice(), i = out.findIndex(c => c.conv === from), j = out.findIndex(c => c.conv === to);
+  if(i < 0 || j < 0 || i === j || out[i].kind === "exarch") return out;
+  const [c] = out.splice(i, 1); out.splice(out.findIndex(x => x.conv === to) + (i < j ? 1 : 0), 0, c);
+  const ex = out.findIndex(x => x.kind === "exarch");
+  if(ex > 0) out.unshift(out.splice(ex, 1)[0]);
+  return out;
+}
+// the Status tab's filter (hub/exarch/history.py tags): all, waiting on the user ("user"), failures ("fail")
+function histShown(lines, f){ return (Array.isArray(lines) ? lines : []).filter(x => x && (f === "user" ? x.tag === "user" : f === "fail" ? x.tag === "fail" : true)); }
+// the notifications (EXARCH J12): only a plan to approve and an escalation the user must act on
+// HUB327: the board's project with the Lead state Exarch AI works with (export/status.json exarch.projects, the core's
+// last tick): a project with no Lead charter installed is not needed, whatever the board says
+function leadRow(k, p, rows){
+  const r = (Array.isArray(rows) ? rows : []).find(x => x && x.key === k);
+  if(!r || !p) return p;
+  const st = r.charter === false ? "not_needed" : String(r.lead_state || "");
+  return st ? Object.assign({}, p, {lead_state: st, snooze_until: r.snooze_until || null, snooze_after: r.snooze_after || null}) : p;
+}
+function notifyKind(m){ return m && m.role === "assistant" && !m.wait && m.plan && !m.plan.done ? "plan" : ""; }
+// the tabs' shared chats: `mine` (this tab's) with what another tab stored (`theirs`) since both had `base`, by chat and by
+// message. Removed on one side: gone. Changed on one side: that side; on both: this tab's, but an answer beats a wait.
+// This tab's objects are changed in place, so a running poll keeps its chat.
+function aiCanon(x){   // the same content is the same text, whatever the order of its fields and which empty ones it has
+  return JSON.stringify(x, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().filter(n => v[n]).map(n => [n, v[n]])) : v);
+}
+function aiKeyed(list, key){   // [[key, entry]]; the same key twice in one list is counted apart
+  const n = {};
+  return (list || []).map(x => { const k = key(x); n[k] = (n[k] || 0) + 1; return [k + "#" + n[k], x]; });
+}
+function aiMsgKey(m){ return [m.role, m.n == null ? "" : m.n, m.role === "assistant" && m.n != null ? "" : m.at || m.text || ""].join("|"); }
+function aiMergeList(mine, theirs, base, key, pick){
+  const a = aiKeyed(mine, key), b = aiKeyed(theirs, key), o = aiKeyed(base, key), M = new Map(a), T = new Map(b), B = new Map(o);
+  const got = k => M.has(k) && T.has(k) ? pick(M.get(k), T.get(k), B.get(k) || null) : B.has(k) ? null : M.has(k) ? M.get(k) : T.get(k);
+  const ks = l => l.map(x => x[0]), [first, rest] = ks(a).join() === ks(o).join() ? [ks(b), ks(a)] : [ks(a), ks(b)];   // the order of the side that changed it
+  return [...new Set(first.concat(rest))].map(got).filter(Boolean);
+}
+function aiMergeMsg(m, t, b){
+  if(!m.wait !== !t.wait) return m.wait ? t : m;
+  const same = aiCanon(m) === aiCanon(t), out = !same && b && aiCanon(m) === aiCanon(b) ? t : m;
+  if((m.seen || t.seen) && !out.seen) out.seen = true;
+  return out;
+}
+function aiMergeChat(m, t, b){
+  const o = b || {}, same = (x, y) => aiCanon(x || null) === aiCanon(y || null);
+  for(const k of Object.keys(t)) if(k !== "msgs" && k !== "n" && same(m[k], o[k]) && !same(t[k], m[k])) m[k] = t[k];
+  m.n = Math.max(Number(m.n) || 0, Number(t.n) || 0);
+  m.msgs = aiMergeList(m.msgs, t.msgs, o.msgs, aiMsgKey, aiMergeMsg);
+  return m;
+}
+function aiMerge(mine, theirs, base){
+  const key = c => c.conv, b = base || {}, seen = Object.assign({}, mine.seen);
+  for(const k of Object.keys(theirs.seen || {})) if(String(theirs.seen[k] || "") > String(seen[k] || "")) seen[k] = theirs.seen[k];
+  let chats = aiMergeList(mine.chats, theirs.chats, b.chats, key, aiMergeChat);
+  const arch = aiMergeList(mine.arch, theirs.arch, b.arch, key, aiMergeChat).filter(c => !chats.some(x => x.conv === c.conv));
+  // two tabs opened at once each made an Exarch chat: one stays (one with messages, else the first by name)
+  const exs = chats.filter(c => c.kind === "exarch").sort((x, y) => (y.msgs.length > 0) - (x.msgs.length > 0) || (x.conv < y.conv ? -1 : 1));
+  for(const c of exs.slice(1)) if(c.msgs.length) c.kind = "user"; else chats = chats.filter(x => x !== c);
+  return {chats, arch, seen, gone: [...new Set((theirs.gone || []).concat(mine.gone || []))]};
+}
+// <<< drawer-rules
+function leadRows(){ const x = exarchNow().x; return x && Array.isArray(x.projects) ? x.projects : []; }
+// The Lead tabs are hidden until a Lead chat reaches its Lead (no card sends one yet): no tab, no message, no notification.
+function chatLeads(){ return []; }
+function leadProject(role){ for(const [k, p] of projects) if(String(p.lead) === role) return [k, p]; return ["", null]; }
+function aiEnsure(){   // the Exarch chat always first; one chat per Lead that has a tab
+  if(!ai.chats.some(c => c.kind === "exarch")) ai.chats.unshift({conv: aiId(), kind: "exarch", lead: "", project: "", title: "Exarch", n: 0, msgs: [], hidden: false});
+  for(const role of chatLeads()) if(!ai.chats.some(c => c.kind === "lead" && c.lead === role)){
+    const [k, p] = leadProject(role);
+    ai.chats.push({conv: aiId(), kind: "lead", lead: role, project: k, title: k || role, n: 0, msgs: [], hidden: false});
+  }
+  const ex = ai.chats.findIndex(c => c.kind === "exarch"); if(ex > 0) ai.chats.unshift(ai.chats.splice(ex, 1)[0]);
+  const row = chatRow(ai.chats, chatLeads());
+  if(!row.some(c => c.conv === ai.cur)) ai.cur = (row.find(c => c.kind === "user") || row[0]).conv;
+}
+function aiConv(){ return ai.chats.find(c => c.conv === ai.cur) || null; }
+function chatName(c){
+  if(c.kind === "exarch") return "Exarch";
+  if(c.kind === "lead") return c.project || c.lead;
+  if(c.title) return c.title;
+  const q = c.msgs.find(m => m.role === "user"); if(!q) return "New chat";
+  return String(q.text).replace(/\s+/g, " ").trim();
+}
+function chatHue(c){   // the project's colour (its hue) for the Exarch and Lead tabs; the user's chats are neutral
+  if(c.kind === "user") return "";
+  const p = c.kind === "exarch" ? [...projects].find(([k, v]) => isHubProject(k, v)) : [c.project, projects.get(c.project)];
+  const h = p && p[1] ? Number(p[1].hue) : c.kind === "exarch" ? 280 : 228;
+  return "hsl(" + (isNaN(h) ? 210 : h) + " 55% 45%)";
+}
+function chatIcon(c){ return c.kind === "exarch" ? ico("compass") : el("span",{class:"cic", "aria-hidden":"true"}, c.kind === "lead" ? "✪" : "✉︎"); }
+function aiNewChat(){
   const c = aiConv();
-  if(c && !c.msgs.length){ $("#aiq").focus(); return; }   // the shown one is still empty: no second empty tab
-  ai.convs.push({conv: Math.random().toString(36).slice(2, 10) + Date.now().toString(36), n: 0, msgs: [], busy: false});
-  while(ai.convs.length > AI_TABS) ai.convs.shift();          // the oldest tab goes
-  ai.cur = ai.convs[ai.convs.length - 1].conv; aiDraw(); $("#aiq").focus();
+  if(c && c.kind === "user" && !c.msgs.length){ $("#aiq").focus(); return; }   // the open one is still empty: no second empty chat
+  ai.chats.push({conv: aiId(), kind: "user", lead: "", project: "", title: "", n: 0, msgs: [], hidden: false});
+  ai.cur = ai.chats[ai.chats.length - 1].conv; ai.tab = "chat"; aiDraw(); $("#aiq").focus();
 }
-function aiEndConv(){   // HUB259: closes the shown conversation; the one before it (or a fresh one) is shown
-  const i = ai.convs.findIndex(c => c.conv === ai.cur);
-  if(i < 0) return;
-  ai.convs.splice(i, 1);
-  if(!ai.convs.length){ ai.cur = ""; aiNewConv(); return; }
-  ai.cur = ai.convs[Math.max(0, i - 1)].conv; aiDraw();
-}
-function aiTitle(c){ const q = c.msgs.find(m => m.role === "user"); if(!q) return "New conversation";
-  const t = String(q.text).replace(/\s+/g, " ").trim(); return t.length > 24 ? t.slice(0, 23) + "…" : t; }
-function aiText(el, text, ids){
-  el.textContent = "";
+function aiCardText(host, text, ids){   // a card id the board knows opens that card
   const known = new Set(ids || []);
-  for(const part of String(text).split(/\b([A-Z]{1,6}-?\d{1,5})\b/)){
-    if(known.has(part) && raw.has(part)){
-      const b = document.createElement("button"); b.type = "button"; b.className = "aicard"; b.textContent = part;
-      b.title = "Open " + part; b.addEventListener("click", () => openCard(part)); el.appendChild(b);
-    } else el.appendChild(document.createTextNode(part));
+  for(const part of String(text || "").split(/\b([A-Z]{1,6}-?\d{1,5})\b/)){
+    if((known.has(part) || /^[A-Z]{1,6}-?\d{1,5}$/.test(part)) && raw.has(part))
+      host.append(el("button",{type:"button", class:"aicard", title:"Open " + part, onclick:() => openCard(part)}, part));
+    else host.append(part);
   }
+  return host;
 }
-function aiDraw(){
-  const c = aiConv(), tabs = $("#aitabs"), box = $("#aimsgs");
-  tabs.textContent = "";
-  for(const t of ai.convs){
-    const b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "tab");
-    b.setAttribute("aria-selected", String(t === c)); b.textContent = aiTitle(t); b.title = aiTitle(t) + (t.busy ? " (answering)" : "");
-    if(t.busy) b.classList.add("busy");
-    b.addEventListener("click", () => { ai.cur = t.conv; aiDraw(); });
-    tabs.appendChild(b);
+// ---- Exarch AI's state, for the compass, the Sync indicator and the Sync popup
+const EX_STALE_MIN = 10;   // EXARCH gap 5: the core not seen for 10 min
+function exarchNow(){
+  const x = hubStatus && hubStatus.exarch && typeof hubStatus.exarch === "object" ? hubStatus.exarch : null;
+  let on = x ? x.on !== false : true;
+  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "exarch.on") on = ch.value === true;   // the user's switch, on its way
+  const runs = x && Array.isArray(x.runs) ? x.runs.filter(r => r && typeof r === "object") : [];
+  const running = runs.filter(r => r.state === "running").length;
+  const tick = x && x.core && x.core.last_tick ? Date.parse(x.core.last_tick) : NaN;
+  const quiet = isNaN(tick) ? null : Math.round((Date.now() - tick) / 60000);
+  const state = !x ? "unknown" : on ? (quiet != null && quiet > EX_STALE_MIN ? "unseen" : "on") : running ? "halting" : "off";
+  return {x, on, runs, running, state, quiet, history: x && Array.isArray(x.history) ? x.history.filter(h => h && typeof h === "object") : []};
+}
+function exarchStateIcon(s){
+  if(s.state === "halting") return ico("hourglass", "wo", "Exarch AI is halting: " + s.running + (s.running === 1 ? " run" : " runs") + " finishing");
+  if(s.state === "off") return ico("zzz", "mu", "Exarch AI is off");
+  if(s.state === "unseen") return ico("compass", "wy", "Exarch AI not seen for " + s.quiet + " min");
+  if(s.state === "unknown") return ico("compass", "mu", "Exarch AI: no reading in the export yet");
+  return ico("compass", "ok", "Exarch AI is on and running");
+}
+// ---- the usage figures (the former Gantt pills, HUB281-HUB285, HUB290), each with its tokLevel; HUB283's scale
+const WARN_RANK = {"tk-yellow": 1, "tk-orange": 2, "tk-red": 3};
+function usageFigures(){
+  const {u, wins} = usageNow(), out = [];
+  if(!u) return out;
+  for(const w of wins){
+    const left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));
+    out.push({k: "plan", label: "Plan, " + w.label, lvl: tokLevel(left), value: left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
+      + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : ""), tip: usageLine(w) + "\nRecorded " + fmtTime(u.recorded)});
   }
-  tabs.hidden = ai.convs.length < 2;                          // one conversation: no tab row
-  box.textContent = "";
-  if(c && !c.msgs.length){ const h = document.createElement("div"); h.className = "aihint";
-    h.textContent = "Hi! Ask me anything about the board: what a card is for, what is blocked, what could start next. I can explain and suggest, but I never change anything myself."; box.appendChild(h); }
-  for(const m of c ? c.msgs : []){ const d = document.createElement("div"); d.className = "aimsg " + m.role + (m.wait ? " wait" : "");
-    aiText(d, m.text, m.cards); box.appendChild(d); }
-  box.scrollTop = box.scrollHeight;
-  $("#aisend").disabled = !c || c.busy;
-  $("#aiend").disabled = !c || (!c.msgs.length && ai.convs.length < 2);
-  aiSave();
+  const c = usageCredits(u);
+  if(c){   // HUB281: what is really left under the cap (spent only) and the budget still free (less what running runs hold)
+    const pc = v => c.cap ? Math.round(100 * v / c.cap) : 0, real = Math.max(0, c.cap - c.spent);
+    out.push({k: "api", label: "API credits", lvl: tokLevel(pc(c.left)), tip: creditLine(c) + "\nReal: the cap less what is spent. Budget: the cap less what is spent and what running runs hold until they end.",
+      value: pc(real) + " % / $" + real.toFixed(2) + " (Real) | " + pc(c.left) + " % / $" + c.left.toFixed(2) + " (Budget) of $" + c.cap.toFixed(0)});
+  }
+  const x = usageExtra(u);   // HUB272: the usage credits, apart from the API credits; HUB290: a stale reading says its age
+  if(x){
+    const lvl = x.rising ? "tk-red" : x.left != null && x.limit ? tokLevel(100 * x.left / x.limit) : "";
+    out.push({k: "extra", label: "Usage credits", lvl, tip: extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : ""),
+      value: (x.left != null ? "$" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "$" + x.spent.toFixed(2) + " used") + extraAge(x)});
+  }
+  return out;
+}
+function worstWarn(figs){   // the most severe figure at yellow or lower, else null
+  let w = null;
+  for(const f of figs) if(WARN_RANK[f.lvl] && (!w || WARN_RANK[f.lvl] > WARN_RANK[w.lvl])) w = f;
+  return w;
+}
+const WARN_CLASS = {"tk-yellow": "wy", "tk-orange": "wo", "tk-red": "wr"};
+// ---- the header: the Sync indicator (circled check, or the worst ⚠; Exarch AI's state beside it) and the compass
+function renderExarchHeader(){
+  const s = exarchNow(), figs = usageFigures(), w = worstWarn(figs), icons = $("#syncicons");
+  if(icons) icons.replaceChildren(w ? ico("alert-triangle", WARN_CLASS[w.lvl], w.label + " is low: " + w.value) : ico("circle-check", "ok", "Usage is fine"), exarchStateIcon(s));
+  const b = $("#aibtn"), off = s.state === "off" || s.state === "halting";
+  b.classList.toggle("off", off);
+  $("#aibtnstate").textContent = off ? " · " + (s.state === "halting" ? "halting" : "off") : "";
+  b.title = off ? "Exarch AI is " + (s.state === "halting" ? "halting" : "off") + ": open the drawer to turn it on" : "Open the Exarch AI drawer";
+  const n = aiWaiting(), dot = $("#aidot");
+  dot.hidden = !n || !$("#aipanel").hidden; dot.textContent = String(n); dot.title = n + " waiting";
+  if($("#syncpop") && !$("#syncpop").hidden) renderSyncPop();
+}
+// ---- the Sync popup (EXARCH F): board, usage, projects, Exarch AI's switch, devices; HUB332 adds the Pace and the runs
+function syncPopOpen(v){
+  const p = $("#syncpop"), b = $("#syncind");
+  if(v === undefined) v = p.hidden;
+  p.hidden = !v; b.setAttribute("aria-expanded", String(v));
+  if(v){ exStart(); renderSyncPop(); }
+}
+function popSec(title, ...kids){ return el("div",{class:"psec"}, el("h3",{}, title), ...kids); }
+function kv(k, v, attrs){ return el("div",Object.assign({class:"kv"}, attrs || {}), el("span",{class:"kk"}, k), el("span",{class:"vv"}, v)); }
+function renderSyncPop(){
+  const p = $("#syncpop"); if(!p || p.hidden) return;
+  const keep = p.scrollTop, s = exarchNow(), figs = usageFigures(), {u} = usageNow(), rw = usageRunway(u);
+  const sync = el("div",{class:"kv"}, el("span",{class:"row"}, ($("#syncicons") || el("span")).cloneNode(true), $("#savest").textContent || (changes.size ? "Syncing" : "Synced")),
+    el("span",{}, meta.exported_at ? "board as of " + fmtTime(meta.exported_at) : "no board export yet"));
+  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : null, f.label), f.value, {title: f.tip}))
+    : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
+  if(u && rw && rw.why) usage.push(el("div",{class:"small mu"}, "Runway: " + rw.why + " (" + runoutText(u, null).replace(/^ · /, "") + ")."));
+  else if(u) usage.push(el("div",{class:"small mu"}, "Runway: " + runoutText(u, null).replace(/^ · /, "") + "."));
+  const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
+    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = [...cards.values()].filter(c => c.col === "prog" && cardProject(c) === k && cardKind(c) !== "Release").length;
+    const streams = n + (n === 1 ? " stream" : " streams");
+    const txt = isHubProject(k, pr) ? (s.state === "halting" ? "Halting · " : "Active · ") + streams
+      : st === "none" ? "No Lead yet" : st === "not_needed" ? "Lead not needed yet"
+      : st === "snoozed" ? "Snoozed" + (pr.snooze_until ? " until " + (isNaN(Date.parse(pr.snooze_until)) ? String(pr.snooze_until) : fmtTime(pr.snooze_until)) : "")
+      : (s.state === "halting" ? "Halting · " : "Active · ") + streams;
+    return kv(String(pr.name || k), el("span",{class:st === "active" || isHubProject(k, pr) ? "" : "mu"}, txt));
+  });
+  const tg = el("button",{type:"button", class:"toggle" + (s.on ? "" : " off"), role:"switch", "aria-checked":String(s.on), id:"exarchsw",
+    "aria-describedby":"exarchwarn", disabled:readOnly ? true : null, title:s.on ? "Turn Exarch AI off" : "Turn Exarch AI on", onclick:() => exarchSet(!s.on)});
+  const ex = [el("div",{class:"row"}, tg, el("label",{for:"exarchsw"}, s.on ? "On" : "Off")),
+    el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
+  if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
+  if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
+  p.replaceChildren(el("div",{class:"phead"}, el("b",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
+    popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")])),
+    popSec("Exarch AI", ...ex), ...syncPopRuns(), devicesSec());
+  p.scrollTop = keep;
+}
+const EXARCH_OFF_WARN = "Turning Exarch AI off stops planning and Lead wakes, and halts the running Leads' work. Running work finishes its current step, keeps its branch and goes back to Next up within 10 min.";
+// ---- HUB332: the Pace and Exarch AI's runs in the Sync popup; the same runs table on the Hub tab (EXARCH F)
+// the usage stage (CLAUDE.md "Usage order", HUB227): the export's usage.stage, 1 to 4
+const USAGE_STAGES = {1: "Plan to 95 %: business as usual", 2: "Cutover: the API credits carry development",
+  3: "Plan 95 to 100 %: finishing only", 4: "Usage credits: handovers only"};
+function syncPopExtra(){
+  const {u, pace} = usageNow(), st = Number(u && u.stage), live = Number(u && u.streams_live);
+  const a = u && u.allowed_streams, cap = hubLimits().streams;
+  const allowed = pace === "turbo" || a === null ? "no limit (Turbo)" : String(Number(a) > 0 ? Math.min(cap, Number(a)) : Number(a) === 0 ? 0 : cap);
+  const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
+  return [popSec("Pace", paceSelector(pace, "syncpop"),
+    USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
+    kv("Streams in use", (live >= 0 && u && u.streams_live != null ? live : "-") + " of " + allowed, {title: u && u.allowance ? "Now: " + u.allowance : null}),
+    held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
+}
+function syncPopRuns(){ return [popSec("Exarch AI runs", runsTable(exarchNow().runs))]; }
+// >>> runs-rows (tests/test_app.py runs this block)
+// one run as the two lines of EXARCH F: [start time, "kind · card or Lead", time taken or "running 6m" or "failed"],
+// then "model · tokens · plan or $cost"; err marks a failed run
+function runTok(t){
+  const n = t && typeof t === "object" ? ["in", "out", "cache_read", "cache_write"].reduce((s, k) => s + (Number(t[k]) || 0), 0) : Number(t) || 0;
+  return n >= 10000 ? Math.round(n / 1000) + "k" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+}
+function runRow(r, now){
+  const t0 = Date.parse(r.started || ""), d = new Date(t0), pad = v => String(v).padStart(2, "0");
+  const when = isNaN(t0) ? "-" : pad(d.getHours()) + ":" + pad(d.getMinutes());
+  const what = String(r.kind || "run") + " · " + String(r.card || r.lead || r.role || (r.kind === "desk" ? "chat" : "-"));
+  const dur = s => s < 60 ? Math.round(s) + " s" : s < 3600 ? Math.round(s / 60) + " m" : Math.floor(s / 3600) + " h " + Math.round(s % 3600 / 60) + " m";
+  const failed = r.state === "failed" || r.state === "error";
+  const took = r.state === "running" ? "running" + (isNaN(t0) ? "" : " " + dur(Math.max(0, (now - t0) / 1000)))
+    : failed ? "failed" : r.halted || r.state === "halted" ? "halted" : Number(r.secs) >= 0 && r.secs != null ? dur(Number(r.secs)) : String(r.state || "-");
+  const cost = Number(r.cost_usd);
+  const paid = r.auth === "api" || (!r.auth && cost > 0) ? "$" + (cost > 0 ? cost : 0).toFixed(2) : "plan";
+  const model = r.model_name || r.model;   // HUB337: the model's display name, and why it was chosen as a hint
+  const sub = [model ? String(model) : null, runTok(r.tokens) + " tokens", paid].filter(Boolean).join(" · ");
+  return {when, what, took, sub, err: failed, hint: r.model_source ? "model from " + String(r.model_source) : null};
+}
+// <<< runs-rows
+function runsTable(rows, max){
+  const now = Date.now(), list = (Array.isArray(rows) ? rows : []).filter(r => r && typeof r === "object")
+    .sort((a, b) => (Date.parse(b.started || "") || 0) - (Date.parse(a.started || "") || 0)).slice(0, max || 10);
+  if(!list.length) return el("p",{class:"note"}, "No Exarch AI runs yet.");
+  return el("div",{class:"runs", role:"list"}, ...list.map(r => { const x = runRow(r, now);
+    return el("div",{class:x.err ? "err" : null, role:"listitem"}, el("span",{class:"t"}, x.when), el("span",{}, x.what), el("span",{class:"took"}, x.took), el("span",{class:"d", title:x.hint}, x.sub)); }));
+}
+function exarchSet(v){   // EXARCH F: the switch is `exarch.on` through the pending path (card "hub", like the pace)
+  if(readOnly){ toast("This view is read-only."); return; }
+  change({id: "hub", upd: null}, "exarch.on", v === true);
+  renderExarchHeader(); renderSyncPop(); if(!$("#aipanel").hidden) aiDraw();
+}
+// ---- notifications (EXARCH J12, mock-up section 5): opt-in per device, only while the Hub is open; no push service
+const NOTE_KEY = "hub.notify";
+function notifyOn(){ return ls(NOTE_KEY) === "on" && "Notification" in window && Notification.permission === "granted"; }
+function notifyAsk(){
+  if(!("Notification" in window)){ ls(NOTE_KEY, "off"); toast("This browser cannot show notifications."); aiDraw(); return; }
+  Notification.requestPermission().then(p => { ls(NOTE_KEY, p === "granted" ? "on" : "off"); aiDraw(); if(!$("#syncpop").hidden) renderSyncPop(); });
+}
+function notify(title, body, conv){
+  if(!notifyOn() || (!document.hidden && !$("#aipanel").hidden)) return;
+  try{
+    const n = new Notification(title, {body: String(body || "").slice(0, 180), tag: "exarch-" + (conv || "status")});
+    n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = "chat"; } else ai.tab = "status"; aiOpen(true); n.close(); };
+  }catch(e){ /* a phone browser that shows notifications only from a service worker: the compass count still says it */ }
+}
+function aiWaiting(){   // the compass count: plans to approve, and escalations since the drawer was last open
+  let n = 0;
+  const leads = chatLeads();
+  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs) if(notifyKind(m) && !m.seen) n++;
+  const since = ai.seen.status || "";
+  n += exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since).length;
+  return n;
+}
+let exSeenHist = null;   // the newest history line notified, so a reload does not notify again
+function exarchWatch(){   // on each new export: an escalation the user must act on is notified once
+  const h = exarchNow().history, top = h.length ? String(h[0].at || "") : "";
+  if(exSeenHist === null){ exSeenHist = ai.seen.notified || top; return; }
+  for(const x of h) if(String(x.at || "") > exSeenHist && x.kind === "escalation") notify("Exarch AI: needs the user", x.text, "");
+  if(top > exSeenHist){ exSeenHist = top; ai.seen.notified = top; aiSave(); }
+}
+// ---- devices (mock-up section 6, HUB338): the devices that read the encrypted chats, and this device's notifications
+function devicesSec(){
+  const on = notifyOn();
+  const cb = el("input",{type:"checkbox", id:"notifydev", checked:on ? true : null,
+    onchange:ev => { if(ev.target.checked) notifyAsk(); else { ls(NOTE_KEY, "off"); renderSyncPop(); aiDraw(); } }});
+  const notes = "notifications " + (on ? "on" : "off"), note = el("label",{class:"row small"}, cb, "Notify this device");
+  if(!conn || !exReady()) return popSec("Devices", el("div",{class:"dev"}, el("span",{}, "This device"), el("span",{class:"small mu"}, notes)), note);
+  const doc = ex.doc || {}, devs = Array.isArray(doc.devices) ? doc.devices : [];
+  const rows = devs.map(d => el("div",{class:"exdev"}, el("span",{}, (d.id === ex.id ? "This device · " : "") + (d.name || "A device")),
+    el("span",{class:"small mu"}, "paired " + exDay(d.added) + (d.id === ex.id ? " · " + notes : d.last_seen ? " · last seen " + exDay(d.last_seen) : "")),
+    exPaired() ? el("button",{type:"button", class:"small", disabled:readOnly ? true : null, onclick:() => {
+      if(confirm("Remove " + (d.name || "this device") + "? It can't read new chats; it pairs again to read any.")) exAct("remove", d.id); }}, "Remove") : null));
+  if(!exPaired()) rows.push(el("div",{class:"exdev"}, el("span",{}, "This device · " + exName()), el("span",{class:"small mu"}, "not paired · " + notes)));
+  return popSec("Devices that read the chats", ...rows,
+    devs.length ? el("span",{class:"small mu"}, "A removed device can't read new chats; it pairs again to read any.") : null,
+    el("div",{class:"row"}, exPaired() ? el("button",{type:"button", "aria-expanded":String(ex.how), onclick:() => { ex.how = !ex.how; renderSyncPop(); }}, "Pair a new device")
+      : el("button",{type:"button", disabled:readOnly ? true : null, onclick:() => { syncPopOpen(false); ai.tab = "chat"; if($("#aipanel").hidden) aiOpen(true); else aiDraw(); if(!ex.asked) exPair(); }}, "Pair this device"), note),
+    exPaired() && ex.how ? el("span",{class:"small mu"}, "Open the Hub on the new device: its drawer shows a code, and the drawer here asks to confirm it.") : null);
+}
+// ---- the drawer
+function aiDraw(){
+  aiSync(); aiEnsure();
+  const s = exarchNow(), c = aiConv(), leads = chatLeads(), row = chatRow(ai.chats, leads);
+  $("#aihico").classList.toggle("mu", s.state === "off" || s.state === "halting");
+  for(const t of ["chat", "status", "arch"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
+  const fails = s.history.filter(h => h.tag === "fail" && String(h.at || "") > (ai.seen.status || "")).length;
+  $("#aitab-status").replaceChildren("Status", fails ? el("span",{class:"err small"}, " " + fails) : "");
+  $("#aichat").hidden = ai.tab !== "chat"; $("#aistatus").hidden = ai.tab !== "status"; $("#aiarch").hidden = ai.tab !== "arch";
+  // off: the panel with Turn on (the chats stay readable below it)
+  const offp = $("#aioff"); offp.hidden = !(s.state === "off" || s.state === "halting");
+  if(!offp.hidden) offp.replaceChildren(el("b",{class:"row"}, ico("zzz", "mu"), s.state === "halting" ? "Exarch AI is halting" : "Exarch AI is off"),
+    el("span",{class:"small mu"}, "No planning, Lead wakes or runs. Turning it on resumes within about 2 minutes and wakes every Lead with waiting work."),
+    el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", disabled:readOnly ? true : null, onclick:() => exarchSet(true)}, "Turn on")));
+  // the notification banner, once per device
+  const nb = $("#ainotify"), asked = ls(NOTE_KEY);
+  nb.hidden = !!asked || !("Notification" in window);
+  const pend = exConfirmCards(), pb = $("#aipair");   // HUB338: a new device waits for its code to be confirmed here
+  pb.hidden = !pend.length; pb.replaceChildren(...pend);
+  if(!nb.hidden) nb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Notify this device?")),
+    el("span",{class:"small"}, "Exarch AI can tell this device when a plan needs approving, or something fails and needs the user. Nothing else."),
+    el("span",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:notifyAsk}, "Turn on"), el("button",{type:"button", onclick:() => { ls(NOTE_KEY, "off"); aiDraw(); }}, "Not now")));
+  if(ai.tab === "chat") aiDrawChat(c, row, leads);
+  else if(ai.tab === "status"){ aiDrawStatus(s); ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status; }
+  else aiDrawArch();
+  aiSave(); renderExarchHeader();
+}
+function aiDrawChat(c, row, leads){
+  const locked = exLocked(); $("#aichat").classList.toggle("locked", locked);
+  if(locked){ $("#aimsgs").replaceChildren(...exLockCards()); return; }   // HUB338
+  const strip = $("#aitabs");
+  strip.replaceChildren(...row.map(t => {
+    const on = t === c, hue = chatHue(t);
+    const b = el("button",{type:"button", role:"tab", class:"ct" + (t.kind !== "user" ? " lead" : "") + (t.kind === "exarch" ? " ex" : "") + (on ? " on" : ""),
+      "aria-selected":String(on), "data-conv":t.conv, title:t.kind === "lead" ? t.lead : t.kind === "exarch" ? "Exarch: always the first tab" : chatName(t),
+      style:hue ? "--pc:" + hue : null, onclick:ev => { if(ev.target.closest(".tm")) return; if(t.conv !== ai.cur){ ai.cur = t.conv; ai.menu = false; ai.confirm = ""; aiDraw(); } }},
+      chatIcon(t), el("span",{class:"ctn"}, chatName(t)),
+      on ? el("span",{class:"tm" + (ai.menu ? " open" : ""), role:"button", tabindex:"0", title:"Chat menu: Clear, Archive", "aria-label":"Chat menu", "aria-expanded":String(ai.menu),
+        onclick:ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); },
+        onkeydown:ev => { if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); } }}, "▼") : null);
+    if(t.kind !== "exarch") dragRow(b, strip, "[data-conv]", (from, to) => { ai.chats = chatMove(ai.chats, from, to); aiDraw(); });
+    return b;
+  }));
+  const cur = strip.querySelector(".ct.on"); if(cur) cur.scrollIntoView({block:"nearest", inline:"nearest"});
+  aiFade();
+  const hid = hiddenCount(ai.chats, leads), cnt = $("#aicnt");
+  cnt.textContent = String(hid); $("#aichats").title = "Chats: show, hide and reorder (" + hid + " hidden)";
+  $("#aichats").setAttribute("aria-expanded", String(ai.pop));
+  aiDrawMenu(c); aiDrawChatsPop(leads);
+  const who = $("#aiwho");
+  who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
+    : c.kind === "lead" ? "Talking to " + c.lead + aiLeadWoken(c) : "";
+  who.hidden = !who.textContent;
+  const box = $("#aimsgs"), foc = document.activeElement && document.activeElement.classList.contains("dedit") ? document.activeElement : null;
+  const typing = foc ? [foc.dataset.item, foc.selectionStart, foc.selectionEnd] : null, atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.replaceChildren(...[ex.note ? el("div",{class:"sline"}, ico("lock"), ex.note) : null, ...aiItems(c)].filter(Boolean));
+  if(typing){   // a redraw while a draft's title is typed: the typing, the focus and the caret stay
+    const f = [...box.querySelectorAll(".dedit")].find(x => x.dataset.item === typing[0]);
+    if(f){ f.focus({preventScroll: true}); try{ f.setSelectionRange(typing[1], typing[2]); }catch(e){} }
+  }
+  if(atEnd || aiDraw.jump){ box.scrollTop = box.scrollHeight; aiDraw.jump = false; }
+  const busy = c && c.msgs.some(m => m.wait && !m.late);
+  $("#aisend").disabled = !c || !!busy;
+  $("#aiq").placeholder = !c ? "" : c.kind === "exarch" ? "Ask about or change the Hub and Exarch" : c.kind === "lead" ? "Message " + c.lead : "Ask Exarch AI, or list work to add";
+  if(!$("#aipanel").hidden) for(const m of c ? c.msgs : []) if(notifyKind(m)) m.seen = true;   // shown: no longer counted on the compass
+}
+function aiLeadWoken(c){
+  const w = exarchNow().history.find(h => h.kind === "lead_wake" && (h.project === c.project || String(h.text || "").includes(c.lead)));
+  return w && w.at ? " · last woken " + new Date(w.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : "";
+}
+function aiFade(){   // the row's right edge fades while more tabs follow
+  const s = $("#aitabs"); s.classList.toggle("more", s.scrollLeft + s.clientWidth < s.scrollWidth - 2);
+}
+function aiDrawMenu(c){
+  const m = $("#aimenu"); m.hidden = !ai.menu || !c;
+  if(m.hidden) return;
+  const who = c.kind === "lead" ? c.lead : c.kind === "exarch" ? "Exarch" : "";
+  const item = (k, icon, name, text) => el("button",{type:"button", class:"it", onclick:() => { ai.confirm = k; aiDraw(); }}, el("span",{"aria-hidden":"true"}, icon), el("b",{}, name), el("span",{class:"small mu"}, text));
+  m.replaceChildren(item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
+    item("archive", "🗄︎", "Archive", "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
+    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : "Archive this chat" + (who ? " with " + who : "") + "?"),
+      el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : "Archive"),
+      el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel")) : null);
+}
+function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archived) and opens a fresh one in its place
+  if(act === "archive" && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
+  const fresh = {conv: aiId(), kind: c.kind, lead: c.lead, project: c.project, title: c.kind === "user" ? "" : c.title, n: 0, msgs: [], hidden: c.hidden};
+  const i = ai.chats.indexOf(c); if(i >= 0) ai.chats[i] = fresh;
+  if(c.ref){ ai.gone.push(c.ref); if(i >= 0) ai.chats.splice(i, 1); }   // HUB330: a refinement plan's chat is not shown again before its next revision
+  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act});   // the node drops (or archives) its copy
+  ai.cur = c.ref ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
+}
+function aiDrawChatsPop(leads){
+  const p = $("#aichatspop"); p.hidden = !ai.pop;
+  if(p.hidden) return;
+  const all = ai.chats.filter(c => c.kind !== "lead" || leads.includes(c.lead));
+  p.replaceChildren(el("b",{class:"small"}, "Chats: drag to reorder; the tab row follows this order"), ...all.map(c => {
+    const hue = chatHue(c);
+    const r = el("div",{class:"crow", "data-conv":c.conv, style:hue ? "--pc:" + hue : null},
+      c.kind === "exarch" ? el("span",{class:"lock", title:"Always first"}, "🔒︎") : el("span",{class:"grip", title:"Drag to reorder"}, "⋮⋮"),
+      chatIcon(c), el("span",{class:"nm" + (c.hidden ? " mu" : "")}, chatName(c)),
+      c.kind === "exarch" ? el("span",{class:"small mu"}, "always first")
+        : el("button",{type:"button", class:"small", "aria-pressed":String(!c.hidden), onclick:() => { c.hidden = !c.hidden; if(c.hidden && ai.cur === c.conv) ai.cur = ""; aiDraw(); }},
+          ico(c.hidden ? "eye-off" : "eye"), c.hidden ? "Hidden" : "Shown"));
+    if(c.kind !== "exarch") dragRow(r.querySelector(".grip"), p, "[data-conv]", (from, to) => { ai.chats = chatMove(ai.chats, from, to); aiDraw(); }, r);
+    return r;
+  }), el("span",{class:"small mu"}, "Hidden chats are skipped in the tab row. A hidden chat keeps its history and shows again when a new message arrives in it."));
+}
+// a drag that reorders: a mouse drag after a few pixels, a touch after a long press (then the row does not scroll)
+function dragRow(handle, list, sel, done, item){
+  item = item || handle;
+  handle.addEventListener("pointerdown", ev => {
+    if(ev.button || ev.target.closest(".tm")) return;
+    const x0 = ev.clientX, y0 = ev.clientY, touch = ev.pointerType !== "mouse";
+    let live = false, timer = 0, over = null;
+    const start = () => { live = true; item.classList.add("drag"); try{ handle.setPointerCapture(ev.pointerId); }catch(e){} };
+    if(touch) timer = setTimeout(start, 400);
+    const move = e => {
+      if(!live){ if(touch){ if(Math.hypot(e.clientX - x0, e.clientY - y0) > 8){ clearTimeout(timer); end(); } return; }
+        if(Math.hypot(e.clientX - x0, e.clientY - y0) < 6) return; start(); }
+      e.preventDefault();
+      const t = document.elementFromPoint(e.clientX, e.clientY), r = t && t.closest(sel);
+      over = r && list.contains(r) && r !== item ? r.dataset.conv : null;
+      for(const o of list.querySelectorAll(sel)) o.classList.toggle("over", o.dataset.conv === over);
+    };
+    const end = () => { clearTimeout(timer); removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", end);
+      item.classList.remove("drag"); for(const o of list.querySelectorAll(sel)) o.classList.remove("over"); };
+    const up = () => { const was = live, to = over; end(); if(was && to){ aiDrag.at = Date.now(); done(item.dataset.conv, to); } };
+    addEventListener("pointermove", move, {passive:false}); addEventListener("pointerup", up); addEventListener("pointercancel", end);
+  });
+  handle.addEventListener("click", ev => { if(Date.now() - (aiDrag.at || 0) < 300){ ev.stopPropagation(); ev.preventDefault(); } }, true);
+}
+const aiDrag = {at: 0};
+function aiItems(c){   // the open chat: messages, and for a Lead its Status lines between them (status only: never sent)
+  if(!c) return [];
+  const items = c.msgs.map((m, i) => ({at: m.at || "", i, m}));
+  if(c.kind === "lead"){
+    const first = items.length ? items[0].at : "";
+    for(const h of exarchNow().history) if((h.project && h.project === c.project) || String(h.text || "").includes(c.lead))
+      if(!first || String(h.at || "") >= first) items.push({at: String(h.at || ""), i: -1, h});
+  }
+  items.sort((a, b) => a.at && b.at && a.at !== b.at ? a.at.localeCompare(b.at) : (a.i - b.i));
+  const out = [];
+  if(!c.msgs.length) out.push(el("div",{class:"aihint"}, c.kind === "exarch" ? "Ask about the Hub and Exarch AI themselves, or ask for a change to them."
+    : c.kind === "lead" ? "Message " + c.lead + ". Each message is a fresh headless run of the Lead with its charter and notes, and the last few messages here."
+    : "Ask about the board (what is blocked, what changed) or list new work for any project. With Plan on, a request comes back as a plan to approve."));
+  for(const it of items){
+    if(it.h){ out.push(el("div",{class:"sline", title:"Status, for reference: not sent to the Lead"}, ico("compass"),
+      (it.h.at ? new Date(it.h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) + " " : "") + String(it.h.text || ""), el("span",{class:"mu"}, " · status, not sent"))); continue; }
+    out.push(aiMsg(c, it.m));
+  }
+  return out;
+}
+function aiMsg(c, m){
+  if(m.role === "moved") return el("div",{class:"moved"}, el("span",{}, m.text), m.undo ? el("button",{type:"button", class:"small", onclick:() => aiUnmove(c, m)}, "Undo") : null);
+  if(m.role === "user") return aiCardText(el("div",{class:"aimsg user"}), m.text);
+  if(m.wait) return el("div",{class:"aimsg assistant wait"}, m.late ? aiNoAnswer(m.queued) : "Thinking…");
+  const box = el("div",{class:"aimsg assistant" + (m.plan ? " plan" : "")});
+  if(m.plan){
+    const p = m.plan;
+    box.append(el("div",{class:"row"}, el("b",{}, "Plan · " + String(p.title || "")), aiMeta(m)), aiCardText(el("span",{class:"mu"}), p.text || m.text, m.cards));
+    const says = planSays(p); if(p.refused) box.append(el("span",{class:"small err"}, "Refused: " + String(p.refused)));
+    box.append(says ? el("span",{class:"small mu"}, says)
+      : el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:() => aiTap(c, m, "plan", p, "approve")}, "Approve"),
+        el("button",{type:"button", onclick:() => aiRevise(c, m, p)}, "Revise"),
+        el("button",{type:"button", onclick:() => aiTap(c, m, "plan", p, "discard")}, "Discard")));
+  } else box.append(aiCardText(el("span",{}), m.text, m.cards));
+  if(Array.isArray(m.drafts) && m.drafts.length){
+    box.append(el("b",{}, "Drafts"), ...m.drafts.map(d => el("div",{class:"draft"}, d.editing ? el("input",{type:"text", class:"dedit", value:String(d.t || ""), "aria-label":"Card title", "data-item":c.conv + "/" + m.n + "/" + String(d.id || ""),
+        oninput:ev => { d.t = ev.target.value; d.edited = true; }, onkeydown:ev => { if(ev.key === "Enter"){ d.t = ev.target.value; d.edited = true; d.editing = false; aiDraw(); } }}) : el("b",{}, String(d.t || "")),
+      d.meta ? el("span",{class:"small mu"}, String(d.meta)) : null,
+      d.dup ? el("span",{class:"dup"}, "Looks like " + String(d.dup) + ": check before creating") : null,
+      d.refused ? el("span",{class:"small err"}, "Refused: " + String(d.refused)) : null,
+      itemSays(d) ? el("span",{class:"small mu"}, itemSays(d))
+        : el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:() => aiTap(c, m, "draft", d, "create", {t: d.t})}, "Create"),
+          el("button",{type:"button", onclick:() => { d.editing = !d.editing; aiDraw(); }}, d.editing ? "Done" : "Edit"),
+          el("button",{type:"button", onclick:() => aiTap(c, m, "draft", d, "dismiss")}, "Dismiss")))));
+  }
+  for(const pr of Array.isArray(m.proposals) ? m.proposals : [])
+    box.append(el("div",{class:"prop"}, aiCardText(el("span",{}), pr.text || "", m.cards), pr.refused ? el("span",{class:"small err"}, "Refused: " + String(pr.refused)) : null,
+      itemSays(pr) ? el("span",{class:"small mu"}, itemSays(pr))
+      : el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:() => aiTap(c, m, "proposal", pr, "apply")}, "Apply"),
+        el("button",{type:"button", onclick:() => aiTap(c, m, "proposal", pr, "dismiss")}, "Dismiss"))));
+  const meta = aiMeta(m); if(meta && !m.plan) box.append(meta);
+  return box;
+}
+function aiMeta(m){   // "colplus-lead · 14k tokens · plan", "Tier 0 · 0 tokens"
+  const parts = [];
+  if(m.by) parts.push(String(m.by));
+  if(m.tier != null && m.tier !== "") parts.push("Tier " + m.tier);
+  if(m.tokens != null) parts.push((Number(m.tokens) >= 1000 ? (Number(m.tokens) / 1000).toFixed(Number(m.tokens) >= 10000 ? 0 : 1) + "k" : String(Number(m.tokens) || 0)) + " tokens");
+  if(m.paid) parts.push(String(m.paid));
+  return parts.length ? el("span",{class:"small mu meta"}, parts.join(" · ")) : null;
+}
+function aiNoAnswer(why){   // names Exarch AI and gives the queued reason
+  return "No answer yet: " + (why ? String(why) : exarchNow().state === "unseen" || !conn ? "the node is offline, so Exarch AI queued this question. It answers as soon as the node is back"
+    : "Exarch AI has not answered yet; it answers here as soon as it does") + " (chats are never held by the Pace).";
+}
+function aiTap(c, m, kind, item, act, extra){   // a plan, draft or proposal tapped: one change through the pending path
+  if(!conn || readOnly){ toast("Exarch AI needs a token that can write to the board data."); return; }
+  if(item.pend) return;
+  const ch = item.change && typeof item.change === "object" && item.change.card ? item.change : null;
+  let sent = "";
+  if(kind !== "plan" && ch){   // HUB331's items (docs/EXARCH.md B "The drawer's items"): the item's own change, or its dismissal
+    if(act === "dismiss") sent = change({id: "chat:" + c.conv, upd: null}, "item", {id: String(item.id || ""), state: "dismissed"});
+    else {
+      let value = ch.value;
+      if(kind === "draft" && value && typeof value === "object" && item.t != null) value = Object.assign({}, value, {t: String(item.t)});   // Edit changed the title
+      const x = {item: c.conv + "/" + String(item.id || ""), via: "exarch"};
+      if(ch.rank != null) x.rank = ch.rank;
+      sent = change({id: String(ch.card), upd: (cards.get(String(ch.card)) || {}).upd || null}, String(ch.field), value, x);
+    }
+  } else sent = change({id: "exarch", upd: null}, "exarch." + kind, Object.assign({conv: c.conv, n: m.n, id: String(item.id || ""), act}, extra || {}));
+  if(!sent) return;
+  item.pend = sent; item.done = act; item.editing = false; item.refused = null;   // on its way until the board takes or refuses it
+  if(kind === "plan" && act === "approve"){ item.wait = new Date().toISOString(); aiReread(c); }   // HUB330: its cards come as items on this reply
+  aiDraw();
+}
+// >>> drawer-taps (tests/test_app.py runs this block)
+function aiRefused(id, why){   // the node refused a tap's change: its buttons come back, with the reason
+  for(const c of ai.chats) for(const m of c.msgs) if(itemRefused(m, id, String(why || "no reason given"))){ aiRefresh(c); }
+}
+function aiSettled(){   // taps whose change the board has settled: the chat's file says what became of them
+  for(const c of ai.chats) if(c.msgs.some(m => itemsOf(m).some(x => x.pend && !changes.has(x.pend)))) aiRefresh(c);
+}
+async function aiRefresh(c){   // the replies with items or a plan read again: the node's states rule (another device may have tapped them)
+  const key = "items:" + c.conv, gen = ai.gen;
+  if(!conn || ai.polling.has(key)) return;
+  ai.polling.add(key);
+  try{
+    const has = n => c.msgs.findIndex(m => m.role === "assistant" && !m.wait && m.n === n && itemsOf(m).length);
+    let rs = null;
+    try{ rs = await aiFetch(c, r => has(r.n) >= 0); }
+    catch(e){ if(e.status !== 404) return; }       // a blip: the next export asks again (404: the chat was cleared there)
+    if(gen !== ai.gen) return;
+    for(const r of rs || []){ const i = has(r.n); if(i >= 0 && !r.failed && !r.queued) c.msgs[i] = aiReplyMsg(r, c.msgs[i], id => changes.has(id)); }
+    const shut = new Set((rs || []).filter(r => r.failed).map(r => r.n));   // not readable here now: still not known
+    for(const m of c.msgs) if(!shut.has(m.n)) for(const x of itemsOf(m)) if(x.pend && !changes.has(x.pend)) delete x.pend;
+  } finally { ai.polling.delete(key); }
+  aiSave(); if(!$("#aipanel").hidden) aiDraw(); else renderExarchHeader();
+}
+// <<< drawer-taps
+// >>> drawer-items (tests/test_app.py runs this block)
+// HUB331's reply items ({id, kind: draft|proposal, action, text, card, draft, dupes, change, undo, state}) as the drawer's
+// drafts ({id, t, meta, dup, change, done}) and proposals ({id, text, change, done}); the older drafts/proposals lists
+// still read. An item the node already settled shows as done; one being applied is `taken`; a refused one has its buttons
+// again, with the reason (a new tap may go through).
+function aiItems331(r, kind){
+  const DONE = {created: "create", applied: "apply", dismissed: "dismiss", undone: "undone"};
+  const items = Array.isArray(r && r.items) ? r.items.filter(x => x && typeof x === "object" && x.kind === kind) : [];
+  const old = r && Array.isArray(r[kind + "s"]) ? r[kind + "s"].filter(x => x && typeof x === "object").map(x => Object.assign({}, x)) : [];
+  if(!items.length) return old.length ? old : null;
+  return old.concat(items.slice(0, 20).map(x => {
+    const d = x.draft && typeof x.draft === "object" ? x.draft : {}, dup = Array.isArray(x.dupes) && Array.isArray(x.dupes[0]) ? x.dupes[0] : null;
+    const out = {id: String(x.id || ""), text: String(x.text || ""), change: x.change || null, card: x.card || null,
+      done: x.taken ? "taken" : x.state && !["open", "refused"].includes(x.state) ? (DONE[x.state] || String(x.state)) : null,
+      refused: x.state === "refused" && !x.taken ? String(x.why || "no reason given") : null, made: x.made || null};
+    if(kind === "draft"){
+      out.t = String(d.t || x.text || "");
+      out.meta = [d.type, d.pri ? "P" + d.pri : null, d.col, d.epic].filter(Boolean).join(" · ");
+      out.dup = dup ? String(dup[0]) + " " + String(dup[1] || "") : null;
+    }
+    return out;
+  }));
+}
+function itemsOf(m){ return (m.plan ? [m.plan] : []).concat(Array.isArray(m.drafts) ? m.drafts : [], Array.isArray(m.proposals) ? m.proposals : []); }
+function itemRefused(m, id, why){   // the tap whose change `id` the node refused: undone here, with the reason; false when not in m
+  const x = itemsOf(m).find(y => y && y.pend && y.pend === id);
+  if(!x) return false;
+  x.done = null; x.pend = null; x.refused = why;
+  if(x.wait) x.wait = null;
+  return true;
+}
+function itemSays(x){   // a draft's or proposal's state in words; "" while it has its buttons
+  if(x.pend) return "On its way to the node";
+  if(!x.done) return "";
+  if(x.done === "taken") return "Being applied";
+  if(x.done === "create") return "Created" + (x.made ? ": " + x.made : x.card && x.card !== "new" ? " as " + x.card : "");
+  return x.done === "apply" ? "Applied" : x.done === "undone" ? "Undone" : "Dismissed";
+}
+function planSays(p){
+  if(!p.done) return "";
+  if(p.pend) return (p.done === "approve" ? "Approved" : "Discarded") + ": on its way to the node";
+  return p.done === "approve" ? "Approved" + (p.wait ? ": its cards come here as drafts" : "") : p.done === "discard" ? "Discarded" : "Revising";
+}
+// a reply of the chat's file as the drawer's message; `old` (the message it replaces) keeps what was tapped here while its
+// change is on its way (`live(id)`), and a title being edited; otherwise the node's states rule
+function aiReplyMsg(r, old, live){
+  const msg = {role: "assistant", n: r.n, text: String(r.text || ""), cards: Array.isArray(r.cards) ? r.cards : [], at: r.at || new Date().toISOString(),
+    tier: r.tier, tokens: r.tokens, by: r.by || r.model || "", paid: r.paid || "",
+    plan: r.plan && typeof r.plan === "object" ? Object.assign({}, r.plan) : null,
+    drafts: aiItems331(r, "draft"), proposals: aiItems331(r, "proposal")};
+  if(!old) return msg;
+  for(const k of ["drafts", "proposals"]) for(const x of msg[k] || []){
+    const o = (Array.isArray(old[k]) ? old[k] : []).find(y => y && y.id && y.id === x.id);
+    if(!o) continue;
+    if(o.pend && live && live(o.pend) && !x.done){ x.done = o.done; x.pend = o.pend; x.refused = null; }
+    else if(o.refused && !o.pend && !x.done && !x.refused) x.refused = o.refused;
+    if(!x.done && (o.edited || o.editing)){ x.t = o.t; x.editing = !!o.editing; x.edited = !!o.edited; }
+  }
+  if(msg.plan && old.plan && old.plan.id === msg.plan.id){
+    if(old.plan.done && !msg.plan.done){ msg.plan.done = old.plan.done; if(old.plan.wait) msg.plan.wait = old.plan.wait; }
+    if(old.plan.pend && live && live(old.plan.pend)) msg.plan.pend = old.plan.pend;
+    if(old.plan.refused && !msg.plan.done) msg.plan.refused = old.plan.refused;
+    msg.seen = old.seen;
+  }
+  return msg;
+}
+// the refinement plans (export/status.json exarch.plans) whose chat the drawer shows or re-reads: a new one once it is
+// ready (a cleared or archived one only after its next revision), one shown here when its state or revision changed
+function planChats(rows, chats, gone){
+  const out = [];
+  for(const r of Array.isArray(rows) ? rows : []){
+    if(!r || r.source !== "refine" || !/^refplan[0-9]{1,6}$/.test(String(r.conv || ""))) continue;
+    const ref = r.conv + "." + (r.revision || 0), c = chats.find(x => x.conv === r.conv), st = ref + "." + r.state;
+    if(c ? c.ref !== st : r.state === "ready" && !gone.some(g => g === ref || g.startsWith(ref + "."))) out.push({conv: r.conv, ref: st, title: "Plan · " + String(r.card || r.title || r.id)});
+  }
+  return out;
+}
+// <<< drawer-items
+function aiRevise(c, m, p){ ai.revise = {conv: c.conv, n: m.n, id: String(p.id || "")}; $("#aiplan").checked = true; const q = $("#aiq"); q.placeholder = "Say what to change in the plan"; q.focus(); }
+function aiUnmove(c, m){   // a message moved from the wrong chat goes back where it was asked
+  const from = ai.chats.find(x => x.conv === m.from), back = c.msgs.splice(c.msgs.indexOf(m), 3).slice(1);
+  if(from){ from.msgs = from.msgs.filter(x => !(x.role === "moved" && x.n === m.n && x.from === c.conv)); from.msgs.push(...back); from.hidden = false; }
+  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: "unmove", n: m.n, to: m.from || ""});
+  m.undo = false; aiDraw();
 }
 async function aiAsk(text){
-  if(!conn || readOnly){ toast("The assistant needs a token that can write to the board data."); return; }
-  const c = aiConv(); if(!c || c.busy) return;
-  const history = c.msgs.filter(m => !m.wait).slice(-12).map(m => ({role: m.role, text: m.text}));
-  const n = ++c.n, conv = c.conv, live = () => ai.convs.includes(c);
-  c.msgs.push({role: "user", text}); c.msgs.push({role: "assistant", text: "Thinking…", wait: true}); c.busy = true; aiDraw();
-  const doc = {conv, n, text, history, ts: new Date().toISOString()};
-  const fin = (t, cards) => { if(!live()) return; const w = c.msgs.findIndex(m => m.wait);   // into its own tab, shown or not
-    if(w >= 0) c.msgs[w] = {role: "assistant", text: t, cards: cards || []}; c.busy = false; aiDraw(); };
+  if(!conn || readOnly){ toast("Exarch AI needs a token that can write to the board data."); return; }
+  aiSync();   // another tab may have asked in this chat: its messages first, so this one takes the next number
+  const c = aiConv(); if(!c) return;
+  const history = c.msgs.filter(m => (m.role === "user" || m.role === "assistant") && !m.wait).slice(-12).map(m => ({role: m.role, text: String(m.text || "").slice(0, 2000)}));   // the desk's limit (hub/exarch/desk.py TEXT_MAX)
+  const n = ++c.n, at = new Date().toISOString();
+  c.msgs.push({role: "user", text, at, n}); c.msgs.push({role: "assistant", text: "", wait: true, n, sent: at, at});
+  aiDraw.jump = true; aiDraw();
+  const doc = {conv: c.conv, n, text, history, ts: at, plan: $("#aiplan").checked, chat: c.kind};
+  if(c.kind === "lead"){ doc.lead = c.lead; doc.project = c.project; }
+  if(ai.revise && ai.revise.conv === c.conv){ doc.revise = ai.revise; const pm = c.msgs.find(m => m.plan && m.n === ai.revise.n); if(pm) pm.plan.done = "revise"; ai.revise = null; }
   try{
-    await gh(`contents/inbox/assistant/${conv}__${n}.json`, {method: "PUT",
-      body: {message: `assistant: ${conv} ${n}\n\nHub-Source: user\nHub-Machine: phone`, content: b64(JSON.stringify(doc) + "\n"), branch: branch()}});
-  }catch(e){ fin("The question could not be sent (" + (e.status || "offline") + ")."); return; }
-  const until = Date.now() + 6 * 60 * 1000;
-  while(Date.now() < until && live()){
-    await new Promise(r => setTimeout(r, 4000));
-    try{
-      const d = await (await gh(`contents/export/assistant/${conv}.json?ref=${branch()}`, {raw: true})).json();
-      const r = (d.replies || []).find(x => x.n === n);
-      if(r){ fin(r.text, r.cards); return; }
-    }catch(e){ /* not written yet (404), or a blip: look again */ }
-  }
-  fin("No answer yet. The node's local model may be busy or off; ask again later.");
+    const send = exReady() ? await exSealAsk(c, doc) : doc;   // HUB338: encrypted
+    await gh(`contents/inbox/assistant/${c.conv}__${n}.json`, {method: "PUT",
+      body: {message: `assistant: ${c.conv} ${n}\n\nHub-Source: user\nHub-Machine: phone`, content: b64(JSON.stringify(send) + "\n"), branch: branch()}});
+  }catch(e){ aiLand(c, n, {text: "The message could not be sent (" + (e.status || e.why || "offline") + ")."}); return; }
+  aiPoll(c.conv);
 }
-// HUB254: the panel grows out of the button (and shrinks back into it); its header lines up with the button
+function aiLand(c, n, r){   // a reply into its own chat (shown or not); a moved message goes to the chat it belongs in
+  const w = c.msgs.findIndex(m => m.wait && m.n === n);
+  if(r.queued){   // HUB329: the desk's "No answer yet" reply: the waiting message says why and goes on waiting
+    if(w >= 0){ c.msgs[w].late = true; c.msgs[w].queued = String(r.why || (typeof r.queued === "string" ? r.queued : "") || ""); } aiDraw(); return; }
+  const msg = aiReplyMsg(Object.assign({}, r, {n}));
+  const mv = r.moved && typeof r.moved === "object" ? r.moved : null;
+  const to = mv ? ai.chats.find(x => x !== c && (mv.lead ? x.kind === "lead" && x.lead === mv.lead && chatLeads().includes(x.lead) : mv.chat === "exarch" ? x.kind === "exarch" : x.kind === "user")) : null;
+  if(to){   // EXARCH F: "Moved to colplus-lead" in the chat it was asked in, and the message with its answer in the other
+    const q = c.msgs.find(m => m.role === "user" && m.n === n);
+    if(w >= 0) c.msgs.splice(w, 1);
+    if(q) c.msgs.splice(c.msgs.indexOf(q), 1);
+    c.msgs.push({role: "moved", n, text: "Moved to " + chatName(to) + (mv.why ? ": " + mv.why : "") + ".", at: msg.at, from: to.conv, undo: false});
+    to.msgs.push({role: "moved", n, text: "Moved here from \"" + chatName(c) + "\"" + (mv.why ? ": " + mv.why : "") + ".", at: msg.at, from: c.conv, undo: true});
+    if(q) to.msgs.push(q);
+    to.msgs.push(msg); to.hidden = false;
+  } else {
+    if(w >= 0) c.msgs[w] = msg; else c.msgs.push(msg);
+    c.hidden = false;   // a hidden chat shows again when a new message arrives in it
+  }
+  const where = to || c;
+  if(notifyKind(msg)) notify("Plan ready to approve", (msg.plan && msg.plan.title ? msg.plan.title + ": " : "") + msg.text, where.conv);
+  aiDraw();
+}
+async function aiPoll(conv){   // every 4 s while waiting (every 30 s once late); a late answer still lands for an hour
+  if(ai.polling.has(conv)) return;
+  ai.polling.add(conv);
+  try{
+    for(;;){
+      const c = ai.chats.find(x => x.conv === conv); if(!c || !conn) return;
+      const waits = c.msgs.filter(m => m.wait); if(!waits.length) return;
+      const oldest = Math.min(...waits.map(m => Date.parse(m.sent || m.at) || Date.now()));
+      const last = Date.now() - oldest > AI_POLL_UNTIL_MS;   // an answer queued for hours: one look per opened drawer or page
+      if(!last) await new Promise(r => setTimeout(r, Date.now() - oldest > AI_WAIT_MS ? 30000 : 4000));
+      try{
+        const gen = ai.gen, got = await aiFetch(c, r => c.msgs.some(m => m.wait && m.n === r.n));
+        if(gen !== ai.gen) return;
+        for(const r of got) aiLand(c, r.n, r);
+      }catch(e){ /* not written yet (404), or a blip: look again */ }
+      for(const m of c.msgs) if(m.wait && !m.late && Date.now() - (Date.parse(m.sent || m.at) || Date.now()) > AI_WAIT_MS){ m.late = true; aiDraw(); }
+      if(last) return;
+    }
+  } finally { ai.polling.delete(conv); }
+}
+async function aiFetch(c, want){   // the chat's replies of its export file (those `want` names)
+  const d = await (await gh(`contents/export/assistant/${c.conv}.json?ref=${branch()}`, {raw: true})).json();
+  const out = [];
+  for(const r of (Array.isArray(d.replies) ? d.replies : []).filter(r => r && r.n != null)){
+    if(!r.ct){ if(want(r)) out.push(r); continue; }
+    if(!want(Object.assign({plan: {done: true}}, r))) continue;   // a sealed reply shows only n, at, tier: opened, then asked again
+    const o = await exOpenReply(c, d, r);
+    if(want(o)) out.push(o);
+  }
+  return out;
+}
+async function aiReread(c){   // HUB330: after Approve, until the reply shows the plan settled with its items (they come with the next node cycle)
+  const key = "plan:" + c.conv, t0 = Date.now(), gen = ai.gen, waits = () => gen === ai.gen ? c.msgs.filter(m => m.plan && m.plan.wait) : [];
+  if(ai.polling.has(key) || !conn) return;
+  ai.polling.add(key);
+  try{
+    while(conn && waits().length && Date.now() - t0 < 15 * 60 * 1000){
+      await new Promise(r => setTimeout(r, Date.now() - t0 > 2 * 60 * 1000 ? 30000 : 8000));
+      try{
+        for(const r of await aiFetch(c, r => waits().some(m => m.n === r.n) && r.plan && r.plan.done)){
+          const i = c.msgs.findIndex(m => m.plan && m.plan.wait && m.n === r.n);
+          if(i >= 0 && !r.failed) c.msgs[i] = aiReplyMsg(r, c.msgs[i], id => changes.has(id));
+        }
+      }catch(e){ /* a blip: look again */ }
+      if(gen !== ai.gen) return;
+      aiDraw();
+    }
+  } finally { ai.polling.delete(key); }
+}
+async function aiPlans(){   // HUB330: the plans Exarch AI drafted for cards in refinement, each in a chat of its own (refplan<N>)
+  const x = exarchNow().x;
+  if(!x || !conn || ai.plansBusy) return;
+  ai.plansBusy = true;
+  const gen = ai.gen;
+  try{
+    if(exReady()){ await exLoad(false); exGone(); if(!exPaired() || gen !== ai.gen) return; }   // HUB338: locked until this device is paired
+    for(const c of ai.chats) if(c.msgs.some(m => m.plan && m.plan.wait) && !ai.polling.has("plan:" + c.conv)) aiRefresh(c);   // an approved plan's cards, also long after
+    for(const p of planChats(x.plans, ai.chats, ai.gone)){
+      let c = ai.chats.find(y => y.conv === p.conv) || {conv: p.conv, kind: "user", lead: "", project: "", title: p.title, n: 0, msgs: [], hidden: false, ref: ""};
+      let rs = [];
+      try{ rs = (await aiFetch(c, () => true)).filter(r => !r.failed); }catch(e){ continue; }   // not written yet (404), or a blip: the next export asks again
+      if(gen !== ai.gen) return;
+      if(!rs.length) continue;
+      c = ai.chats.find(y => y.conv === p.conv) || c;   // another tab's may have come in meanwhile
+      if(!ai.chats.includes(c)) ai.chats.push(c);
+      for(const r of rs){
+        if(r.queued) continue;
+        const i = c.msgs.findIndex(m => m.role === "assistant" && m.n === r.n);
+        if(i < 0 || c.msgs[i].wait) aiLand(c, r.n, r); else c.msgs[i] = aiReplyMsg(r, c.msgs[i], id => changes.has(id));
+        c.n = Math.max(c.n, Number(r.n) || 0);
+      }
+      c.ref = p.ref;
+      aiDraw();
+    }
+  } finally { ai.plansBusy = false; }
+}
+function aiDrawStatus(s){
+  const f = ai.hfilt, seg = el("div",{class:"seg", role:"group", "aria-label":"Show"}, ...[["all", "All"], ["user", "Waiting on the user"], ["fail", "Failures"]].map(([k, name]) =>
+    el("button",{type:"button", "aria-pressed":String(f === k), onclick:() => { ai.hfilt = k; aiDraw(); }}, name)));
+  const lines = histShown(s.history, f);
+  $("#aistatus").replaceChildren(seg, ...(lines.length ? lines.map(h => el("div",{class:"hl" + (h.tag === "fail" ? " err" : "")},
+    el("span",{class:"t"}, h.at ? new Date(h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""), aiCardText(el("span",{}), h.text || "", h.card ? [h.card] : []))) :
+    [el("p",{class:"note"}, s.x ? "Nothing to show here." : "No Exarch AI status in the export yet.")]));
+}
+function aiDrawArch(){
+  const box = $("#aiarch"), list = ai.arch;
+  const one = c => el("div",{class:"arow"}, el("span",{style:"flex:1"}, el("b",{}, chatIcon(c), " ", c.kind === "lead" ? c.lead : chatName(c)), el("br"),
+      el("span",{class:"small mu"}, (c.kind === "user" ? "Chat" : c.kind === "lead" ? "Lead" : "Exarch") + " · " + c.msgs.length + (c.msgs.length === 1 ? " message" : " messages") + " · archived " + fmtTime(c.archived))),
+    el("button",{type:"button", class:"small", onclick:() => { ai.arch.splice(ai.arch.indexOf(c), 1);
+      if(c.kind === "user"){ ai.chats.push(Object.assign({}, c, {archived: "", hidden: false})); ai.cur = c.conv; }
+      else { const live = ai.chats.find(x => x.kind === c.kind && x.lead === c.lead); if(live){ live.msgs = c.msgs.concat(live.msgs); ai.cur = live.conv; } }
+      ai.tab = "chat"; aiDraw(); }}, "Restore"),
+    el("button",{type:"button", class:"small", onclick:() => { ai.confirm = "a:" + c.conv; aiDraw(); }}, "Clear"));
+  const conf = ai.confirm && ai.confirm.startsWith("a:") ? ai.confirm.slice(2) : "";
+  const ask = (text, yes, go) => el("div",{class:"confirm"}, el("span",{}, text), el("button",{type:"button", class:"pbtn", onclick:go}, yes), el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel"));
+  const rows = [];
+  for(const c of list){ rows.push(one(c)); if(conf === c.conv) rows.push(ask("Clear this archived chat? This cannot be undone.", "Clear", () => { ai.arch.splice(ai.arch.indexOf(c), 1); ai.confirm = ""; aiDraw(); })); }
+  box.replaceChildren(el("div",{class:"row", style:"justify-content:space-between"}, el("span",{class:"small mu"}, "Kept 90 days; never sent to the AI."),
+      list.length ? el("button",{type:"button", class:"small", onclick:() => { ai.confirm = "all"; aiDraw(); }}, "Clear all") : null),
+    ai.confirm === "all" ? ask("Clear all " + list.length + " archived chats? This cannot be undone.", "Clear all", () => { ai.arch = []; ai.confirm = ""; aiDraw(); }) : null,
+    ...(rows.length ? rows : [el("p",{class:"note"}, "No archived chats.")]));
+}
+function aiRestart(){   // what an earlier visit still waits for: answers, and an approved plan's items
+  for(const c of ai.chats){
+    if(c.msgs.some(m => m.wait)) aiPoll(c.conv);
+    if(c.msgs.some(m => m.plan && m.plan.wait)) aiReread(c);
+  }
+}
+// ---- open and close: the drawer grows out of the compass (HUB254) and shrinks back into it
 function aiClip(r, pr){ const px = x => Math.max(0, x) + "px";
   return "inset(" + px(r.top - pr.top) + " " + px(pr.right - r.right) + " " + px(pr.bottom - r.bottom) + " " + px(r.left - pr.left) + " round 999px)"; }
 function aiOpen(v){
@@ -5702,7 +6626,7 @@ function aiOpen(v){
   const still = !p.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(!v){
     if(p.hidden) return;
-    const done = () => { p.hidden = true; document.body.classList.remove("ai-open"); b.setAttribute("aria-expanded", "false"); b.focus(); };
+    const done = () => { p.hidden = true; document.body.classList.remove("ai-open"); b.setAttribute("aria-expanded", "false"); b.focus(); renderExarchHeader(); };
     if(still || !ai.rect) return done();
     p.animate([{clipPath:"inset(0px 0px 0px 0px round 0px)"}, {clipPath:aiClip(ai.rect, p.getBoundingClientRect())}],
       {duration:200, easing:"ease-in"}).onfinish = done;
@@ -5713,14 +6637,322 @@ function aiOpen(v){
   p.hidden = false; b.setAttribute("aria-expanded", "true"); document.body.classList.add("ai-open");
   if(!still) p.animate([{clipPath:aiClip(r, p.getBoundingClientRect())}, {clipPath:"inset(0px 0px 0px 0px round 0px)"}],
     {duration:280, easing:"cubic-bezier(.2,.8,.2,1)"});
-  if(!aiConv()) aiNewConv(); else aiDraw();
-  $("#aiq").focus();
+  exStart();
+  aiDraw.jump = true; aiDraw();
+  aiRestart();
+  const cur = aiConv(); if(cur && !exLocked() && cur.msgs.some(m => itemsOf(m).some(x => !x.done))) aiRefresh(cur);   // another device may have tapped them
+  if(ai.tab === "chat") $("#aiq").focus();
 }
+// ---- the drawer's width (desktop only): its left edge is a drag handle, 320 px to 70% of the window, kept per device
+function dwClamp(w){ return Math.round(Math.max(DW_MIN, Math.min(w, Math.max(DW_MIN, innerWidth * DW_MAX)))); }
+function dwSet(w, keep){ const v = dwClamp(w); document.documentElement.style.setProperty("--dw", v + "px"); if(keep) ls(DW_KEY, v); aiFade(); }
+dwSet(Number(ls(DW_KEY)) || DW_DEF, false);
+addEventListener("resize", () => dwSet(Number(ls(DW_KEY)) || DW_DEF, false));
+(() => { const h = $("#airesize");
+  h.addEventListener("pointerdown", ev => {
+    if(ev.button) return; ev.preventDefault(); h.classList.add("on"); document.body.classList.add("dwresizing"); try{ h.setPointerCapture(ev.pointerId); }catch(e){}
+    const move = e => dwSet(innerWidth - e.clientX, false);
+    const up = e => { h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up); h.removeEventListener("pointercancel", up);
+      h.classList.remove("on"); document.body.classList.remove("dwresizing"); dwSet(innerWidth - e.clientX, true); };
+    h.addEventListener("pointermove", move); h.addEventListener("pointerup", up); h.addEventListener("pointercancel", up);
+  });
+  h.addEventListener("keydown", ev => { const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--dw")) || DW_DEF;
+    if(ev.key === "ArrowLeft"){ ev.preventDefault(); dwSet(w + 20, true); } else if(ev.key === "ArrowRight"){ ev.preventDefault(); dwSet(w - 20, true); } });
+  h.addEventListener("dblclick", () => dwSet(DW_DEF, true));
+})();
+// the tab row scrolls sideways: a wheel turns into a sideways scroll, a mouse drag on the row's free space pans it
+(() => { const s = $("#aitabs");
+  s.addEventListener("wheel", ev => { if(Math.abs(ev.deltaY) > Math.abs(ev.deltaX) && s.scrollWidth > s.clientWidth){ ev.preventDefault(); s.scrollLeft += ev.deltaY; } }, {passive:false});
+  s.addEventListener("scroll", aiFade, {passive:true});
+  s.addEventListener("pointerdown", ev => {
+    if(ev.pointerType !== "mouse" || ev.button || ev.target.closest(".ct")) return;
+    const x0 = ev.clientX, l0 = s.scrollLeft;
+    const move = e => { s.scrollLeft = l0 - (e.clientX - x0); };
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+})();
 $("#aibtn").addEventListener("click", () => aiOpen($("#aipanel").hidden));
 $("#aiclose").addEventListener("click", () => aiOpen(false));
-$("#ainew").addEventListener("click", aiNewConv);
-$("#aiend").addEventListener("click", aiEndConv);
-$("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(); const c = aiConv(); if(!t || !c || c.busy) return; $("#aiq").value = ""; aiAsk(t); });
+$("#ainew").addEventListener("click", aiNewChat);
+$("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
+for(const t of ["chat", "status", "arch"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
+$("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
+// ---------- HUB338: encrypted chats (docs/EXARCH.md section K, mock-ups section 6). This device makes its own
+// RSA-OAEP key pair with WebCrypto; the private key is not extractable and stays in this browser's IndexedDB. Each
+// chat has an AES-256-GCM content key, wrapped by the node for itself and every paired device, so the board data holds
+// chat text only as ciphertext. Pairing: this device asks with a change file (card "devices"); the node answers with a
+// salt in export/devices.json and both devices show the code made from that salt and this device's key; the user
+// confirms it on a paired device (or in a terminal of the node's machine). Board, Status and Decisions don't depend on this.
+// >>> ex-crypto (tests/test_app.py runs this block against hub/exarch/crypto.py)
+const EX_DB = "hub-exarch", EX_POLL = 10000, EX_ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const ex = {kp: null, jwk: null, id: "", doc: null, at: 0, asked: 0, code: "", codes: {}, chats: 0, chatsAt: 0, was: false,
+            used: "", sig: "", timer: null, note: "", how: false, loads: 0, missing: 0, missLoad: 0, impAt: 0};
+const EX_IMP = "hub.exarch.imported";   // the device id the other devices' chats were imported for
+const EX_PAIRED = "hub.exarch.paired";   // the device id this browser was paired as: gone from the list later, it was removed
+const exEnc = new TextEncoder();
+function exUb(s){ s = String(s || "").replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(s + "===".slice((s.length + 3) % 4)), ch => ch.charCodeAt(0)); }
+function exBe(buf){ let bin = ""; for(const x of new Uint8Array(buf)) bin += String.fromCharCode(x);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function exReady(){ return !!(window.crypto && crypto.subtle && window.indexedDB); }
+function exIdb(mode, fn){ return new Promise((ok, no) => { const r = indexedDB.open(EX_DB, 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("keys");
+  r.onerror = () => no(r.error);
+  r.onsuccess = () => { const t = r.result.transaction("keys", mode), q = fn(t.objectStore("keys"));
+    t.oncomplete = () => { r.result.close(); ok(q && q.result); };
+    t.onerror = t.onabort = () => { r.result.close(); no(t.error); }; }; }); }
+let exKeyWork = null;
+function exKeys(){                    // this device's key pair, one for every caller and every tab
+  if(ex.kp) return Promise.resolve(ex.kp);
+  if(!exKeyWork){ exKeyWork = exKeyMake(); exKeyWork.catch(() => {}).then(() => { exKeyWork = null; }); }
+  return exKeyWork;
+}
+function exKeyPut(kp){                // the stored key, or this one stored, in one transaction: another tab's key wins
+  return exIdb("readwrite", st => { const out = {result: null}, g = st.get("device");
+    g.onsuccess = () => { if(g.result && g.result.privateKey) out.result = g.result; else { st.put(kp, "device"); out.result = kp; } };
+    return out; });
+}
+async function exKeyMake(){
+  let kp = await exIdb("readonly", st => st.get("device"));   // a key that can't be read is an error, never written over
+  if(!kp || !kp.privateKey){                       // first visit, or the browser's data was cleared: a new key, paired again
+    kp = await exKeyPut(await crypto.subtle.generateKey({name: "RSA-OAEP", modulusLength: 3072, publicExponent: new Uint8Array([1, 0, 1]),
+                                                         hash: "SHA-256"}, false, ["encrypt", "decrypt"]));
+  }
+  const j = await crypto.subtle.exportKey("jwk", kp.publicKey);
+  ex.jwk = {kty: "RSA", n: j.n, e: j.e}; ex.id = await exDevId(ex.jwk); ex.kp = kp;
+  return kp;
+}
+async function exSha(bytes){ return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)); }
+function exCanon(jwk){ return "RSA." + jwk.n + "." + jwk.e; }
+async function exDevId(jwk){ const h = await exSha(exEnc.encode(exCanon(jwk)));
+  return "d" + [...h].map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 12); }
+async function exCode(salt, jwk){     // 30 bits of SHA-256(the node's salt || the key), Crockford base32: "7K4-Q9M"
+  const s = exUb(salt), c = exEnc.encode(exCanon(jwk)), all = new Uint8Array(s.length + c.length);
+  all.set(s); all.set(c, s.length);
+  const h = await exSha(all), v = ((h[0] * 16777216) + (h[1] << 16) + (h[2] << 8) + h[3]) >>> 2;
+  let out = ""; for(let i = 0; i < 6; i++) out += EX_ALPHA[(v >>> (5 * (5 - i))) & 31];
+  return out.slice(0, 3) + "-" + out.slice(3);
+}
+function exAad(conv, n, side){ return exEnc.encode(conv + ":" + n + ":" + side); }
+async function exAes(raw){ return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]); }
+async function exSeal(raw, conv, n, side, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: "AES-GCM", iv, additionalData: exAad(conv, n, side)}, await exAes(raw),
+                                         exEnc.encode(JSON.stringify(obj)));
+  return {iv: exBe(iv), ct: exBe(ct)};
+}
+async function exUnseal(raw, conv, n, side, rec){
+  const p = await crypto.subtle.decrypt({name: "AES-GCM", iv: exUb(rec.iv), additionalData: exAad(conv, n, side)},
+                                        await exAes(raw), exUb(rec.ct));
+  return JSON.parse(new TextDecoder().decode(p));
+}
+async function exUnwrap(w){ await exKeys(); return new Uint8Array(await crypto.subtle.decrypt({name: "RSA-OAEP"}, ex.kp.privateKey, exUb(w))); }
+async function exWrapNode(raw){
+  const j = ex.doc.node.jwk;
+  const k = await crypto.subtle.importKey("jwk", {kty: "RSA", n: j.n, e: j.e, alg: "RSA-OAEP-256", ext: true},
+                                          {name: "RSA-OAEP", hash: "SHA-256"}, false, ["encrypt"]);
+  return exBe(await crypto.subtle.encrypt({name: "RSA-OAEP"}, k, raw));
+}
+function exMine(){ return ex.doc && ex.id ? (ex.doc.devices || []).find(d => d.id === ex.id) || null : null; }
+function exPaired(){ return !!exMine(); }
+function exLocked(){ return !!conn && exReady() && !exPaired(); }
+function exLive(p){ return Date.parse(p.expires || "") > Date.now(); }
+async function exLoad(force){
+  if(!conn || !exReady()) return ex.doc;
+  if(!force && Date.now() - ex.at < EX_POLL) return ex.doc;
+  ex.at = Date.now();
+  try{ await exKeys(); }catch(e){ return ex.doc; }
+  try{ ex.doc = await (await gh(`contents/export/devices.json?ref=${branch()}`, {raw: true})).json(); ex.loads++; }
+  catch(e){ if(e.status === 404) ex.doc = null; }
+  return ex.doc;
+}
+// Whether this browser's device was removed: it was paired as `paired`, and two device lists in a row (`loads` counts those
+// read; a list that could not be read counts for nothing) no longer name it.
+function exMissing(paired){
+  if(!ex.id || paired !== ex.id || !ex.doc || !Array.isArray(ex.doc.devices) || exPaired()){ ex.missing = 0; ex.missLoad = ex.loads; return false; }
+  if(ex.loads !== ex.missLoad){ ex.missing++; ex.missLoad = ex.loads; }
+  return ex.missing >= 2;
+}
+async function exSealAsk(c, doc){     // the message as the node reads it: everything but its ids sealed, the key for the node
+  await exLoad(false);
+  if(!exPaired()) throw Object.assign(new Error("not paired"), {why: "this device is not paired"});
+  // the key the chat's file has now (another device may have written it, or removing a device changed it), else the one
+  // kept here (a chat with no answer yet), else a new one
+  try{
+    const d = await (await gh(`contents/export/assistant/${doc.conv}.json?ref=${branch()}`, {raw: true})).json();
+    const w = d.enc ? (d.enc.keys || {})[ex.id] : null;
+    if(d.enc) c.k = w ? exBe(await exUnwrap(w)) : "";
+    if(d.enc && !w) throw Object.assign(new Error("no key"), {why: "this chat is not readable by this device yet, try again in a minute"});
+  }catch(e){ if(e.status !== 404 && !c.k) throw e; }
+  if(!c.k) c.k = exBe(crypto.getRandomValues(new Uint8Array(32)));
+  const {conv, n, ts, ...body} = doc, raw = exUb(c.k), enc = await exSeal(raw, conv, n, "q", body);
+  enc.keys = {node: await exWrapNode(raw)};
+  return {conv: doc.conv, n: doc.n, ts: doc.ts, from: ex.id, enc};
+}
+async function exChatKey(c, d){       // the chat's key: the one kept here, else (a re-keyed or imported chat) the file's
+  await exKeys();
+  if(c.k) return exUb(c.k);
+  const w = ((d.enc || {}).keys || {})[ex.id];
+  if(!w) throw new Error("no key for this device");
+  const raw = await exUnwrap(w); c.k = exBe(raw); return raw;
+}
+async function exOpenReply(c, d, r){   // a sealed reply with all its fields (text, cards, plan, items, queued, moved, ...)
+  for(let i = 0; i < 2; i++){
+    try{ const o = await exUnseal(await exChatKey(c, d), d.conv || c.conv, r.n, "a", r);
+      return Object.assign({}, o, {n: r.n, at: r.at, tier: r.tier}); }
+    catch(e){ c.k = ""; }             // a key kept from before a re-key: take the file's once
+  }
+  return {n: r.n, at: r.at, tier: r.tier, text: "This answer could not be opened on this device.", cards: [], failed: true};
+}
+// <<< ex-crypto
+async function exImport(){            // the chats other devices had, opened for this one once it is paired: {got, ok (all of them read)}
+  let list = [];
+  const gen = ai.gen;
+  try{ list = await (await gh(`contents/export/assistant?ref=${branch()}`)).json(); }catch(e){ if(e.status === 404) return {got: 0, ok: true}; return {got: 0, ok: false}; }
+  let got = 0, ok = true;
+  for(const f of (Array.isArray(list) ? list : []).filter(f => /\.json$/.test(f.name || ""))){
+    const conv = f.name.replace(/\.json$/, "");
+    if(!AI_CONV.test(conv) || /^refplan/.test(conv) || ai.chats.concat(ai.arch).some(c => c.conv === conv)) continue;   // (aiPlans shows the refinement plans)
+    try{
+      const c = {conv, kind: "user", lead: "", project: "", title: "", n: 0, k: "", msgs: [], hidden: false, ref: ""};
+      for(const r of (await aiFetch(c, () => true)).filter(r => !r.failed && !r.queued)){
+        if(!c.k) break;                // a plain chat: not one of the encrypted ones
+        if(r.q) c.msgs.push({role: "user", text: String(r.q), at: r.at, n: r.n});
+        c.msgs.push(Object.assign(aiReplyMsg(r), {seen: true}));
+        c.n = Math.max(c.n, Number(r.n) || 0);
+      }
+      if(gen !== ai.gen) return {got: 0, ok: false};
+      if(c.msgs.length && !ai.chats.concat(ai.arch).some(x => x.conv === conv)){ ai.chats.push(c); got++; }
+    }catch(e){ if(exBlip(e)) ok = false; /* else a chat this device can't open, or one cleared meanwhile: stays out */ }
+  }
+  return {got, ok};
+}
+function exBlip(e){ return e.status ? e.status !== 404 : e instanceof TypeError; }   // GitHub or the network, not the chat: worth another try
+function exGone(){                    // this device was removed on another: what it kept of the chats goes
+  if(exPaired() && ls(EX_PAIRED) !== ex.id) ls(EX_PAIRED, ex.id);
+  if(!exMissing(ls(EX_PAIRED))) return;
+  ex.missing = 0; aiClear(); toast("This device was removed: its chats are gone from this browser.");
+}
+function exName(){                    // "Chrome on Windows": what the confirming device shows (no personal data)
+  const u = navigator.userAgent || "";
+  const b = /Edg\//.test(u) ? "Edge" : /Firefox\//.test(u) ? "Firefox" : /Chrome\//.test(u) ? "Chrome" : /Safari\//.test(u) ? "Safari" : "A browser";
+  const os = /Android/.test(u) ? "Android" : /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Windows/.test(u) ? "Windows"
+           : /Mac OS X/.test(u) ? "Mac" : /Linux/.test(u) ? "Linux" : "";
+  const home = matchMedia("(display-mode: standalone)").matches ? " (home screen)" : "";
+  return b + (os ? " on " + os : "") + home;
+}
+async function exSend(value){
+  const name = "devices__device__" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const doc = {card: "devices", field: "device", value, ts: new Date().toISOString()};
+  await gh(`contents/inbox/phone/${name}.json`, {method: "PUT", body: {message: `phone: devices device\n\nHub-Source: user\nHub-Machine: phone`,
+                                                                       content: b64(JSON.stringify(doc) + "\n"), branch: branch()}});
+}
+async function exPair(){
+  if(!conn || readOnly){ toast("Pairing needs a token that can write to the board data."); return; }
+  try{ await exKeys(); await exSend({op: "pair", jwk: ex.jwk, name: exName()}); ex.asked = Date.now(); }
+  catch(e){ toast("The pairing request could not be sent (" + (e.status || "offline") + ")."); }
+  exTick(true);
+}
+async function exCancel(){
+  ex.asked = 0; ex.code = "";
+  try{ await exSend({op: "cancel", jwk: ex.jwk}); }catch(e){ /* it expires by itself in 10 minutes */ }
+  aiDraw();
+}
+async function exAct(op, id, code){   // confirm / refuse / remove, proved with this device's one-use nonce
+  const me = exMine();
+  if(!me || !me.nonce_w) return;
+  if(ex.used === me.nonce_w){ toast("The node has not taken the last device change yet; try again in a minute."); return; }
+  try{
+    const nonce = await exUnwrap(me.nonce_w);
+    const k = await crypto.subtle.importKey("raw", nonce, {name: "HMAC", hash: "SHA-256"}, false, ["sign"]);
+    const proof = exBe(await crypto.subtle.sign("HMAC", k, exEnc.encode([op, ex.id, id, code || ""].join("|"))));
+    await exSend({op, by: ex.id, id, code: code || "", proof});
+    ex.used = me.nonce_w;
+    toast(op === "confirm" ? "Pairing it: the node re-encrypts the chats for it." : op === "refuse" ? "Refused." : "Removing the device.");
+  }catch(e){ toast("The change could not be sent (" + (e.status || "offline") + ")."); }
+}
+async function exTick(force){         // the device state from the export, the codes, and the panel redrawn on a change
+  if(!conn || !exReady()) return;
+  await exLoad(!!force);
+  exGone();
+  const doc = ex.doc || {}, pend = (doc.pending || []).filter(exLive);
+  ex.codes = {};
+  for(const p of pend){ try{ ex.codes[p.id] = await exCode(p.salt, p.jwk); }catch(e){ /* a broken row is left out */ } }
+  const mine = pend.find(p => p.id === ex.id);
+  ex.code = mine ? ex.codes[mine.id] || "" : "";
+  if(ex.asked && !mine && !exPaired() && Date.now() - ex.asked > 11 * 60 * 1000) exPair();   // expired: ask again, a new code
+  if(!exPaired() && Date.now() - ex.chatsAt > 60000){
+    ex.chatsAt = Date.now();
+    try{ const l = await (await gh(`contents/export/assistant?ref=${branch()}`)).json(); ex.chats = Array.isArray(l) ? l.length : 0; }catch(e){ ex.chats = 0; }
+  }
+  if(exPaired() && ls(EX_IMP) !== ex.id && !ex.busy && Date.now() - ex.impAt > 60000){   // just paired (also while the page was closed): the other devices' chats
+    ex.busy = true; ex.impAt = Date.now();   // (one that could not read everything is tried again after a minute)
+    const gen = ai.gen, {got: n, ok} = await exImport(), text = n + " chat" + (n === 1 ? "" : "s") + " unlocked" + (ok ? "" : ", more to come");
+    ex.asked = 0; ex.busy = false;
+    if(gen === ai.gen){
+      if(ok) ls(EX_IMP, ex.id);
+      ex.note = "Paired at " + new Date().toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) + " · " + text;
+      if(n) aiSave();
+      if(ok && $("#aipanel").hidden) toast("Paired · " + text);
+      aiPlans();
+    }
+  }
+  ex.was = exPaired();
+  const sig = JSON.stringify([ex.was, ex.code, ex.codes, (doc.devices || []).map(d => [d.id, d.last_seen]), ex.chats, !!ex.asked, ex.id, ex.note]);
+  if(sig !== ex.sig){ ex.sig = sig; if(!$("#aipanel").hidden) aiDraw(); if(!$("#syncpop").hidden) renderSyncPop(); }
+}
+function exDay(s){ const t = Date.parse(s || ""); return isNaN(t) ? "" : new Date(t).toLocaleDateString(undefined, {day: "numeric", month: "short"}); }
+function exStart(){                   // the devices are read while the drawer or the Sync popup is open, or a request is on its way
+  if(ex.timer || !conn || !exReady()) return;
+  ex.timer = setInterval(() => { if(!$("#aipanel").hidden || !$("#syncpop").hidden || ex.asked) exTick(false); }, EX_POLL);
+  exTick(true);
+}
+function exLockCards(){               // mock-up section 6: what the chat shows on a device that is not paired
+  const doc = ex.doc || {};
+  if(!ex.id) return [el("div",{class:"aihint"}, "Preparing this device's key…")];
+  const kids = [el("span",{class:"row"}, ico("lock"), el("b",{}, "Pair this device to read the chats")),
+    el("span",{}, (doc.devices || []).length
+      ? "Chats are encrypted. Open the Hub on a device that is already paired: it will ask to confirm this code."
+      : "Chats are encrypted. No device is paired yet: confirm this code in a terminal of the node's machine (python -m hub.exarch.crypto confirm CODE).")];
+  if(ex.asked || ex.code) kids.push(el("div",{class:"excode"}, ex.code || "…"),
+    el("span",{class:"mu"}, ex.code ? "Waiting for a paired device… The code changes in 10 minutes." : "Getting a code from the node…"),
+    el("div",{class:"exrow"}, el("button",{type:"button", onclick:exCancel}, "Cancel")));
+  else kids.push(el("div",{class:"exrow"}, el("button",{type:"button", class:"p", onclick:exPair}, "Pair this device")));
+  return [el("div",{class:"expair"}, ...kids),
+    ex.chats ? el("div",{class:"exlocked row"}, ico("lock"), ex.chats + " chat" + (ex.chats === 1 ? "" : "s") + ", locked until this device is paired") : null].filter(Boolean);
+}
+function exConfirmCards(){            // on a paired device: each new device waiting for its code to be confirmed
+  if(!conn || !exReady() || !exPaired()) return [];
+  return ((ex.doc || {}).pending || []).filter(p => exLive(p) && p.id !== ex.id && ex.codes[p.id]).map(p => el("div",{style:"display:grid; gap:6px"},
+    el("span",{class:"row"}, ico("device"), el("b",{}, "A new device wants to read the chats")),
+    el("span",{class:"small"}, (p.name || "A device") + ", from " + new Date(Date.parse(p.at)).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})
+      + ". Check that this is the code it shows:"),
+    el("div",{class:"excode"}, ex.codes[p.id]),
+    el("span",{class:"row"}, el("button",{type:"button", class:"pbtn", disabled:readOnly ? true : null, onclick:() => exAct("confirm", p.id, ex.codes[p.id])}, "Codes match: pair it"),
+      el("button",{type:"button", disabled:readOnly ? true : null, onclick:() => exAct("refuse", p.id)}, "Refuse")),
+    el("span",{class:"small mu"}, "A code that does not match: refuse it.")));
+}
+$("#syncind").addEventListener("click", () => syncPopOpen());
+document.addEventListener("keydown", ev => { if(ev.key === "Escape" && !$("#syncpop").hidden){ syncPopOpen(false); $("#syncind").focus(); } });
+document.addEventListener("pointerdown", ev => { const p = $("#syncpop"); if(!p.hidden && !p.contains(ev.target) && !$("#syncind").contains(ev.target)) syncPopOpen(false); });
+renderExarchHeader();
+
+render();
+setInterval(() => { if (!dragId && !document.hidden && loaded) render(); }, 60000);   // keep "time in this column" and the ETAs current
+conn = loadConn();
+if (conn) pendLoad();                 // the changes of an earlier visit that the board has not shown yet
+// another tab of the App in this browser made or settled a change: both show the same
+window.addEventListener("storage", ev => { if (ev.key === PEND_KEY && conn){ pendLoad(); rebuild(); render(); saveState(); }
+  if (ev.key === cfgKey || ev.key === null){ if (conn && !loadConn()) disconnect(); }   // disconnected in another tab
+  if (ev.key === AI_KEY || ev.key === null){   // the chats changed, or were cleared, in another tab
+    if (ev.newValue === null && ev.key !== null) aiForget();
+    if (aiSync() || ev.newValue === null){ if (!$("#aipanel").hidden) aiDraw(); else renderExarchHeader(); }
+  }
+});
+if (conn) aiRestart();   // answers and an approved plan's items still on their way from an earlier visit
+if (conn){ setRO(false); startPolling(); } else showSetup("");
+
 </script>
 </html>
