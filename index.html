@@ -493,8 +493,8 @@ dl.facts dd{margin:0; overflow-wrap:anywhere}
 .meter span{display:block; height:100%; background:var(--c-done)}
 .tblwrap{overflow-x:auto}
 /* HUB105: the Gantt tab. The label column stays put (sticky) while the chart scrolls sideways inside its own box */
-#gantt{--glw:190px; --grow:26px; grid-template-columns:minmax(0,1fr)}
-#gantt > *{min-width:0}
+#gantt, #streams{--glw:190px; --grow:26px; grid-template-columns:minmax(0,1fr)}
+#gantt > *, #streams > *{min-width:0}
 .ghead{display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center}
 .ghead .pill{font-size:.78rem; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); font-variant-numeric:tabular-nums}
 .rels{display:grid; gap:6px; margin-bottom:14px}
@@ -559,6 +559,12 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .pacehelp.preview b{color:var(--pc, var(--accent))}
 /* HUB171/HUB173: the settable limits, each with what it caps and the suggested value */
 .limits{display:grid; gap:8px; max-width:860px}
+/* HUB388: the limits beside the pace (two columns where there is room; stacked on a phone) */
+.pacelim{display:grid; grid-template-columns:minmax(300px,560px) minmax(0,1fr); gap:6px 24px; align-items:start}
+.pacelim .palcol{display:grid; gap:6px; min-width:0; align-content:start}
+.pacelim .limbox h3{margin-top:0}
+.pacelim .limrow{grid-template-columns:1fr auto} .pacelim .limrow .limtext{grid-column:1 / -1}
+@media (max-width:900px){ .pacelim{grid-template-columns:minmax(0,1fr)} }
 .limrow{display:grid; grid-template-columns:minmax(150px,200px) auto 1fr; gap:6px 14px; align-items:start; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px}
 .limrow .limname{font-weight:600; padding-top:5px}
 .limrow .limval{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
@@ -586,6 +592,13 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gslice.past{background:var(--muted); opacity:.55}
 .glegend i.gpastsw{background:linear-gradient(90deg, var(--muted) 0 60%, color-mix(in srgb, var(--muted) 35%, transparent) 60%)}
 .gin{position:relative}
+/* HUB385: the Streams tab: a stream's label, its bars carry the card id and estimate; a planned (predicted) bar is dashed */
+.glab .gid{overflow:hidden; text-overflow:ellipsis}
+.glab.gstream.idle .gid, .glab.gstream.pred .gid{color:var(--muted); font-weight:500}
+.glab.gstream.pred{font-style:italic}
+.gbar.gs{color:var(--on-bar,#fff); font-size:.68rem; line-height:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 4px}
+.gbar.gs.planned{color:var(--ink)}
+.gbar.gs.pred{outline:2px dashed var(--accent); outline-offset:-2px}
 .grow{display:flex; height:var(--grow); border-bottom:1px solid var(--line)}
 /* HUB207: the axis row is no stacking context of its own (it was sticky, which lifted the lines over its Day scale
    cell), and each label cell covers its row's bottom border, so no line shows across the label column */
@@ -607,8 +620,11 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 /* HUB165, HUB166: one hue per theme (the theme's, else the epic's), in three shades: cards the brightest, epics in
    between, themes the darkest; a card's type is the ribbon in its bar's top left corner (the type's colour) */
 #gantt{--gs:58%; --gl-card:60%; --gl-epic:45%; --gl-theme:31%}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #gantt{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%} }
+#streams{--gs:58%; --gl-card:60%; --gl-epic:45%; --gl-theme:31%}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #gantt{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%}
+:root:not([data-theme="light"]) #streams{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%} }
 :root[data-theme="dark"] #gantt{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%}
+:root[data-theme="dark"] #streams{--gs:55%; --gl-card:70%; --gl-epic:52%; --gl-theme:36%}
 .gbar{--gc:hsl(var(--h,210) var(--gs) var(--gl-card))}
 .gbar[class*="g-t-"]::before, .gbar[class*="g-t-"]::after{content:""; position:absolute; left:-1px; top:-1px; pointer-events:none; clip-path:polygon(0 0, 100% 0, 0 100%); border-top-left-radius:4px}
 .gbar[class*="g-t-"]::before{width:12px; height:12px; background:var(--surface)}
@@ -699,7 +715,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .g-t-bug{--tc:var(--t-bug)} .g-t-feature{--tc:var(--t-feature)} .g-t-technical{--tc:var(--t-technical)} .g-t-administration{--tc:var(--t-admin)}
 .g-t-artwork{--tc:var(--t-art)} .g-t-documentation{--tc:var(--t-doc)} .g-t-release{--tc:var(--t-rel)} .g-t-testing{--tc:var(--t-test)}
 .g-t-plan{--tc:var(--t-plan)} .g-t-spike{--tc:var(--t-spike)}
-@media (max-width:640px){ #gantt{--glw:104px} .glab.gcard .gt{display:none} .gaxis .gscale button{padding:2px 6px} .gepic .glab, .glab.gcard{padding-left:6px} }
+@media (max-width:640px){ #gantt, #streams{--glw:104px} .glab.gstream .gt{display:none} .glab.gcard .gt{display:none} .gaxis .gscale button{padding:2px 6px} .gepic .glab, .glab.gcard{padding-left:6px} }
 table.st{border-collapse:collapse; width:100%; font-size:.82rem}
 table.st th button.sorth{all:unset; cursor:pointer; font-weight:600; color:inherit}
 table.st th button.sorth:hover, table.st th button.sorth.on{color:var(--fg, inherit); text-decoration:underline}
@@ -900,6 +916,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
   <nav class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-tab="board" aria-controls="view-board" type="button">Board</button>
     <button class="tab" role="tab" id="tab-gantt" data-tab="gantt" aria-controls="gantt" type="button">Gantt</button>
+    <button class="tab" role="tab" id="tab-streams" data-tab="streams" aria-controls="streams" type="button">Streams</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
     <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Exarch Hub</button>
@@ -909,6 +926,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
   </nav>
   <div class="synconly" id="synconly" role="status" hidden></div>
   <section class="status" id="gantt" role="tabpanel" aria-labelledby="tab-gantt" hidden></section>
+  <section class="status" id="streams" role="tabpanel" aria-labelledby="tab-streams" hidden></section>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
     <div class="bar">
@@ -2431,7 +2449,7 @@ function render(){
   if(focusTa){ render.later = true; return; }   // don't rebuild while a note is being typed (redrawn when it loses the focus)
   if(drag && drag.active){ drag.renderLater = true; return; }   // nor while a card is being dragged (redrawn on drop)
   render.later = false;
-  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); ffcount();
+  renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); ffcount(); renderStreams();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
@@ -3272,6 +3290,7 @@ function dragPan(board, box, skip, only){   // only: a pan starts only on what m
 }
 dragPan($("#board"), () => $("#board"), ".card, button, select, input, textarea, a");
 dragPan($("#gantt"), () => $("#gantt .gwrap"), ".gbar, .gms, .glab, button, select, input, textarea, a", ".gwrap");
+dragPan($("#streams"), () => $("#streams .gwrap"), ".gbar, .glab, button, select, input, textarea, a", ".gwrap");   // HUB385
 
 // ---------- HUB216: the projects panel's width: dragged at its right border (or arrow keys on it), kept per viewer
 // >>> panel-width (tests/test_app.py runs this block)
@@ -4205,13 +4224,21 @@ const HUB_LIMITS = [
   {k: "art", name: "ComfyUI art streams", def: 3, min: 1, max: 6,
    what: "Artwork cards made with ComfyUI at once, apart from the development streams, on every pace.",
    hint: "Suggested: 3. One graphics card runs ComfyUI's queue one picture at a time: 3 keeps the queue busy while the others pick or wait for a sign-off; more mostly makes the queue longer."}];
-function hubLimits(){
-  const got = hubStatus && hubStatus.usage && hubStatus.usage.limits && typeof hubStatus.usage.limits === "object" ? hubStatus.usage.limits : {};
+// HUB388: each Pace has its own limits and defaults (hub/usage.py PACE_DEFAULTS): Conservative 3 development streams
+// and 1 art stream Claude draws, the others the HUB173 suggestions; the export's limits_by_pace holds the values
+// (limits, the current pace's, for an older hub)
+const PACE_LIMIT_DEFS = {conservative: {streams: 3, drawn: 1}, moderate: {}, turbo: {}};
+function limitDef(L, pace){ const d = PACE_LIMIT_DEFS[pace] || {}; return d[L.k] != null ? d[L.k] : L.def; }
+function hubLimits(pace){
+  const us = usageNow(), u = us.u;
+  pace = PACE_LIMIT_DEFS[pace] ? pace : us.pace;
+  const per = u && u.limits_by_pace && typeof u.limits_by_pace === "object" && u.limits_by_pace[pace] && typeof u.limits_by_pace[pace] === "object" ? u.limits_by_pace[pace] : null;
+  const got = per || (u && u.pace === pace && u.limits && typeof u.limits === "object" ? u.limits : {});
   const out = {};
   for(const L of HUB_LIMITS){
     let v = got[L.k];
-    for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "limit." + L.k) v = ch.value;   // the user's choice, on its way
-    out[L.k] = Number.isInteger(v) && v >= L.min && v <= L.max ? v : L.def;
+    for(const ch of changes.values()) if(ch.card === "hub" && (ch.field === "limit." + pace + "." + L.k || ch.field === "limit." + L.k && us.pace === pace)) v = ch.value;   // the user's choice, on its way
+    out[L.k] = Number.isInteger(v) && v >= L.min && v <= L.max ? v : limitDef(L, pace);
   }
   return out;
 }
@@ -4363,11 +4390,10 @@ function usageSection(host){
       usageExtra(u).left != null ? el("b",{}, "$" + usageExtra(u).left.toFixed(2) + " left") : el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"),
       usageExtra(u).left != null ? " of $" + usageExtra(u).limit.toFixed(0) + " ($" + usageExtra(u).spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
       extraBudgetInput(u)) : null,
-    paceSelector(pace, "hub"), paceAutoHint(u, pace),
+    el("div",{class:"pacelim"}, el("div",{class:"palcol"}, paceSelector(pace, "hub"), paceAutoHint(u, pace)), limitsSection()),   // HUB388: the limits beside the pace
     nowRunoutTable(u, rw),
     ...defaultModelSec(),
     el("h3",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's, beside the Pace
-  limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
   if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: Exarch records the plan's limits on each wake."), ...creditsTable(u)); return; }
   host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
     el("thead",{}, el("tr",{}, el("th",{}, "Limit"), el("th",{}, "Used"), el("th",{}, "Refreshes"), el("th",{}, "Runs out (at the present rate)"))),
@@ -4465,25 +4491,26 @@ function paceSelector(pace, where){   // HUB332: where = "hub" (the Hub tab) or 
   return el("div",{class:"pacebox"}, group, flame, help);
 }
 // HUB171/HUB173: the limits, settable here, each with what it caps and the suggested value
-function limitsSection(host){
-  const lim = hubLimits(), {pace} = usageNow(), u = hubStatus && hubStatus.usage;
+function limitsSection(){   // HUB388: the chosen pace's own limits, drawn beside the pace selector
+  const {pace} = usageNow(), lim = hubLimits(pace), u = hubStatus && hubStatus.usage;
+  const pname = (PACES.find(x => x[0] === pace) || [pace, pace])[1];
   const rows = HUB_LIMITS.map(L => {
     const id = "limit-" + L.k;
     const sel = el("select",{id, "aria-describedby":id + "-what", disabled:readOnly ? true : null,
-      onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits()[L.k]) change({id: "hub", upd: null}, "limit." + L.k, v); renderHubTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
-    for(let v = L.min; v <= L.max; v++) sel.append(el("option",{value:String(v), selected:v === lim[L.k] ? true : null}, String(v) + (v === L.def ? " (default)" : "")));
+      onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits(pace)[L.k]) change({id: "hub", upd: null}, "limit." + pace + "." + L.k, v); renderHubTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
+    for(let v = L.min; v <= L.max; v++) sel.append(el("option",{value:String(v), selected:v === lim[L.k] ? true : null}, String(v) + (v === limitDef(L, pace) ? " (default)" : "")));
     const lifted = (L.k === "streams" || L.k === "coord" || L.k === "drawn") && pace === "turbo";   // HUB174, HUB196, HUB292
     return el("div",{class:"limrow" + (lifted ? " lifted" : "")},
       el("label",{for:id, class:"limname"}, L.name),
       el("div",{class:"limval"}, sel, lifted ? el("span",{class:"state"}, "lifted on Turbo") : null),
       el("div",{class:"limtext", id:id + "-what"}, el("div",{}, L.what), el("div",{class:"limhint"}, L.hint)));
   });
-  host.append(el("h3",{}, "Limits"), el("div",{class:"limits"}, ...rows),
-    el("p",{class:"note"}, "A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
+  return el("div",{class:"limbox", "data-pace":pace}, el("h3",{}, "Limits on " + pname), el("div",{class:"limits"}, ...rows),
+    el("p",{class:"note"}, "Each pace has its own limits and defaults; these are " + pname + "'s. A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
       + (u && u.limits_set ? " Last set " + fmtTime(u.limits_set) + "." : "")));
 }
 function renderHubTab(){
-  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly], host => {
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly], host => {
     usageSection(host);      // HUB172: tokens and pace first; HUB193: the limits inside it, right under the pace
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
@@ -5358,6 +5385,120 @@ function drawGantt(host){
   }
 }
 
+// ---------- Streams tab (HUB385): one row per stream like the Gantt's, time along the bottom. A row shows the card the
+// stream works now, the cards assigned to it (HUB379's `assigned`, queued behind it) and the cards the plan puts next
+// under a predicted stream by name (dashed until the stream claims the card and the bar turns solid).
+// >>> streams-rows (tests/test_app.py runs this block)
+// The rule for the predicted stream (the user: planned cards are given to a stream by name): in plan order, a planned
+// card goes to the live stream that is free soonest by the time the card starts (its own work and the cards queued
+// for it done; a stream working a card of another pool is not given this one; an idle stream takes any), the one free
+// longest first, then by name; with no stream free in time it gets a new stream named for its card,
+// "<card>-stream" in lower case, the name Exarch's core starts it under, drawn as a predicted stream.
+// items: [{c, s, e, kind, pool}] (the Gantt's plan, ganttPlan); streams: [{name, seen, started}] the live ones;
+// returns [{name, live, predicted, pool, free, bars: [{it, role: "now" | "assigned" | "planned", s, e}], idleSince}].
+function streamsModel(items, streams, now, own){
+  const rows = new Map(), mk = (name, live) => { const r = {name, live, predicted: !live, pool: null, free: now, bars: [], idleSince: null, seen: null}; rows.set(name, r); return r; };
+  for(const s of streams) if(s && s.name) mk(s.name, true).seen = s.seen || s.started || null;
+  const holder = c => typeof c.assigned === "string" ? c.assigned.trim() : "";
+  const mine = it => { const c = it.c; return (c.col === "prog" || c.col === "assign") && holder(c) && own(c); };
+  const put = (r, it, role) => {   // a queued bar starts when the stream is free, and keeps its length
+    const len = Math.max(0, it.e - it.s), s = role === "now" ? it.s : Math.max(it.s, r.free), e = role === "now" ? it.e : s + len;
+    r.bars.push({it, role, s, e}); r.free = Math.max(r.free, e);
+    if(role === "now" && it.pool) r.pool = it.pool;
+  };
+  const byStart = (a, b) => a.s - b.s || String(a.c.id).localeCompare(String(b.c.id));
+  const held = items.filter(mine).sort(byStart);
+  // a stream that holds a card is a row even when it is not in the live list: its claim is real, so not "predicted"
+  const rowOf = n => { const r = rows.get(n) || mk(n, false); r.predicted = false; return r; };
+  for(const it of held.filter(x => x.c.col === "prog")) put(rowOf(holder(it.c)), it, "now");
+  for(const it of held.filter(x => x.c.col === "assign")) put(rowOf(holder(it.c)), it, "assigned");
+  const planned = items.filter(it => it.kind === "planned" && !holder(it.c) && it.c.col !== "assign" && it.c.col !== "prog").sort(byStart);
+  for(const it of planned){
+    let best = null;
+    for(const r of rows.values()){
+      if(!r.live || r.free > it.s + 60000) continue;
+      if(r.pool && it.pool && r.pool !== it.pool) continue;
+      if(!best || r.free < best.free || r.free === best.free && r.name < best.name) best = r;
+    }
+    const nn = String(it.c.id).toLowerCase() + "-stream";
+    if(!best) best = rows.get(nn) || mk(nn, false);
+    put(best, it, "planned");
+  }
+  for(const r of rows.values()){
+    if(!r.bars.length){ const t = r.seen ? Date.parse(r.seen) : NaN; r.idleSince = isNaN(t) ? null : t; }
+    r.bars.sort((a, b) => a.s - b.s);
+  }
+  return [...rows.values()].sort((a, b) => (b.bars.length ? 1 : 0) - (a.bars.length ? 1 : 0) || (a.predicted ? 1 : 0) - (b.predicted ? 1 : 0) || a.name.localeCompare(b.name));
+}
+// <<< streams-rows
+function streamLive(){   // the live sessions and agents that are streams: by name, or holding a card
+  const held = new Set([...cards.values()].map(c => streamOf(c)).filter(Boolean));
+  const list = hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions : [];
+  return list.filter(s => s && s.name && (/-stream$/.test(s.name) || held.has(s.name))).map(s => ({name: s.name, seen: s.seen, started: s.started}));
+}
+function renderStreams(){   // a fault in this tab must never stop the board from drawing
+  const host = document.getElementById("streams");
+  if(!host || host.hidden) return;
+  try { drawStreams(host); }
+  catch(e){ host.replaceChildren(el("p",{class:"note"}, "The Streams view could not be shown: " + (e && e.message || e))); }
+}
+function drawStreams(host){
+  const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
+  const list = ganttCards(), live = streamLive();
+  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), live,
+    list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
+  if(host.dataset.sig === sig && host.childElementCount) return;
+  host.dataset.sig = sig;
+  const old = host.querySelector(".gwrap"), keepX = old && old.dataset.scale === scaleKey ? old.scrollLeft : null;
+  host.replaceChildren();
+  if(!loaded){ host.append(el("p",{class:"note"}, "Loading…")); return; }
+  const plan = ganttPlan(list, now);
+  const items = [...plan.items.values()].filter(it => it.kind !== "milestone" && inProject(it.c));
+  const rows = streamsModel(items, live, now, c => inProject(c));
+  const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderStreams(); };
+  host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
+    el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
+  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams running or planned" + (filt.j ? " with this project filter." : "."))); return; }
+  const hour = t => Math.floor(t / G_H) * G_H;
+  const t0 = hour(now - 3 * G_H);
+  const end = rows.reduce((m, r) => r.bars.reduce((x, b) => Math.max(x, b.e), m), now);
+  const t1 = Math.min(hour(Math.max(end, now + (sc.ahead || 1) * 24 * G_H)) + 24 * G_H, t0 + 45 * 24 * G_H);
+  const W = Math.ceil((t1 - t0) / G_H * sc.pxh), X = t => Math.round((Math.max(t0, Math.min(t1, t)) - t0) / G_H * sc.pxh);
+  const inner = el("div",{class:"gin", style:"width:calc(var(--glw) + " + W + "px)"});
+  const row = (cls, lab, cell, data) => el("div",{class:"grow " + cls, ...(data || {})}, lab, el("div",{class:"gcell", style:"width:" + W + "px"}, cell));
+  const ticks = [];
+  for(let t = Math.ceil(t0 / (sc.tick * G_H)) * sc.tick * G_H; t < t1; t += sc.tick * G_H){
+    const d = new Date(t), isDay = d.getHours() === 0;
+    ticks.push(el("span",{class:"gtick" + (isDay ? " day" : ""), style:"left:" + X(t) + "px"},
+      isDay ? d.toLocaleDateString(undefined, {weekday:"short", day:"numeric"}) : d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"})));
+  }
+  inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
+    ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
+  for(const r of rows){
+    const idle = !r.bars.length, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";
+    const tip0 = r.name + (r.predicted ? " (predicted: no stream by this name yet; Exarch starts it for its planned card)" : "")
+      + (idle ? "\nIdle" + (ago ? ": last seen " + ago + " ago" : "") : "");
+    const lab = el("div",{class:"glab gstream" + (r.predicted ? " pred" : "") + (idle ? " idle" : ""), title:tip0},
+      el("span",{class:"gid"}, r.name), idle ? el("span",{class:"gt"}, "idle" + (ago ? " " + ago : "")) : null);
+    const cell = r.bars.map(b => {
+      const it = b.it, c = it.c, hue = epics.get(c.epic || "")?.hue, w = Math.max(4, X(b.e) - X(b.s));
+      const what = b.role === "now" ? "Working now" : b.role === "assigned" ? "Assigned to " + r.name + ", waits for its turn"
+        : "Planned for " + r.name + (r.predicted ? " (a stream not started yet)" : " (predicted: it takes the card when free)") + ", dashed until it claims the card";
+      const est = Number(c.estimate) > 0 ? fmtDur(Number(c.estimate) * G_MIN) : "no estimate";
+      const tip = what + "\n" + gTipText(Object.assign({}, it, {s: b.s, e: b.e})) + "\nEstimate: " + est;
+      const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
+        onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); openCard(c.id); } };
+      return el("button",{type:"button", class:"gbar gs" + (b.role === "now" ? "" : " planned") + (b.role === "planned" ? " pred" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : ""),
+        style:"left:" + X(b.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : ""), "aria-label":tip, "data-card":c.id, ...hover}, c.id + (Number(c.estimate) > 0 ? " · " + est : ""));
+    });
+    inner.append(row("gstreamrow", lab, cell, {"data-stream":r.name}));
+  }
+  inner.append(el("span",{class:"gline", style:"left:calc(var(--glw) + " + X(now) + "px)"}, el("span",{}, "now")));
+  const wrap = el("div",{class:"gwrap", "data-scale":scaleKey, onscroll:() => gTip(null, "")}, inner);
+  host.append(wrap);
+  wrap.scrollLeft = keepX != null ? keepX : Math.max(0, X(now) - 2 * sc.pxh * (scaleKey === "day" ? 1 : 12));
+}
+
 // ---------- HUB163, HUB191: drag the Gantt's rows. A theme moves among its project's themes and an epic among its
 // theme's epics (their `order`, through the epic / theme editor's change); a card among its epic's cards (its rank in
 // its board column, the board's own move) or onto another epic of its project (its epic, as the card window sets it).
@@ -5529,7 +5670,7 @@ document.addEventListener("touchmove", ev => { if(gDrag && gDrag.active) ev.prev
 document.addEventListener("contextmenu", ev => { if(gDrag) ev.preventDefault(); });   // nor opens the long-press menu
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "gantt", "decisions", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
+const TABS = ["board", "gantt", "streams", "decisions", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -5909,7 +6050,7 @@ function showTab(name, fromHash){
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
-  renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt();
+  renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); renderStreams();
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
