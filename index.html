@@ -757,6 +757,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 body.ai-open .wrap{margin-right:min(var(--dw),100%)}
 body.ai-open .aibtn{visibility:hidden; position:absolute}   /* HUB254: the drawer grows out of it; HUB258: out of the row too */
 body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(var(--dw),100%)) / 2)}
+.aipanel,.aimsgs,.aipane{overscroll-behavior:contain}   /* HUB364 */
 .aipanel{position:fixed; top:0; right:0; bottom:0; width:min(var(--dw),100%); z-index:15; background:var(--surface); border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.18); display:flex; flex-direction:column; min-width:0}
 .aipanel[hidden]{display:none}
 .aipanel > *{min-width:0}
@@ -776,7 +777,8 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .dtabs .right{margin-left:auto}
 .aichat{display:flex; flex-direction:column; flex:1; min-height:0}
 .ctabs{display:flex; gap:6px; align-items:flex-start; padding:6px 12px; border-bottom:1px solid var(--line); font-size:.76rem}
-.ctabs .strip{flex:1; min-width:0; display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; padding-bottom:3px; scroll-snap-type:x proximity; overscroll-behavior-x:contain}
+.ctabs .strip{flex:1; min-width:0; display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding-bottom:3px; scroll-snap-type:x proximity; overscroll-behavior-x:contain}
+.ctabs .strip::-webkit-scrollbar{display:none}   /* HUB365: the tab row has no scrollbar; the wheel, a drag and the fade scroll it */
 .ctabs .strip.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)}
 .ctabs .tools{display:flex; gap:4px; flex:none}
 .aipanel .ctabs .ct{flex:none; scroll-snap-align:start; box-sizing:border-box; width:100px; height:26px; padding:4px 8px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:6px; white-space:nowrap; overflow:hidden; cursor:grab; position:relative; display:flex; gap:3px; justify-content:flex-start; --pc:var(--accent); font-size:.76rem}
@@ -784,20 +786,23 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .ctabs .ct .ico, .ctabs .ct .cic, .crow .ico, .crow .cic{color:var(--pc)}
 .ctabs .ct.lead{border:1.5px solid var(--pc)}
 .ctabs .ct.ex{cursor:pointer}
-.aipanel .ctabs .ct.on{color:var(--ink); font-weight:600; background:color-mix(in srgb, var(--pc) 16%, var(--surface)); padding-right:20px}
-.ctabs .ct .tm{position:absolute; right:3px; top:4px; width:15px; height:16px; line-height:16px; text-align:center; font-size:9px; font-weight:400; color:var(--muted); border-radius:4px; cursor:pointer}
-.ctabs .ct .tm:hover,.ctabs .ct .tm.open{background:color-mix(in srgb, var(--pc) 30%, var(--surface)); color:var(--ink)}
+.aipanel .ctabs .ct.on{color:var(--ink); font-weight:600; background:color-mix(in srgb, var(--pc) 16%, var(--surface))}
+.aiframe{position:relative; flex:1; min-height:0; display:flex; flex-direction:column}   /* HUB367: the chat menu button sits top right of the message frame */
+.aipanel .aiframe .tm{position:absolute; right:14px; top:4px; z-index:3; width:20px; height:20px; padding:0; justify-content:center; font-size:10px; line-height:1; color:var(--muted); background:var(--surface); border-radius:5px}
+.aipanel .aiframe .tm:hover,.aipanel .aiframe .tm.open{color:var(--ink); background:color-mix(in srgb, var(--accent) 14%, var(--surface))}
 .ctabs .ct.drag,.crow.drag{outline:1px dashed var(--accent); opacity:.6}
-.ctabs .ct.over,.crow.over{box-shadow:-3px 0 0 var(--accent)}
-.crow.over{box-shadow:0 -2px 0 var(--accent)}
+.ctabs .ct.over{box-shadow:-3px 0 0 var(--accent)}
+.ctabs .ct.over.after{box-shadow:3px 0 0 var(--accent)}
+.crow.over{box-shadow:0 -3px 0 var(--accent)}
+.crow.over.after{box-shadow:0 3px 0 var(--accent)}
 .cnt{font-variant-numeric:tabular-nums}
-.tmenu{margin:6px 12px 0; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:4px; display:grid; gap:2px; font-size:.78rem; box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.tmenu{position:absolute; right:12px; top:28px; z-index:4; min-width:220px; max-width:calc(100% - 24px); border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:4px; display:grid; gap:2px; font-size:.78rem; box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .aipanel .tmenu .it{display:grid; grid-template-columns:auto 1fr; gap:2px 8px; padding:5px 8px; border-radius:6px; background:none; border:0; text-align:left; justify-items:start}
 .tmenu .it:hover{background:color-mix(in srgb, var(--accent) 10%, var(--surface))}
 .tmenu .it .small{grid-column:2}
 .confirm{font-size:.78rem; border:1px solid var(--warn-o); border-radius:8px; padding:6px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .chatspop{border:1px solid var(--line); border-radius:8px; margin:6px 12px 0; padding:6px 8px; display:grid; gap:2px; font-size:.78rem; background:var(--surface); box-shadow:0 6px 18px rgba(0,0,0,.18)}
-.crow{display:flex; gap:8px; align-items:center; padding:3px 4px; border-radius:6px}
+.crow{cursor:pointer; display:flex; gap:8px; align-items:center; padding:3px 4px; border-radius:6px}
 .crow .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .crow .grip{color:var(--muted); cursor:grab; letter-spacing:-2px; width:12px; touch-action:none; user-select:none}
 .crow .lock{width:12px}
@@ -819,7 +824,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .moved{font-size:.78rem; color:var(--muted); border:1px dashed var(--line); border-radius:8px; padding:5px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .sline{font-size:.78rem; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-self:center; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); padding:3px 8px; max-width:100%}
 .aiform{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; padding:10px 12px; border-top:1px solid var(--line)}
-.aiform textarea{flex:1 1 180px; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; min-height:2.6em}
+.aiform textarea{flex:1 1 180px; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:vertical; min-height:2.6em; max-height:50vh}   /* HUB357 */
 .aihint{color:var(--muted); font-size:.8rem}
 .aipane{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
 .aipane .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
@@ -863,7 +868,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .expair .mu, .exlocked{color:var(--muted); font-size:.78rem}
 .exdev{display:flex; gap:2px 8px; align-items:center; justify-content:space-between; flex-wrap:wrap; font-size:.8rem}
 .exdev button{font:inherit; padding:2px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
-.aichat.locked > :not(.aimsgs){display:none}   /* HUB338: this device is not paired yet: the pairing card only */
+.aichat.locked > :not(.aimsgs):not(.aiframe){display:none} .aichat.locked .aiframe > :not(.aimsgs){display:none}   /* HUB338: this device is not paired yet: the pairing card only */
 </style>
 
 <div class="wrap" id="app">
@@ -954,10 +959,11 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
   <div class="nbanner" id="aipair" hidden></div>
   <div class="aichat" id="aichat">
     <div class="ctabs"><div class="strip" id="aitabs" role="tablist" aria-label="Chats"></div><span class="tools"><button type="button" id="aichats" aria-haspopup="true" aria-expanded="false" title="Chats: show, hide and reorder"><svg class="i" aria-hidden="true"><use href="#i-tabs"/></svg><span class="cnt" id="aicnt">0</span></button><button type="button" id="ainew" title="New chat" aria-label="New chat">+</button></span></div>
-    <div class="tmenu" id="aimenu" hidden></div>
     <div class="chatspop" id="aichatspop" hidden></div>
     <div class="aiwho" id="aiwho" hidden></div>
-    <div class="aimsgs" id="aimsgs" aria-live="polite"></div>
+    <div class="aiframe"><button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
+      <div class="tmenu" id="aimenu" hidden></div>
+      <div class="aimsgs" id="aimsgs" aria-live="polite"></div></div>
     <form class="aiform" id="aiform"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><button type="submit" class="pbtn aisend" id="aisend">Send</button></form>
   </div>
   <div class="aipane" id="aistatus" hidden></div>
@@ -1019,6 +1025,8 @@ function el(tag, attrs={}, ...kids){
   for(const k of kids.flat()) if(k!=null&&k!==false) e.append(k);
   return e;
 }
+
+function setKids(n, ...kids){ n.replaceChildren(...kids.flat().filter(k => k != null && k !== false)); }   // replaceChildren turns a null into the text "null" (HUB355, HUB366)
 
 // ---------- pictures: the vault's media are private, so they come through the API and are shown as blob URLs
 const blobs = new Map(), blobUrl = new Map(), noPic = new Set();   // media path -> Promise<object URL> / the URL / failed
@@ -2436,7 +2444,12 @@ function cardStats(all, keep){   // done / all (Rejected left out); open = not D
 function statKids(st){ return [el("span",{class:"ec"}, st.done+"/"+st.n+" done · "+st.open+" open"), el("span",{class:"eb"}, el("i",{style:"width:"+st.pct+"%"}))]; }
 // HUB297: a card with no epic (ad hoc, Release, others) belongs to the first theme (in panel order) of its project
 const NO_EPIC = "__noepic";
-function projectTheme(j){ for(const [k, v] of sortedThemes()) if(v.project === j) return k; return ""; }
+function projectTheme(j){   // HUB378: a theme that names no project is still the project's when the project's epics sit in it
+  const th = sortedThemes();
+  for(const [k, v] of th) if(v.project === j) return k;
+  for(const [k] of th) for(const [, e] of epics) if(e && e.theme === k && e.project === j && !e.retired) return k;
+  return "";
+}
 function cardTheme(c){ return c.epic ? epicTheme(c.epic) : projectTheme(cardProject(c)); }
 function setNoEpic(t){ if(filt.e === NO_EPIC && filt.t === t){ filt.e = ""; } else { filt.e = NO_EPIC; filt.t = t; } syncFilters(); }
 function setTheme(t){ filt.t = t; if(filt.e && filt.e !== NO_EPIC && epicTheme(filt.e)!==t) filt.e = ""; if(filt.e === NO_EPIC && filt.t !== t) filt.e = ""; syncFilters(); }   // an epic of another theme is dropped
@@ -6400,10 +6413,7 @@ function aiDrawChat(c, row, leads){
     const b = el("button",{type:"button", role:"tab", class:"ct" + (t.kind !== "user" ? " lead" : "") + (t.kind === "exarch" ? " ex" : "") + (on ? " on" : ""),
       "aria-selected":String(on), "data-conv":t.conv, title:t.kind === "lead" ? t.lead : t.kind === "exarch" ? "Exarch: always the first tab" : chatName(t),
       style:hue ? "--pc:" + hue : null, onclick:ev => { if(ev.target.closest(".tm")) return; if(t.conv !== ai.cur){ ai.cur = t.conv; ai.menu = false; ai.confirm = ""; aiDraw(); } }},
-      chatIcon(t), el("span",{class:"ctn"}, chatName(t)),
-      on ? el("span",{class:"tm" + (ai.menu ? " open" : ""), role:"button", tabindex:"0", title:"Chat menu: Clear, Archive", "aria-label":"Chat menu", "aria-expanded":String(ai.menu),
-        onclick:ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); },
-        onkeydown:ev => { if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); } }}, "▼") : null);
+      chatIcon(t), el("span",{class:"ctn"}, chatName(t)));
     if(t.kind !== "exarch") dragRow(b, strip, "[data-conv]", (from, to) => { ai.chats = chatMove(ai.chats, from, to); aiDraw(); });
     return b;
   }));
@@ -6412,6 +6422,7 @@ function aiDrawChat(c, row, leads){
   const hid = hiddenCount(ai.chats, leads), cnt = $("#aicnt");
   cnt.textContent = String(hid); $("#aichats").title = "Chats: show, hide and reorder (" + hid + " hidden)";
   $("#aichats").setAttribute("aria-expanded", String(ai.pop));
+  const mb = $("#aimenubtn"); mb.hidden = !c; mb.classList.toggle("open", !!ai.menu); mb.setAttribute("aria-expanded", String(!!ai.menu));
   aiDrawMenu(c); aiDrawChatsPop(leads);
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
@@ -6444,27 +6455,30 @@ function aiDrawMenu(c){
   if(m.hidden) return;
   const who = c.kind === "lead" ? c.lead : c.kind === "exarch" ? "Exarch" : "";
   const item = (k, icon, name, text) => el("button",{type:"button", class:"it", onclick:() => { ai.confirm = k; aiDraw(); }}, el("span",{"aria-hidden":"true"}, icon), el("b",{}, name), el("span",{class:"small mu"}, text));
-  m.replaceChildren(item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
+  setKids(m, item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
     item("archive", "🗄︎", "Archive", "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
-    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : "Archive this chat" + (who ? " with " + who : "") + "?"),
-      el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : "Archive"),
+    c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Close this chat and its tab. Its history is kept in Archived.") : null,
+    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Close this chat? Its history is kept in Archived." : "Archive this chat" + (who ? " with " + who : "") + "?"),
+      el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : ai.confirm === "close" ? "Close" : "Archive"),
       el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel")) : null);
 }
 function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archived) and opens a fresh one in its place
-  if(act === "archive" && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
+  if((act === "archive" || act === "close") && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
   const fresh = {conv: aiId(), kind: c.kind, lead: c.lead, project: c.project, title: c.kind === "user" ? "" : c.title, n: 0, msgs: [], hidden: c.hidden};
   const i = ai.chats.indexOf(c); if(i >= 0) ai.chats[i] = fresh;
+  if(act === "close" && i >= 0) ai.chats.splice(i, 1);   // HUB354: a custom chat closes with no fresh one; the next tab opens
   if(c.ref){ ai.gone.push(c.ref); if(i >= 0) ai.chats.splice(i, 1); }   // HUB330: a refinement plan's chat is not shown again before its next revision
-  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act});   // the node drops (or archives) its copy
-  ai.cur = c.ref ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
+  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: act === "close" ? (c.msgs.length ? "archive" : "clear") : act});   // the node drops (or archives) its copy
+  ai.cur = c.ref || act === "close" ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
 }
 function aiDrawChatsPop(leads){
   const p = $("#aichatspop"); p.hidden = !ai.pop;
   if(p.hidden) return;
   const all = ai.chats.filter(c => c.kind !== "lead" || leads.includes(c.lead));
-  p.replaceChildren(el("b",{class:"small"}, "Chats: drag to reorder; the tab row follows this order"), ...all.map(c => {
+  setKids(p, ...all.map(c => {
     const hue = chatHue(c);
-    const r = el("div",{class:"crow", "data-conv":c.conv, style:hue ? "--pc:" + hue : null},
+    const r = el("div",{class:"crow", "data-conv":c.conv, style:hue ? "--pc:" + hue : null,
+      onclick:ev => { if(ev.target.closest("button,.grip")) return; c.hidden = false; ai.cur = c.conv; ai.pop = false; ai.menu = false; ai.confirm = ""; aiDraw(); }},   // HUB369: a click on a row opens that chat and closes the list
       c.kind === "exarch" ? el("span",{class:"lock", title:"Always first"}, "🔒︎") : el("span",{class:"grip", title:"Drag to reorder"}, "⋮⋮"),
       chatIcon(c), el("span",{class:"nm" + (c.hidden ? " mu" : "")}, chatName(c)),
       c.kind === "exarch" ? el("span",{class:"small mu"}, "always first")
@@ -6472,7 +6486,7 @@ function aiDrawChatsPop(leads){
           ico(c.hidden ? "eye-off" : "eye"), c.hidden ? "Hidden" : "Shown"));
     if(c.kind !== "exarch") dragRow(r.querySelector(".grip"), p, "[data-conv]", (from, to) => { ai.chats = chatMove(ai.chats, from, to); aiDraw(); }, r);
     return r;
-  }), el("span",{class:"small mu"}, "Hidden chats are skipped in the tab row. A hidden chat keeps its history and shows again when a new message arrives in it."));
+  }));
 }
 // a drag that reorders: a mouse drag after a few pixels, a touch after a long press (then the row does not scroll)
 function dragRow(handle, list, sel, done, item){
@@ -6489,10 +6503,11 @@ function dragRow(handle, list, sel, done, item){
       e.preventDefault();
       const t = document.elementFromPoint(e.clientX, e.clientY), r = t && t.closest(sel);
       over = r && list.contains(r) && r !== item ? r.dataset.conv : null;
-      for(const o of list.querySelectorAll(sel)) o.classList.toggle("over", o.dataset.conv === over);
+      const all = [...list.querySelectorAll(sel)], from = all.indexOf(item);
+      for(const o of all){ const on = o.dataset.conv === over; o.classList.toggle("over", on); o.classList.toggle("after", on && all.indexOf(o) > from); }   // HUB358: the line shows where the chat lands
     };
     const end = () => { clearTimeout(timer); removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", end);
-      item.classList.remove("drag"); for(const o of list.querySelectorAll(sel)) o.classList.remove("over"); };
+      item.classList.remove("drag"); for(const o of list.querySelectorAll(sel)) o.classList.remove("over", "after"); };
     const up = () => { const was = live, to = over; end(); if(was && to){ aiDrag.at = Date.now(); done(item.dataset.conv, to); } };
     addEventListener("pointermove", move, {passive:false}); addEventListener("pointerup", up); addEventListener("pointercancel", end);
   });
@@ -6832,7 +6847,7 @@ function aiDrawArch(){
   const ask = (text, yes, go) => el("div",{class:"confirm"}, el("span",{}, text), el("button",{type:"button", class:"pbtn", onclick:go}, yes), el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel"));
   const rows = [];
   for(const c of list){ rows.push(one(c)); if(conf === c.conv) rows.push(ask("Clear this archived chat? This cannot be undone.", "Clear", () => { ai.arch.splice(ai.arch.indexOf(c), 1); ai.confirm = ""; aiDraw(); })); }
-  box.replaceChildren(el("div",{class:"row", style:"justify-content:space-between"}, el("span",{class:"small mu"}, "Kept 90 days; never sent to the AI."),
+  setKids(box, el("div",{class:"row", style:"justify-content:space-between"}, el("span",{class:"small mu"}, "Kept 90 days; never sent to the AI."),
       list.length ? el("button",{type:"button", class:"small", onclick:() => { ai.confirm = "all"; aiDraw(); }}, "Clear all") : null),
     ai.confirm === "all" ? ask("Clear all " + list.length + " archived chats? This cannot be undone.", "Clear all", () => { ai.arch = []; ai.confirm = ""; aiDraw(); }) : null,
     ...(rows.length ? rows : [el("p",{class:"note"}, "No archived chats.")]));
@@ -6897,10 +6912,21 @@ addEventListener("resize", () => dwSet(Number(ls(DW_KEY)) || DW_DEF, false));
     addEventListener("pointermove", move); addEventListener("pointerup", up);
   });
 })();
+// HUB364: a wheel over the drawer scrolls what in it can scroll, never the board behind it
+$("#aipanel").addEventListener("wheel", ev => {
+  if(ev.ctrlKey) return;
+  for(let n = ev.target; n && n !== ev.currentTarget; n = n.parentElement){
+    if(!(n instanceof Element)) break;
+    const y = getComputedStyle(n).overflowY;
+    if((y === "auto" || y === "scroll") && n.scrollHeight > n.clientHeight + 1 && ((ev.deltaY < 0 && n.scrollTop > 0) || (ev.deltaY > 0 && n.scrollTop + n.clientHeight < n.scrollHeight - 1))) return;
+  }
+  ev.preventDefault();
+}, {passive:false});
 $("#aibtn").addEventListener("click", () => aiOpen($("#aipanel").hidden));
 $("#aiclose").addEventListener("click", () => aiOpen(false));
 $("#ainew").addEventListener("click", aiNewChat);
 $("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
+$("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); });
 for(const t of ["chat", "status", "arch"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
