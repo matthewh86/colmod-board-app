@@ -6527,7 +6527,7 @@ function renderSyncPop(){
   const keep = p.scrollTop, s = exarchNow(), figs = usageFigures();
   // HUB380: a figure shows its short value here; the refresh and runs-out times stay in its hover text
   const sync = el("div",{class:"kv"}, el("span",{class:"row"}, ($("#syncicons") || el("span")).cloneNode(true), $("#savest").textContent || (changes.size ? "Syncing" : "Synced")));
-  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), f.label)   // HUB363: a check circle when fine, the warning symbol otherwise, f.short || f.value, {title: f.tip}))
+  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), f.label), f.short || f.value, {title: f.tip}))   // HUB363: a check circle when fine, the warning symbol otherwise
     : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
   const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
     const pr = leadRow(k, p0, core), st = leadState(pr, now), n = [...cards.values()].filter(c => c.col === "prog" && cardProject(c) === k && cardKind(c) !== "Release").length;
