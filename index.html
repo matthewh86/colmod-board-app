@@ -3707,9 +3707,16 @@ function buildTokens(d, machine, w){
     el("p",{class:"note"}, (fresh ? `Up to ${hm(end)}` : `No data since ${day(d.end * 1000)} ${hm(d.end * 1000)}`) + `, ${Math.round(step / 60000)} min per bar, ${view}` + (picked ? `, ${picked.name} alone` : "") + ". "
       + (machine === TOK_ALL ? "Every machine's sessions and agents together." : "Sessions that ran on this machine;") + " an agent is counted on its own line, not in its session's."));
 }
-function tokRate(r, step){   // tokens per hour over the last hour of the series (HUB90): who is using them now
-  const k = Math.max(1, Math.min(r.val.length, Math.round(3600 / (step || 1800))));
-  return r.val.slice(-k).reduce((x, y) => x + y, 0) * 3600 / (k * (step || 1800));
+function tokRate(r, step, end, now){   // tokens per hour over the last hour of the series (HUB90): who is using them now
+  const st = (step || 1800), k = Math.max(1, Math.min(r.val.length, Math.round(3600 / st)));
+  const sum = r.val.slice(-k).reduce((x, y) => x + y, 0);
+  if(!(end > 0)) return sum * 3600 / (k * st);
+  // HUB386: the real time the last k steps cover, not k whole steps: the newest step is still running (it ends at `end`), and a
+  // stream that started less than an hour ago has only run since its first reply (at least a minute, so a first reply is no spike)
+  const t = now == null ? Date.now() : now;
+  let span = Math.min(k * st * 1000, t - (end - k * st * 1000));
+  if(r.since > 0) span = Math.min(span, t - r.since);
+  return sum * 3600000 / Math.max(60000, span);
 }
 // HUB179: tokens per hour over time, from the same token files as the graphs below (aggregate numbers only).
 // The Overview's "Tokens per hour" card sums every machine (one dashed line per machine beside the total). HUB198
@@ -4007,7 +4014,7 @@ function heatOf(v, most){   // the tokens/hr cell's row colour: from none to a s
 // ---------- Machines
 function tokRows(machine){   // a machine's token file's rows with their rate, or []
   const d = tokens.get(machine), step = d && d.step || 1800;
-  return d && d.end && Array.isArray(d.series) ? tokSeries(d).rows.map(r => ({r, rate: tokRate(r, step), machine})) : [];
+  return d && d.end && Array.isArray(d.series) ? tokSeries(d).rows.map(r => ({r, rate: tokRate(r, step, d.end * 1000), machine})) : [];
 }
 function machineRows(machine, sessions){   // a machine's sessions and agents: the registered ones and the token file's, merged
   const by = new Map();
@@ -4028,6 +4035,15 @@ function machineRows(machine, sessions){   // a machine's sessions and agents: t
 const NO_TOK = "No Claude token history under this name: the node counts a session by the HUB_SESSION name its hub commands use, "
   + "and keeps a day";
 function noData(why){ return el("span",{class:"nodata", title:why, "aria-label":"no data: " + why}, "\u2014"); }
+// HUB386: a row with no token series says so, in words and with the reason on hover, never a bare dash
+function tokWhy(name, s, now){
+  const t = Date.parse((s || {}).started), young = !isNaN(t) && (now == null ? Date.now() : now) - t < 30 * 60000;
+  if(name === "exarch-console") return "The Console is woken on demand: it has used no Claude tokens in the last day, so there is nothing to count";
+  if(s && s.idle) return "Idle: no Claude tokens in the last day";
+  if(young) return "Started less than half an hour ago: none of its Claude replies is counted yet (the node counts a session or agent from its first hub command naming it, by the HUB_SESSION name or the session tool, and publishes every ten minutes)";
+  return NO_TOK + ". If it names itself differently, or never, its tokens are counted under its parent's " + String.fromCharCode(34) + "agents" + String.fromCharCode(34) + " row or as " + String.fromCharCode(34) + "unnamed" + String.fromCharCode(34) + ".";
+}
+function noTokens(name, s){ const why = tokWhy(name, s); return el("span",{class:"nodata", title:why, "aria-label":"no token figure: " + why}, "no data yet"); }
 function sessionTable(rows, most){
   const hours = Math.round(tokHours);
   // HUB236: each row's sortable figures, then the order the viewer chose
@@ -4049,9 +4065,9 @@ function sessionTable(rows, most){
     const seenWhy = seen === last ? "its latest Claude reply" : "its latest hub command (heartbeat)";
     const seenEl = seen > 0 ? el("span",{title:"From " + seenWhy}, agoEl(seen, " ago"))
       : noData("No heartbeat from the hub and no Claude reply in the token files of the last day");
-    const rateEl = !r.tok ? noData(NO_TOK)
+    const rateEl = !r.tok ? noTokens(r.name, s)
       : r.rate > 0 ? fmtTok(r.rate) : el("span",{title:"No Claude tokens in the last hour" + (r.tok.last > 0 ? "; last used " + fmtDur(Math.max(0, Date.now() - r.tok.last)) + " ago" : "")}, "0");
-    const tot = r.tok ? el("td",{class:"num", title:`new input ${fmtTok(r.tok.fresh)}, read from cache ${fmtTok(r.tok.read)}, output ${fmtTok(r.tok.out)}`}, fmtTok(r.tok.total)) : el("td",{class:"num"}, noData(NO_TOK));
+    const tot = r.tok ? el("td",{class:"num", title:`new input ${fmtTok(r.tok.fresh)}, read from cache ${fmtTok(r.tok.read)}, output ${fmtTok(r.tok.out)}`}, fmtTok(r.tok.total)) : el("td",{class:"num"}, noTokens(r.name, s));
     const tr = el("tr",{class: r.rate > 0 ? "heat" : ""},
       el("td",{}, name, lc.long ? " " : null, longCtxEl(lc)), el("td",{}, s.role || r.what || "-"),
       el("td",{}, (s.cards || []).join(", ") || "-"), el("td",{}, s.note || ""),
