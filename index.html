@@ -750,6 +750,7 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .syncind .savest.ok{background:none; padding:0; color:var(--ink); font-weight:500}
 .aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px 3px 8px; cursor:pointer; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; position:relative}   /* HUB254: top right */
 .aibtn svg{width:18px; height:18px; flex:none}
+.aibtn.ison svg{color:var(--ok)}   /* HUB381 */
 .aibtn[aria-expanded="true"]{background:var(--sunk)}
 .aibtn.off{color:var(--muted); opacity:.75}   /* EXARCH F: greyed with "off" while Exarch AI is off */
 .aibtn .dot{position:absolute; top:-6px; right:-6px; display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--warn-r); color:#fff; font-size:10px; font-weight:600; line-height:1}
@@ -816,6 +817,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aimsg.plan{border-color:var(--accent)}
 .aimsg.wait{color:var(--muted); font-style:italic}
 .aimsg .meta{white-space:normal}
+.aimsg .mtime{justify-self:end; font-size:.7rem; font-variant-numeric:tabular-nums} .aimsg.user .mtime{display:block; text-align:right}   /* HUB381 */
 .aimsg .aicard,.hl .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); border-radius:0; padding:0; cursor:pointer; display:inline}
 .draft{border:1px solid var(--line); border-radius:8px; padding:6px 8px; display:grid; gap:4px; white-space:normal}
 .draft .dedit{font:inherit; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); min-width:0}
@@ -824,7 +826,8 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .moved{font-size:.78rem; color:var(--muted); border:1px dashed var(--line); border-radius:8px; padding:5px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .sline{font-size:.78rem; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-self:center; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); padding:3px 8px; max-width:100%}
 .aiform{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; padding:10px 12px; border-top:1px solid var(--line)}
-.aiform textarea{flex:1 1 180px; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:vertical; min-height:2.6em; max-height:50vh}   /* HUB357 */
+.aiform .aiact{flex:1 1 100%; display:flex; align-items:center; justify-content:space-between; gap:8px}   /* HUB373: Plan and Send under the box */
+.aiform textarea{flex:1 1 100%; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:vertical; min-height:2.6em; max-height:50vh}   /* HUB357 */
 .aihint{color:var(--muted); font-size:.8rem}
 .aipane{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
 .aipane .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
@@ -837,7 +840,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aipanel .seg button{border:0; border-radius:0; background:none; padding:3px 9px}
 .aipanel .seg button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
 /* the Sync popup: under the Sync indicator on a desktop, the full width on a phone */
-.syncpop{position:fixed; z-index:16; top:64px; left:var(--spx,16px); width:min(380px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
+.syncpop{position:fixed; z-index:16; top:64px; left:var(--spx,16px); width:min(520px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
 .syncpop .phead b{flex:1}
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
@@ -953,7 +956,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 <aside class="aipanel" id="aipanel" role="complementary" aria-label="Exarch AI" hidden>
   <div class="airesize" id="airesize" role="separator" aria-orientation="vertical" aria-label="Width of the Exarch AI drawer" tabindex="0" title="Drag to resize (arrow keys too; double-click resets it)"></div>
   <div class="aihead"><h2><span class="ico" id="aihico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg></span>Exarch AI</h2><button type="button" id="aiclose" aria-label="Close the drawer">✕</button></div>
-  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-status">Status</button><button type="button" role="tab" id="aitab-arch" class="right">Archived</button></div>
+  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button><button type="button" role="tab" id="aitab-status">Status</button></div>
   <div class="offpanel" id="aioff" role="status" hidden></div>
   <div class="nbanner" id="ainotify" hidden></div>
   <div class="nbanner" id="aipair" hidden></div>
@@ -964,8 +967,9 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
     <div class="aiframe"><button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
       <div class="tmenu" id="aimenu" hidden></div>
       <div class="aimsgs" id="aimsgs" aria-live="polite"></div></div>
-    <form class="aiform" id="aiform"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><button type="submit" class="pbtn aisend" id="aisend">Send</button></form>
+    <form class="aiform" id="aiform"><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
   </div>
+  <div class="aipane" id="aidev" hidden></div>
   <div class="aipane" id="aistatus" hidden></div>
   <div class="aipane" id="aiarch" hidden></div>
 </aside>
@@ -6140,7 +6144,7 @@ function aiEnsure(){   // the Exarch chat always first; one chat per Lead that h
 }
 function aiConv(){ return ai.chats.find(c => c.conv === ai.cur) || null; }
 function chatName(c){
-  if(c.kind === "exarch") return "Exarch";
+  if(c.kind === "exarch") return "exarch";   // HUB381: lowercase, like the Lead tabs
   if(c.kind === "lead") return c.project || c.lead;
   if(c.title) return c.title;
   const q = c.msgs.find(m => m.role === "user"); if(!q) return "New chat";
@@ -6195,7 +6199,7 @@ function usageFigures(){
   if(!u) return out;
   for(const w of wins){
     const left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));
-    out.push({k: "plan", label: "Plan, " + w.label, lvl: tokLevel(left), value: left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
+    out.push({k: "plan", label: "Plan, " + w.label, lvl: tokLevel(left), short: left + " % left", value: left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
       + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : ""), tip: usageLine(w) + "\nRecorded " + fmtTime(u.recorded)});
   }
   const c = usageCredits(u);
@@ -6223,7 +6227,7 @@ function renderExarchHeader(){
   const s = exarchNow(), figs = usageFigures(), w = worstWarn(figs), icons = $("#syncicons");
   if(icons) icons.replaceChildren(w ? ico("alert-triangle", WARN_CLASS[w.lvl], w.label + " is low: " + w.value) : ico("circle-check", "ok", "Usage is fine"), exarchStateIcon(s));
   const b = $("#aibtn"), off = s.state === "off" || s.state === "halting";
-  b.classList.toggle("off", off);
+  b.classList.toggle("off", off); b.classList.toggle("ison", s.state === "on");   // HUB381: the compass is green while Exarch AI is on
   $("#aibtnstate").textContent = off ? " · " + (s.state === "halting" ? "halting" : "off") : "";
   b.title = off ? "Exarch AI is " + (s.state === "halting" ? "halting" : "off") + ": open the drawer to turn it on" : "Open the Exarch AI drawer";
   const n = aiWaiting(), dot = $("#aidot");
@@ -6252,13 +6256,11 @@ function popSec(title, ...kids){ return el("div",{class:"psec"}, el("h3",{}, tit
 function kv(k, v, attrs){ return el("div",Object.assign({class:"kv"}, attrs || {}), el("span",{class:"kk"}, k), el("span",{class:"vv"}, v)); }
 function renderSyncPop(){
   const p = $("#syncpop"); if(!p || p.hidden) return;
-  const keep = p.scrollTop, s = exarchNow(), figs = usageFigures(), {u} = usageNow(), rw = usageRunway(u);
-  const sync = el("div",{class:"kv"}, el("span",{class:"row"}, ($("#syncicons") || el("span")).cloneNode(true), $("#savest").textContent || (changes.size ? "Syncing" : "Synced")),
-    el("span",{}, meta.exported_at ? "board as of " + fmtTime(meta.exported_at) : "no board export yet"));
-  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : null, f.label), f.value, {title: f.tip}))
+  const keep = p.scrollTop, s = exarchNow(), figs = usageFigures();
+  // HUB380: a figure shows its short value here; the refresh and runs-out times stay in its hover text
+  const sync = el("div",{class:"kv"}, el("span",{class:"row"}, ($("#syncicons") || el("span")).cloneNode(true), $("#savest").textContent || (changes.size ? "Syncing" : "Synced")));
+  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : null, f.label), f.short || f.value, {title: f.tip}))
     : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
-  if(u && rw && rw.why) usage.push(el("div",{class:"small mu"}, "Runway: " + rw.why + " (" + runoutText(u, null).replace(/^ · /, "") + ")."));
-  else if(u) usage.push(el("div",{class:"small mu"}, "Runway: " + runoutText(u, null).replace(/^ · /, "") + "."));
   const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
     const pr = leadRow(k, p0, core), st = leadState(pr, now), n = [...cards.values()].filter(c => c.col === "prog" && cardProject(c) === k && cardKind(c) !== "Release").length;
     const streams = n + (n === 1 ? " stream" : " streams");
@@ -6277,8 +6279,7 @@ function renderSyncPop(){
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
   p.replaceChildren(el("div",{class:"phead"}, el("b",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
-    popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")])),
-    popSec("Exarch AI", ...ex), ...syncPopRuns(), devicesSec());
+    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")])));
   p.scrollTop = keep;
 }
 const EXARCH_OFF_WARN = "Turning Exarch AI off stops planning and Lead wakes, and halts the running Leads' work. Running work finishes its current step, keeps its branch and goes back to Next up within 10 min.";
@@ -6292,12 +6293,12 @@ function syncPopExtra(){
   const allowed = pace === "turbo" ? "no limit (Turbo)" : String(a != null && Number(a) >= 0 ? Math.min(cap, Number(a)) : cap);
   const inUse = u && u.streams_live != null && live >= 0 ? live + " of " + allowed : "-";   // "-" alone while there is no reading
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
-  return [popSec("Pace", paceSelector(pace, "syncpop"),
+  const pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
+  return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Hub tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
     kv("Streams in use", inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
-function syncPopRuns(){ return [popSec("Exarch AI runs", runsTable(exarchNow().runs))]; }
 // >>> runs-rows (tests/test_app.py runs this block)
 // one run as the two lines of EXARCH F: [start time, "kind · card or Lead", time taken or "running 6m" or "failed"],
 // then "model · tokens · plan or $cost"; err marks a failed run
@@ -6365,7 +6366,7 @@ function exarchWatch(){   // on each new export: an escalation the user must act
 function devicesSec(){
   const on = notifyOn();
   const cb = el("input",{type:"checkbox", id:"notifydev", checked:on ? true : null,
-    onchange:ev => { if(ev.target.checked) notifyAsk(); else { ls(NOTE_KEY, "off"); renderSyncPop(); aiDraw(); } }});
+    onchange:ev => { if(ev.target.checked) notifyAsk(); else { ls(NOTE_KEY, "off"); aiDraw(); } }});
   const notes = "notifications " + (on ? "on" : "off"), note = el("label",{class:"row small"}, cb, "Notify this device");
   if(!conn || !exReady()) return popSec("Devices", el("div",{class:"dev"}, el("span",{}, "This device"), el("span",{class:"small mu"}, notes)), note);
   const doc = ex.doc || {}, devs = Array.isArray(doc.devices) ? doc.devices : [];
@@ -6376,8 +6377,8 @@ function devicesSec(){
   if(!exPaired()) rows.push(el("div",{class:"exdev"}, el("span",{}, "This device · " + exName()), el("span",{class:"small mu"}, "not paired · " + notes)));
   return popSec("Devices that read the chats", ...rows,
     devs.length ? el("span",{class:"small mu"}, "A removed device can't read new chats; it pairs again to read any.") : null,
-    el("div",{class:"row"}, exPaired() ? el("button",{type:"button", "aria-expanded":String(ex.how), onclick:() => { ex.how = !ex.how; renderSyncPop(); }}, "Pair a new device")
-      : el("button",{type:"button", disabled:readOnly ? true : null, onclick:() => { syncPopOpen(false); ai.tab = "chat"; if($("#aipanel").hidden) aiOpen(true); else aiDraw(); if(!ex.asked) exPair(); }}, "Pair this device"), note),
+    el("div",{class:"row"}, exPaired() ? el("button",{type:"button", "aria-expanded":String(ex.how), onclick:() => { ex.how = !ex.how; aiDraw(); }}, "Pair a new device")
+      : el("button",{type:"button", disabled:readOnly ? true : null, onclick:() => { ai.tab = "chat"; if($("#aipanel").hidden) aiOpen(true); else aiDraw(); if(!ex.asked) exPair(); }}, "Pair this device"), note),
     exPaired() && ex.how ? el("span",{class:"small mu"}, "Open the Hub on the new device: its drawer shows a code, and the drawer here asks to confirm it.") : null);
 }
 // ---- the drawer
@@ -6385,10 +6386,11 @@ function aiDraw(){
   aiSync(); aiEnsure();
   const s = exarchNow(), c = aiConv(), leads = chatLeads(), row = chatRow(ai.chats, leads);
   $("#aihico").classList.toggle("mu", s.state === "off" || s.state === "halting");
-  for(const t of ["chat", "status", "arch"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
+  $("#aihico").classList.toggle("ok", s.state === "on");   // HUB381: green while Exarch AI is on
+  for(const t of ["chat", "arch", "dev", "status"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
   const fails = s.history.filter(h => h.tag === "fail" && String(h.at || "") > (ai.seen.status || "")).length;
   $("#aitab-status").replaceChildren("Status", fails ? el("span",{class:"err small"}, " " + fails) : "");
-  $("#aichat").hidden = ai.tab !== "chat"; $("#aistatus").hidden = ai.tab !== "status"; $("#aiarch").hidden = ai.tab !== "arch";
+  $("#aichat").hidden = ai.tab !== "chat"; $("#aistatus").hidden = ai.tab !== "status"; $("#aiarch").hidden = ai.tab !== "arch"; $("#aidev").hidden = ai.tab !== "dev";
   // off: the panel with Turn on (the chats stay readable below it)
   const offp = $("#aioff"); offp.hidden = !(s.state === "off" || s.state === "halting");
   if(!offp.hidden) offp.replaceChildren(el("b",{class:"row"}, ico("zzz", "mu"), s.state === "halting" ? "Exarch AI is halting" : "Exarch AI is off"),
@@ -6404,6 +6406,7 @@ function aiDraw(){
     el("span",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:notifyAsk}, "Turn on"), el("button",{type:"button", onclick:() => { ls(NOTE_KEY, "off"); aiDraw(); }}, "Not now")));
   if(ai.tab === "chat") aiDrawChat(c, row, leads);
   else if(ai.tab === "status"){ aiDrawStatus(s); ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status; }
+  else if(ai.tab === "dev") $("#aidev").replaceChildren(devicesSec());   // HUB381: moved here from the Sync popup (HUB380)
   else aiDrawArch();
   aiSave(); renderExarchHeader();
 }
@@ -6532,12 +6535,22 @@ function aiItems(c){   // the open chat: messages, and for a Lead its Status lin
     : "Ask about the board (what is blocked, what changed) or list new work for any project. With Plan on, a request comes back as a plan to approve."));
   for(const it of items){
     if(it.h){ out.push(el("div",{class:"sline", title:"Status, for reference: not sent to the Lead"}, ico("compass"),
-      (it.h.at ? new Date(it.h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) + " " : "") + String(it.h.text || ""), el("span",{class:"mu"}, " · status, not sent"))); continue; }
+      aiTime(it.h.at), String(it.h.text || ""), el("span",{class:"mu"}, " · status, not sent"))); continue; }
     out.push(aiMsg(c, it.m));
   }
   return out;
 }
+// HUB381: a message's or status line's own time, local, with the full date on hover
+function aiTime(at){
+  const d = new Date(at || ""); if(!at || isNaN(d)) return null;
+  return el("time",{class:"small mu mtime", datetime:d.toISOString(), title:d.toLocaleString()}, d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}));
+}
 function aiMsg(c, m){
+  const box = aiMsg0(c, m), t = m.role === "moved" || m.wait ? null : aiTime(m.at);
+  if(t) box.append(t);
+  return box;
+}
+function aiMsg0(c, m){
   if(m.role === "moved") return el("div",{class:"moved"}, el("span",{}, m.text), m.undo ? el("button",{type:"button", class:"small", onclick:() => aiUnmove(c, m)}, "Undo") : null);
   if(m.role === "user") return aiCardText(el("div",{class:"aimsg user"}), m.text);
   if(m.wait) return el("div",{class:"aimsg assistant wait"}, m.late ? aiNoAnswer(m.queued) : "Thinking…");
@@ -6834,7 +6847,7 @@ function aiDrawStatus(s){
     el("button",{type:"button", "aria-pressed":String(f === k), onclick:() => { ai.hfilt = k; aiDraw(); }}, name)));
   const lines = histShown(s.history, f);
   $("#aistatus").replaceChildren(seg, ...(lines.length ? lines.map(h => el("div",{class:"hl" + (h.tag === "fail" ? " err" : "")},
-    el("span",{class:"t"}, h.at ? new Date(h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""), aiCardText(el("span",{}), h.text || "", h.card ? [h.card] : []))) :
+    el("span",{class:"t", title:h.at ? new Date(h.at).toLocaleString() : null}, h.at ? new Date(h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""), aiCardText(el("span",{}), h.text || "", h.card ? [h.card] : []))) :
     [el("p",{class:"note"}, s.x ? "Nothing to show here." : "No Exarch AI status in the export yet.")]));
 }
 function aiDrawArch(){
@@ -6930,7 +6943,7 @@ $("#aiclose").addEventListener("click", () => aiOpen(false));
 $("#ainew").addEventListener("click", aiNewChat);
 $("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
 $("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); });
-for(const t of ["chat", "status", "arch"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
+for(const t of ["chat", "arch", "dev", "status"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
 // ---------- HUB338: encrypted chats (docs/EXARCH.md section K, mock-ups section 6). This device makes its own
