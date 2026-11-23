@@ -833,6 +833,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aimsg.plan{border-color:var(--accent)}
 .aimsg.wait{color:var(--muted); font-style:italic}
 .aimsg .meta{white-space:normal}
+.aimsg .cmark{font-size:.7rem} .aimsg .undo{margin-left:8px}   /* HUB390 */
 .aimsg .mtime{justify-self:end; font-size:.7rem; font-variant-numeric:tabular-nums} .aimsg.user .mtime{display:block; text-align:right}   /* HUB381 */
 .aimsg .aicard,.hl .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); border-radius:0; padding:0; cursor:pointer; display:inline}
 .draft{border:1px solid var(--line); border-radius:8px; padding:6px 8px; display:grid; gap:4px; white-space:normal}
@@ -5968,6 +5969,7 @@ async function load(sha){
   exarchWatch(); if(!$("#aipanel").hidden) aiDraw();   // HUB322: a new export: escalations notified, the drawer redrawn
   aiSettled();   // HUB331: the chats whose taps the board has settled are read again: the node's item states rule
   aiPlans();   // HUB330: the refinement plans' chats
+  aiConsole();   // HUB390: the Console's rows and the waiting / read mark in the Exarch chat
 }
 const POLL_MS = 3000;   // HUB374: was 6 s (a 304 costs no API quota)
 let nextCheck = null;   // when the next look at the board is due (HUB135: the ring beside "checked")
@@ -6625,7 +6627,12 @@ function aiMsg(c, m){
 }
 function aiMsg0(c, m){
   if(m.role === "moved") return el("div",{class:"moved"}, el("span",{}, m.text), m.undo ? el("button",{type:"button", class:"small", onclick:() => aiUnmove(c, m)}, "Undo") : null);
-  if(m.role === "user") return aiCardText(el("div",{class:"aimsg user"}), m.text);
+  if(m.role === "user"){
+    const mark = consoleMark(c, m), box = aiCardText(el("div",{class:"aimsg user"}), m.text);
+    if(m.con) box.append(el("span",{class:"small mu cmark", title:"Typed to the Console in the desktop session"}, " · to the Console"));
+    if(mark) box.append(el("span",{class:"small mu cmark", title: mark === "read" ? "The Console has read this message" : "The Console has not read this message yet"}, " · " + mark));
+    return box;
+  }
   if(m.wait) return el("div",{class:"aimsg assistant wait"}, m.late ? aiNoAnswer(m.queued) : "Thinking…");
   const box = el("div",{class:"aimsg assistant" + (m.plan ? " plan" : "")});
   if(m.plan){
@@ -6643,7 +6650,7 @@ function aiMsg0(c, m){
       d.meta ? el("span",{class:"small mu"}, String(d.meta)) : null,
       d.dup ? el("span",{class:"dup"}, "Looks like " + String(d.dup) + ": check before creating") : null,
       d.refused ? el("span",{class:"small err"}, "Refused: " + String(d.refused)) : null,
-      itemSays(d) ? el("span",{class:"small mu"}, itemSays(d))
+      itemSays(d) ? el("span",{class:"small mu"}, itemSays(d), undoOpen(d) ? el("button",{type:"button", class:"small undo", title:"Moves the card to Rejected (for 24 hours)", onclick:() => aiUndo(c, m, d)}, "Undo") : null)
         : el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:() => aiTap(c, m, "draft", d, "create", {t: d.t})}, "Create"),
           el("button",{type:"button", onclick:() => { d.editing = !d.editing; aiDraw(); }}, d.editing ? "Done" : "Edit"),
           el("button",{type:"button", onclick:() => aiTap(c, m, "draft", d, "dismiss")}, "Dismiss")))));
@@ -6688,6 +6695,14 @@ function aiTap(c, m, kind, item, act, extra){   // a plan, draft or proposal tap
   if(kind === "plan" && act === "approve"){ item.wait = new Date().toISOString(); aiReread(c); }   // HUB330: its cards come as items on this reply
   aiDraw();
 }
+function aiUndo(c, m, x){   // HUB390: the item's own undo (the card to Rejected), through the usual change path
+  if(!conn || readOnly){ toast("Exarch AI needs a token that can write to the board data."); return; }
+  if(!undoOpen(x)) return;
+  const sent = change({id: String(x.undo.card), upd: (cards.get(String(x.undo.card)) || {}).upd || null}, String(x.undo.field || "column"), x.undo.value,
+    {item: c.conv + "/" + String(x.id || ""), via: "exarch", undo: true});
+  if(!sent) return;
+  x.pend = sent; x.undoing = true; aiDraw();
+}
 // >>> drawer-taps (tests/test_app.py runs this block)
 function aiRefused(id, why){   // the node refused a tap's change: its buttons come back, with the reason
   for(const c of ai.chats) for(const m of c.msgs) if(itemRefused(m, id, String(why || "no reason given"))){ aiRefresh(c); }
@@ -6726,7 +6741,8 @@ function aiItems331(r, kind){
     const d = x.draft && typeof x.draft === "object" ? x.draft : {}, dup = Array.isArray(x.dupes) && Array.isArray(x.dupes[0]) ? x.dupes[0] : null;
     const out = {id: String(x.id || ""), text: String(x.text || ""), change: x.change || null, card: x.card || null,
       done: x.taken ? "taken" : x.state && !["open", "refused"].includes(x.state) ? (DONE[x.state] || String(x.state)) : null,
-      refused: x.state === "refused" && !x.taken ? String(x.why || "no reason given") : null, made: x.made || null};
+      refused: x.state === "refused" && !x.taken ? String(x.why || "no reason given") : null, made: x.made || null,
+      auto: x.auto === true, undo: x.undo && typeof x.undo === "object" ? x.undo : null, at: String(x.at || "")};   // HUB390: auto = Exarch AI created it; undo = the change that moves the card to Rejected
     if(kind === "draft"){
       out.t = String(d.t || x.text || "");
       out.meta = [d.type, d.pri ? "P" + d.pri : null, d.col, d.epic].filter(Boolean).join(" · ");
@@ -6739,16 +6755,38 @@ function itemsOf(m){ return (m.plan ? [m.plan] : []).concat(Array.isArray(m.draf
 function itemRefused(m, id, why){   // the tap whose change `id` the node refused: undone here, with the reason; false when not in m
   const x = itemsOf(m).find(y => y && y.pend && y.pend === id);
   if(!x) return false;
-  x.done = null; x.pend = null; x.refused = why;
+  x.done = x.undoing ? "create" : null; x.pend = null; x.refused = why; x.undoing = false;   // a refused Undo leaves it created
   if(x.wait) x.wait = null;
   return true;
 }
 function itemSays(x){   // a draft's or proposal's state in words; "" while it has its buttons
-  if(x.pend) return "On its way to the node";
+  if(x.pend) return x.undoing ? "Undoing: on its way to the node" : "On its way to the node";
   if(!x.done) return "";
   if(x.done === "taken") return "Being applied";
   if(x.done === "create") return "Created" + (x.made ? ": " + x.made : x.card && x.card !== "new" ? " as " + x.card : "");
   return x.done === "apply" ? "Applied" : x.done === "undone" ? "Undone" : "Dismissed";
+}
+// HUB390: a card Exarch AI created by itself (`auto`) has an Undo for 24 hours from its creation (the node's UNDO_S): the
+// change moves the card to Rejected; an epic has no undo, and a settled or being-undone item has none
+const UNDO_MS = 24 * 3600 * 1000;
+function undoOpen(x, now){
+  if(!x || x.auto !== true || x.done !== "create" || x.pend || !x.undo || typeof x.undo !== "object" || !x.undo.card) return false;
+  const t = Date.parse(x.at || ""); return !isNaN(t) && (now == null ? Date.now() : now) - t < UNDO_MS;
+}
+// HUB390: the Console's rows of the Exarch chat (hub/exarch/consolechat.py: by "console", n from 100000, `ask` = what the
+// user typed to the Console, `text` = its answer) as the drawer's messages, in time order with the others; and the mark
+// of a message the user sent (`console` of its reply row: "waiting" until the Console has read it, then "read")
+const CONSOLE_N0 = 100000;
+function consoleMsgs(r){
+  const at = r.at || new Date().toISOString(), out = [];
+  if(String(r.ask || "").trim()) out.push({role: "user", text: String(r.ask), at, n: r.n, con: true});
+  if(String(r.text || "").trim()) out.push({role: "assistant", text: String(r.text), at, n: r.n, by: "console", cards: Array.isArray(r.cards) ? r.cards : [], con: true});
+  return out;
+}
+function consoleMark(c, m){   // "waiting" | "read" | "" for a message the user sent in the Exarch tab
+  if(!c || c.kind !== "exarch" || m.role !== "user" || m.con || m.n == null || Number(m.n) >= CONSOLE_N0) return "";
+  const a = c.msgs.find(x => x.role === "assistant" && x.n === m.n && !x.wait && x.console);
+  return a && (a.console === "waiting" || a.console === "read") ? a.console : "";
 }
 function planSays(p){
   if(!p.done) return "";
@@ -6758,7 +6796,7 @@ function planSays(p){
 // a reply of the chat's file as the drawer's message; `old` (the message it replaces) keeps what was tapped here while its
 // change is on its way (`live(id)`), and a title being edited; otherwise the node's states rule
 function aiReplyMsg(r, old, live){
-  const msg = {role: "assistant", n: r.n, text: String(r.text || ""), cards: Array.isArray(r.cards) ? r.cards : [], at: r.at || new Date().toISOString(),
+  const msg = {role: "assistant", n: r.n, text: String(r.text || ""), cards: Array.isArray(r.cards) ? r.cards : [], at: r.at || new Date().toISOString(), console: r.console === "waiting" || r.console === "read" ? r.console : "",
     tier: r.tier, tokens: r.tokens, by: r.by || r.model || "", paid: r.paid || "",
     plan: r.plan && typeof r.plan === "object" ? Object.assign({}, r.plan) : null,
     drafts: aiItems331(r, "draft"), proposals: aiItems331(r, "proposal")};
@@ -6766,7 +6804,7 @@ function aiReplyMsg(r, old, live){
   for(const k of ["drafts", "proposals"]) for(const x of msg[k] || []){
     const o = (Array.isArray(old[k]) ? old[k] : []).find(y => y && y.id && y.id === x.id);
     if(!o) continue;
-    if(o.pend && live && live(o.pend) && !x.done){ x.done = o.done; x.pend = o.pend; x.refused = null; }
+    if(o.pend && live && live(o.pend) && (!x.done || o.undoing)){ x.done = o.done; x.pend = o.pend; x.refused = null; x.undoing = !!o.undoing; }
     else if(o.refused && !o.pend && !x.done && !x.refused) x.refused = o.refused;
     if(!x.done && (o.edited || o.editing)){ x.t = o.t; x.editing = !!o.editing; x.edited = !!o.edited; }
   }
@@ -6869,6 +6907,27 @@ async function aiFetch(c, want){   // the chat's replies of its export file (tho
     if(want(o)) out.push(o);
   }
   return out;
+}
+async function aiConsole(){   // HUB390: the Console's rows of the Exarch chat, and the waiting / read mark of the user's messages there
+  const c = ai.chats.find(x => x.kind === "exarch");
+  if(!c || !conn || ai.polling.has("console") || exLocked() || !c.msgs.length) return;
+  const open = c.msgs.some(m => m.role === "assistant" && m.console === "waiting");   // a mark to settle: look sooner
+  if(Date.now() - (aiConsole.at || 0) < (open ? 8000 : 30000)) return;
+  aiConsole.at = Date.now();
+  ai.polling.add("console");
+  const gen = ai.gen;
+  try{
+    if(exReady()){ await exLoad(false); exGone(); if(!exPaired() || gen !== ai.gen) return; }   // sealed like every chat (HUB338)
+    const want = r => Number(r.n) >= CONSOLE_N0 ? !c.msgs.some(m => m.n === r.n) : c.msgs.some(m => m.role === "assistant" && m.n === r.n && !m.wait && m.console === "waiting");
+    let rs = [];
+    try{ rs = (await aiFetch(c, want)).filter(r => !r.failed && !r.queued); }catch(e){ return; }   // not written yet (404), or a blip: the next export asks again
+    if(gen !== ai.gen || !rs.length) return;
+    for(const r of rs){
+      if(Number(r.n) >= CONSOLE_N0){ if(!c.msgs.some(m => m.n === r.n)){ c.msgs.push(...consoleMsgs(r)); c.hidden = false; } }
+      else { const a = c.msgs.find(m => m.role === "assistant" && m.n === r.n && !m.wait); if(a) a.console = r.console === "waiting" || r.console === "read" ? r.console : ""; }
+    }
+    aiSave(); if(!$("#aipanel").hidden) aiDraw(); else renderExarchHeader();
+  } finally { ai.polling.delete("console"); }
 }
 async function aiReread(c){   // HUB330: after Approve, until the reply shows the plan settled with its items (they come with the next node cycle)
   const key = "plan:" + c.conv, t0 = Date.now(), gen = ai.gen, waits = () => gen === ai.gen ? c.msgs.filter(m => m.plan && m.plan.wait) : [];
