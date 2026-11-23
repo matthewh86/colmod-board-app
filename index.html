@@ -5836,6 +5836,7 @@ async function check(){
                                                          : "The repository or its branch can't be found with this token."); return; }
     document.getElementById("sync").textContent = "Can't reach GitHub right now; retrying.";
   }
+  if (changes.size) wake();   // HUB374: keep looking quickly
 }
 async function load(sha){
   const data = await (await gh(`contents/export/board.json?ref=${sha}`, {raw: true})).json();
@@ -5890,9 +5891,10 @@ async function load(sha){
   aiSettled();   // HUB331: the chats whose taps the board has settled are read again: the node's item states rule
   aiPlans();   // HUB330: the refinement plans' chats
 }
-const POLL_MS = 6000;
+const POLL_MS = 3000;   // HUB374: was 6 s (a 304 costs no API quota)
 let nextCheck = null;   // when the next look at the board is due (HUB135: the ring beside "checked")
-function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, 2500); nextCheck = Date.now() + 2500; }
+const FAST_MS = 1500;   // HUB374: while a change of ours is on its way, look every 1.5 s until the board shows it
+function wake(){ clearTimeout(wake.t); wake.t = setTimeout(check, FAST_MS); nextCheck = Date.now() + FAST_MS; }
 function startPolling(){
   clearInterval(timer);
   timer = setInterval(() => { nextCheck = Date.now() + POLL_MS; check(); }, POLL_MS);
