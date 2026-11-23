@@ -262,6 +262,8 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .dq button[aria-pressed="true"]{background:var(--q); border-color:var(--q); color:var(--surface); border-style:solid}
 .dq .hint{font-size:.7rem; color:var(--muted)}
 .chip{display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:500; padding:1px 7px; border-radius:999px; background:hsl(var(--h) var(--chip-s) var(--chip-l)); color:var(--chip-ink); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+.eedit.epicedit{position:static; display:inline-block; opacity:.7; vertical-align:middle}   /* HUB311: beside the card's epic */
+.epedit select{font:inherit; max-width:60vw}
 .chipedit{position:relative; cursor:pointer; padding-right:8px}
 .chipedit:hover,.chipedit:focus-within{outline:2px solid hsl(var(--h) 60% 45%); outline-offset:1px}
 .projnote{font-size:.76rem; color:var(--q); margin-top:4px}   /* HUB350: what a project change does to the card */
@@ -650,6 +652,13 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .grow.gtheme{background:color-mix(in srgb, var(--sunk) 60%, transparent)} .grow.gtools{height:30px; background:var(--sunk)}
 .gtheme .glab{font-weight:600; background-color:var(--sunk)} .gepic .glab{padding-left:16px; color:var(--muted)} .glab.gcard{padding-left:24px}
 .gfold{font:inherit; font-size:.8rem; line-height:1; width:18px; height:18px; flex:none; padding:0; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink); cursor:pointer}
+/* HUB383: a bar a stream is working on shimmers: light bands travel along it and it pulses softly */
+.gshim{position:absolute; inset:0; border-radius:inherit; overflow:hidden; pointer-events:none}
+.gshim::before{content:""; position:absolute; top:0; bottom:0; left:0; width:100%; background:repeating-linear-gradient(100deg, transparent 0 28px, rgb(255 255 255 / .55) 44px, transparent 60px 90px); background-size:90px 100%; animation:gshimmer 1.8s linear infinite}
+.gbar.live,.gspan.live{animation:gpulse 2.4s ease-in-out infinite}
+@keyframes gshimmer{from{background-position:0 0} to{background-position:90px 0}}
+@keyframes gpulse{0%,100%{filter:brightness(1)} 50%{filter:brightness(1.18)}}
+@media (prefers-reduced-motion: reduce){ .gshim::before{animation:none; background:rgb(255 255 255 / .25)} .gbar.live,.gspan.live{animation:none; outline:2px solid var(--accent); outline-offset:-2px} }
 .gspan{position:absolute; top:5px; height:calc(var(--grow) - 11px); box-sizing:border-box; border-radius:4px; background:hsl(var(--h,220) var(--gs) var(--gl-epic))}
 .gtheme .gspan{background:hsl(var(--h,220) var(--gs) var(--gl-theme))}
 /* HUB152: an epic's bar across a gap between its cards' work (nothing worked on or planned then): dotted, lighter */
@@ -1793,7 +1802,9 @@ function cardEl(c, full=false){
     // HUB293: a change is held in the editor (EDIT) until Save
     const own = cardProject(c), projV = edVal(c, "project", own), moved = projV !== own;   // HUB350
     const epV = edVal(c, "epic", c.epic), epP = epics.get(epV);
-    const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation(), onchange:ev=>{ if(ev.target.value){ edPut(c, "epic", ev.target.value, c.epic); renderModal(); } }});
+    // HUB311: the epic is shown as a plain pill; its edit icon turns it into a select with Save and Cancel
+    const editing = EPIC_EDIT === c.id || (moved && !epP);
+    const es = el("select",{id:"card-epic", "aria-label":"Epic of "+c.id, onclick:ev=>ev.stopPropagation()});
     const noEp = epV ? String(epV) : moved && cardProblem(c, {project: projV, epic: "", type: kind}, newCtx()) ? "(choose an epic)" : noEpicText(c);
     if(!epP) es.append(el("option",{value:"", selected:true}, noEp));
     const ownTh = moved ? "" : epicTheme(c.epic);   // HUB303: only epics of the card's theme (a card without a theme, or one changing its project, may take any)
@@ -1808,9 +1819,15 @@ function cardEl(c, full=false){
     const th2 = moved ? themes.get(epicTheme(epV)) : null;
     const tpath2 = moved ? (th2 ? el("span",{class:"tpath", title:"Theme (follows the epic)"}, th2.name+" ›") : null) : tpath;
     const notes = projectNotes(c, projV, epV);
-    e.append(el("div",{class:"eprow"}, pchip, pchip ? " " : null, tpath2, el("label",{class:"chip chipedit", style:"--h:"+(epP?epP.hue:210), title:"Change this card's epic (kept until you Save)"},
-      el("span",{"aria-hidden":"true"}, (epP?epP.name:noEp)+" ▾"), es),
-      epP ? el("button",{type:"button", class:"eplink", title:"Open this epic and its cards", onclick:ev=>{ ev.stopPropagation(); showEpic(epV); }}, "Open epic ›") : null,
+    const epHue = epP ? epP.hue : 210;
+    const epPart = editing
+      ? el("span",{class:"epedit", onclick:ev=>ev.stopPropagation()}, es, " ",
+          el("button",{type:"button", class:"pri epsave", title:"Send this epic change to the board", onclick:ev=>{ ev.stopPropagation(); if(es.value){ edPut(c, "epic", es.value, c.epic); EPIC_EDIT = null; edSave(); renderModal(); } else { EPIC_EDIT = null; renderModal(); } }}, "Save"), " ",
+          el("button",{type:"button", class:"epcancel", onclick:ev=>{ ev.stopPropagation(); EPIC_EDIT = null; if(EDIT.id === c.id) EDIT.v.delete("epic"); renderModal(); }}, "Cancel"))
+      : el("span",{class:"epshow"}, el("span",{class:"chip", style:"--h:"+epHue, title:epP ? epP.blurb||"" : ""}, epP ? epP.name : noEp), " ",
+          el("button",{type:"button", class:"eedit epicedit", title:"Edit this card's epic", "aria-label":"Edit the epic of "+c.id, onclick:ev=>{ ev.stopPropagation(); EPIC_EDIT = c.id; renderModal(); }}, "✎"));
+    e.append(el("div",{class:"eprow"}, pchip, pchip ? " " : null, tpath2, epPart,
+      epP && !editing ? el("button",{type:"button", class:"eplink", title:"Open this epic and its cards", onclick:ev=>{ ev.stopPropagation(); showEpic(epV); }}, "Open epic ›") : null,
       notes.length ? el("div",{class:"projnote", role:"status"}, notes.join(" ")) : null));
   } else if(ep) e.append(el("div",{}, tpath, full ? el("button",{type:"button", class:"chip eplink", style:"--h:"+ep.hue, title:(ep.blurb||"")+" (open this epic and its cards)", onclick:ev=>{ ev.stopPropagation(); showEpic(c.epic); }}, ep.name)
     : el("span",{class:"chip", style:"--h:"+ep.hue, title:ep.blurb||""}, ep.name)));
@@ -2033,6 +2050,7 @@ function draftBack(ch, doc){
 // >>> card-editor (tests/test_app.py runs this block)
 // HUB293: the card editor holds its changes (EDIT) until the Save button; closing, opening another card or switching
 // tab with changes asks Save or Discard, with a summary of each changed field.
+let EPIC_EDIT = null;   // HUB311: the card whose epic select is open in the card window
 let EDIT = {id: null, v: new Map()};   // the open card's unsaved changes: "epic", "pri", "col", "ans.<id>" -> new value
 function edVal(c, key, cur){ return EDIT.id === c.id && EDIT.v.has(key) ? EDIT.v.get(key) : cur; }
 function edDirty(){ return !!openId && EDIT.id === openId && EDIT.v.size > 0; }
@@ -2124,7 +2142,7 @@ function edPrompt(then){   // unsaved changes: summary, then Save, Discard or Ca
 function edGuard(then){ if(edDirty()) edPrompt(then); else then(); }
 // <<< card-editor
 function openCard(id){
-  const go = () => { if(EDIT.id !== id) edReset(); lastFocus = document.activeElement; openId = id; openEpic = null; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); };
+  const go = () => { EPIC_EDIT = null; if(EDIT.id !== id) edReset(); lastFocus = document.activeElement; openId = id; openEpic = null; renderModal(); const m=$("#modal .mclose"); if(m) m.focus({preventScroll:true}); };
   if(openId && openId !== id) edGuard(go); else go();
 }
 function showEpic(k){ if(!epics.has(k)) return; openEpic = k; renderModal(); const b = $("#modal .epback"); if(b) b.focus({preventScroll:true}); }   // HUB310
@@ -5297,6 +5315,8 @@ function drawGantt(host){
       label);
     const hstyle = hue != null ? "; --h:" + hue : "";
     let bar;
+    const live = cls === "gepic" && its.some(i => i.c.col === "prog" && streamOf(i.c));   // HUB383: a stream works on one of its cards
+    const shim = () => live ? [el("span",{class:"gshim", "aria-hidden":"true"})] : [];
     if(cls === "gepic"){   // HUB152: solid where its cards are worked on or planned, dotted and lighter across the gaps
       const runs = [];
       for(const [a, b] of its.map(i => [i.s, Math.max(i.s, i.e)]).sort((x, y) => x[0] - y[0])){
@@ -5306,7 +5326,7 @@ function drawGantt(host){
       bar = [];
       runs.forEach(([a, b], i) => {
         if(i){ const g0 = runs[i - 1][1]; if(X(a) > X(g0)) bar.push(el("span",{class:"gspan gap", style:"left:" + X(g0) + "px; width:" + (X(a) - X(g0)) + "px" + hstyle, ...hover})); }
-        bar.push(el("span",{class:"gspan", style:"left:" + X(a) + "px; width:" + Math.max(4, X(b) - X(a)) + "px" + hstyle, ...hover}));
+        bar.push(el("span",{class:"gspan" + (live ? " live" : ""), style:"left:" + X(a) + "px; width:" + Math.max(4, X(b) - X(a)) + "px" + hstyle, ...hover}, ...shim()));
       });
     } else bar = el("span",{class:"gspan", style:"left:" + X(s) + "px; width:" + Math.max(4, X(e) - X(s)) + "px" + hstyle, ...hover});
     inner.append(row(cls, lab, bar, Object.assign({"data-g": kind, "data-folded": open ? null : "1"}, data)));
@@ -5351,13 +5371,13 @@ function drawGantt(host){
       const testing = it.kind === "testing";   // HUB146: merged: no longer drawn like work in progress
       const was = it.kind === "past";   // HUB168: finished: solid while worked on, pale from its gate pass to Done
       const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "");
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "") + (c.col === "prog" && streamOf(c) ? " live" : "");   // HUB383: a stream works on it now
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
       const split = hatch || was ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
       const gend = hatch && it.merged != null ? Math.max(split, Math.min(w, X(it.merged) - X(it.s))) : null;
       cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : "") + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover,
-        "data-gfocus":movable ? "card:" + c.id : null, onkeydown:movable ? ev => gKeyMove(ev, ev.currentTarget) : null});
+        "data-gfocus":movable ? "card:" + c.id : null, onkeydown:movable ? ev => gKeyMove(ev, ev.currentTarget) : null}, ...(cls.includes(" live") ? [el("span",{class:"gshim", "aria-hidden":"true"})] : []));
     }
     inner.append(row(it.kind, lab, cell, Object.assign({"data-g":"card", "data-id":c.id, "data-col":c.col, "data-move":movable ? "1" : null}, data)));
   };
