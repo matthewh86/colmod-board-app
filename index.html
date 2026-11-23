@@ -2492,9 +2492,10 @@ function renderEpics(all){
           onclick:()=>setTheme(filt.t===g.k ? "" : g.k)},
           el("span",{class:"tn"}, g.v.name), ...statKids(cardStats(all, c=>cardTheme(c)===g.k && countsForEpic(c))))
       : el("div",{class:"tnone"}, nm);
+    const tkids = [...g.eps.map(([k,v])=>epicBtn(k,v)), noEpicBtn(g)].filter(Boolean);
     box.append(el("div",{class:"tgroup"+(isC?" collapsed":""), style:"--h:"+hue, role:"group", "aria-label":g.v ? "Theme "+nm : "Epics with no theme"},
       el("div",{class:"thead"}, head, g.v ? editBtn("theme", g.k, g.v) : null, g.eps.length ? tog : null),
-      el("div",{class:"tepics"}, ...g.eps.map(([k,v])=>epicBtn(k,v)), noEpicBtn(g))));
+      tkids.length ? el("div",{class:"tepics"}, ...tkids) : null));   // HUB382: no empty .tepics (an empty grid row still took the 6px gap)
   }
   if(!themes.size) for(const [k,v] of sortedEpics()) box.append(epicBtn(k,v));   // no themes: the plain list
   box.scrollTop = x; box.scrollLeft = xl;
