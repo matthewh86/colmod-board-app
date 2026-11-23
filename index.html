@@ -833,6 +833,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aimsg.plan{border-color:var(--accent)}
 .aimsg.wait{color:var(--muted); font-style:italic}
 .aimsg .meta{white-space:normal}
+.factdo{margin-top:2px; white-space:normal} .nowrun th[scope=row]{text-align:left; white-space:nowrap}   /* HUB387 */
 .aimsg .cmark{font-size:.7rem} .aimsg .undo{margin-left:8px}   /* HUB390 */
 .aimsg .mtime{justify-self:end; font-size:.7rem; font-variant-numeric:tabular-nums} .aimsg.user .mtime{display:block; text-align:right}   /* HUB381 */
 .aimsg .aicard,.hl .aicard{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; border-bottom:1px dashed var(--muted); border-radius:0; padding:0; cursor:pointer; display:inline}
@@ -901,7 +902,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
     <button class="tab" role="tab" id="tab-gantt" data-tab="gantt" aria-controls="gantt" type="button">Gantt</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
-    <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Hub</button>
+    <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Exarch Hub</button>
     <button class="tab" role="tab" id="tab-queues" data-tab="queues" aria-controls="queues" type="button">Queues</button>
     <button class="tab" role="tab" id="tab-releases" data-tab="releases" aria-controls="releases" type="button">Releases</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
@@ -4319,19 +4320,51 @@ function creditsTable(u){
         el("td",{}, "$" + c.left.toFixed(2)), el("td",{}, "$" + c.cap.toFixed(0) + " (" + pct + " % spent)"))))),
     el("p",{class:"note"}, state + " " + c.runs + " run" + (c.runs === 1 ? "" : "s") + " this month.")];
 }
+function addKids(host, ...kids){ host.append(...kids.flat().filter(k => k != null && k !== false)); }   // HUB387: Node.append turns a null into the text "null"
+// >>> hub-tab (tests/test_app.py runs this block)
+// HUB387: the Exarch line of the Hub tab (was the Coordinator line): on or off, the core's last tick, the runs on the plan
+function exarchLine(s, now){
+  const t = now == null ? Date.now() : now;
+  const onPlan = r => !(r.auth === "api" || (!r.auth && Number(r.cost_usd) > 0));
+  const plan = (s.runs || []).filter(onPlan), running = plan.filter(r => r.state === "running").length;
+  const word = {on: "On", off: "Off", halting: "Halting", unseen: "On, but not seen lately", unknown: "No reading in the export yet"}[s.state] || String(s.state);
+  const tick = s.quiet == null ? "no tick seen yet" : s.quiet < 1 ? "last tick under a minute ago" : "last tick " + s.quiet + " min ago";
+  const runs = plan.length + (plan.length === 1 ? " run" : " runs") + " on the plan" + (running ? " (" + running + " running)" : "");
+  return {value: word + "; " + tick + "; " + runs, state: s.state, t};
+}
+// HUB387: "Now" and "Runs out", one row each: the value, what it means and when it changes
+function nowRunoutRows(u, rw, when){
+  const rows = [];
+  if(u && u.allowance) rows.push({k: "Now", value: String(u.allowance),
+    means: "How many development streams the pace chosen above lets start at this moment, from the plan's usage reading.",
+    changes: "When the pace is changed, a stream starts or ends, or the next usage reading is recorded" + (u.recorded ? " (the last one was " + when(u.recorded) + ")" : "") + "."});
+  if(rw && rw.why){
+    const v = rw.out ? when(rw.out) : rw.plan ? "the plan " + when(rw.plan) + "; the API credits last" : "lasts";
+    rows.push({k: "Runs out", value: v,
+      means: "When the plan, then the API credits, would be used up at the present rate: " + rw.why + ".",
+      changes: "With each usage reading, and as the API credits are spent" + (rw.refresh ? "; the plan refreshes " + when(rw.refresh) : "") + "."});
+  }
+  return rows;
+}
+// <<< hub-tab
+function nowRunoutTable(u, rw){
+  const rows = nowRunoutRows(u, rw, fmtTime);
+  return rows.length ? el("div",{class:"tblwrap"}, el("table",{class:"st nowrun"},
+    el("thead",{}, el("tr",{}, el("th",{}, ""), el("th",{}, "Value"), el("th",{}, "What it means"), el("th",{}, "When it changes"))),
+    el("tbody",{}, rows.map(r => el("tr",{}, el("th",{scope:"row"}, r.k), el("td",{}, r.value), el("td",{}, r.means), el("td",{}, r.changes)))))) : null;
+}
 function usageSection(host){
   const {u, pace, wins} = usageNow();
   const rw = usageRunway(u);
   const cr = usageCredits(u);   // HUB267: the top-up (API) credits left, up top beside the pace
-  host.append(el("h2",{}, "Tokens and pace"),
+  addKids(host, el("h2",{}, "Tokens and pace"),
     cr ? el("p",{class:"note credleft", title:creditLine(cr)}, "API top-up credits: ", el("b",{}, "$" + cr.left.toFixed(2) + " left"), " of $" + cr.cap.toFixed(0) + " this month (" + cr.month + ").") : null,
     usageExtra(u) ? el("p",{class:"note credleft", title:extraLine(usageExtra(u))}, "Usage credits (extra usage past the plan, for handovers only): ",
       usageExtra(u).left != null ? el("b",{}, "$" + usageExtra(u).left.toFixed(2) + " left") : el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"),
       usageExtra(u).left != null ? " of $" + usageExtra(u).limit.toFixed(0) + " ($" + usageExtra(u).spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
       extraBudgetInput(u)) : null,
     paceSelector(pace, "hub"), paceAutoHint(u, pace),
-    u && u.allowance ? el("p",{class:"note"}, "Now: " + u.allowance + ".") : null,
-    rw && rw.why ? el("p",{class:"note"}, "Runs out (the plan, then the API credits): " + rw.why + ".") : null,
+    nowRunoutTable(u, rw),
     ...defaultModelSec(),
     el("h3",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's, beside the Pace
   limitsSection(host);   // HUB193: the limits right under the pace, the token figures after them
@@ -4458,14 +4491,17 @@ function renderHubTab(){
     const appPub = String(fact("Published App") || "");
     if(/^behind/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " This Hub page is behind the hub's: " + appPub.replace(/^behind the hub's /, "")));
     else if(/^not known/.test(appPub)) host.append(el("p",{class:"note appbehind"}, stateEl("behind"), " Whether this Hub page is the hub's is " + appPub));
-    const hb = facts.filter(f => f.group === "hub").map(f => el("tr",{}, el("td",{}, f.label), el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value)));
+    const ex = exarchNow(), exl = exarchLine(ex, Date.now());
+    const hb = facts.filter(f => f.group === "hub" && !/^coord/i.test(f.label)).map(f => el("tr",{}, el("td",{}, f.label),
+      el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value, f.help ? el("div",{class:"small mu factdo"}, "What to do: " + String(f.help)) : null)));
+    hb.splice(Math.max(0, hb.findIndex(r => r.firstChild.textContent === "Published App")), 0, el("tr",{}, el("td",{}, "Exarch"), el("td",{}, exl.value)));
     host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
     // the hub's own jobs (the user, 2026-11-17, HUB96): for a HUB card, or for no card (summaries, syncs)
     const hubJobs = (Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : []).filter(j => !j.card || /^HUB/.test(j.card));
     const queued = hubJobs.filter(j => j.state === "queued");
-    host.append(el("h2",{}, "Hub jobs"), el("p",{class:"note"}, queued.length
-      ? queued.length + " queued: " + queued.map(j => j.kind + (j.card ? " " + j.card : "")).join(", ") + " (the Queues tab orders them)."
-      : "No hub job is queued."));
+    host.append(el("h2",{}, "Hub jobs"), el("p",{class:"note"}, "Jobs for a HUB card or for no card at all: the local LLM's summaries and a node's own settings changes (and syncs). Game jobs are on the Queues tab. "
+      + (queued.length ? queued.length + " queued: " + queued.map(j => j.kind + (j.card ? " " + j.card : "")).join(", ") + " (the Queues tab orders them)."
+      : "No hub job is queued.")));
     jobTables(host, hubJobs, {h: "h3", running: "Running hub jobs", finished: "Finished hub jobs"});
     host.append(el("div",{class:"discon"}, el("button",{type:"button", class:"dangerbtn", id:"signout",
       title:"Forget this browser's connection to the board",
