@@ -6730,7 +6730,7 @@ function aiDrawMenu(c){
   const who = c.kind === "lead" ? c.lead : c.kind === "exarch" ? "Exarch" : "";
   const item = (k, icon, name, text) => el("button",{type:"button", class:"it", onclick:() => { ai.confirm = k; aiDraw(); }}, el("span",{"aria-hidden":"true"}, icon), el("b",{}, name), el("span",{class:"small mu"}, text));
   setKids(m, item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
-    item("archive", "🗄︎", "Archive", "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
+    item("archive", "🗄︎", "Archive", c.kind === "user" ? "Move this chat to Archived, with its history; no new chat opens." : "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
     c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Close this chat and its tab. Its history is kept in Archived.") : null,
     ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Close this chat? Its history is kept in Archived." : "Archive this chat" + (who ? " with " + who : "") + "?"),
       el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : ai.confirm === "close" ? "Close" : "Archive"),
@@ -6740,10 +6740,11 @@ function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archi
   if((act === "archive" || act === "close") && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
   const fresh = {conv: aiId(), kind: c.kind, lead: c.lead, project: c.project, title: c.kind === "user" ? "" : c.title, n: 0, msgs: [], hidden: c.hidden};
   const i = ai.chats.indexOf(c); if(i >= 0) ai.chats[i] = fresh;
-  if(act === "close" && i >= 0) ai.chats.splice(i, 1);   // HUB354: a custom chat closes with no fresh one; the next tab opens
+  const noFresh = act === "close" || (act === "archive" && c.kind === "user");   // HUB368: closing or archiving a custom chat opens no new chat
+  if(noFresh && i >= 0) ai.chats.splice(i, 1);   // HUB354: a custom chat closes with no fresh one; the next tab opens
   if(c.ref){ ai.gone.push(c.ref); if(i >= 0) ai.chats.splice(i, 1); }   // HUB330: a refinement plan's chat is not shown again before its next revision
   if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: act === "close" ? (c.msgs.length ? "archive" : "clear") : act});   // the node drops (or archives) its copy
-  ai.cur = c.ref || act === "close" ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
+  ai.cur = c.ref || noFresh ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
 }
 function aiDrawChatsPop(leads){
   const p = $("#aichatspop"); p.hidden = !ai.pop;
