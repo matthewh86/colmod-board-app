@@ -9,7 +9,7 @@
 <style>
 /* The old Work Board's page (legacy/work-board/index.html) on the hub's data: the page scrolls as a whole; the filter bar
    sticks to the top, the epic column sits left of the board, columns grow to fit their cards (drag the board to pan
-   sideways); one stacked list on phones. A second tab shows the machines and jobs. */
+   sideways); one stacked list on a narrow screen. A second tab shows the machines and jobs. */
 :root{
   --bg:#eef1f5; --surface:#ffffff; --sunk:#e4e8ee; --ink:#1b2230; --muted:#586173; --line:#d4dae3;
   --accent:#1f4e8c; --accent-soft:#dfe8f5; --on-accent:#ffffff;
@@ -78,7 +78,7 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .synconly button{font:inherit; cursor:pointer}
 .tabhide{display:none!important}   /* a tab's own list while the sync pill's view shows only the changes on their way */
 .projsel{width:100%; flex:none; margin:2px 0 4px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px; cursor:pointer}
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:2px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a phone; the page never widens (Manual actions was off-screen, 2026-11-17) */
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin:2px 0 0; position:sticky; top:env(safe-area-inset-top,0px); z-index:6; background:var(--bg); overflow-x:auto; overflow-y:hidden; scrollbar-width:none; max-width:100%}   /* the tabs scroll sideways on a narrow screen; the page never widens (Manual actions was off-screen, 2026-11-17) */
 .tabs::-webkit-scrollbar{display:none}
 .tab .badge{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:10px; background:#d93025; color:#fff; font-size:.7rem; font-weight:700; line-height:1; vertical-align:2px; box-sizing:border-box}   /* the open count, a red circle (Decisions, Manual actions) */
 .tab{flex:none; white-space:nowrap; font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
@@ -94,7 +94,11 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; display:none}
 .qclr{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:20px; height:20px; padding:0; border:0; border-radius:50%; background:var(--sunk); color:var(--muted); font:600 14px/20px var(--f-body); text-align:center; cursor:pointer}
 .qclr:hover{background:var(--accent-soft); color:var(--accent)}
-.fbtn{display:inline-flex; align-items:center; gap:5px; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 9px; cursor:pointer}
+/* HUB352: ONE shared button look for every bordered button in the Hub; each rule below keeps only its layout (size, spacing, display) */
+.fbtn,.qnav,.selbar button,.dq button,.ecbtn,.row button,.mclose,.rankbtn,.rk .acts button,.newwin .nwhead button,.newf .kinds button,.newf .acts button,.pbtn,.qmove button,.gfilt > summary,.grel,.gfoldall,.gfpop .gfclr,.artbtn,.usage .tmode,.ohead .tmode,.syncind,.aibtn,.aipanel button,.expair button,.exdev button{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer}
+.fbtn:not(:disabled):hover,.qnav:not(:disabled):hover,.selbar button:not(:disabled):hover,.dq button:not(:disabled):hover,.ecbtn:not(:disabled):hover,.row button:not(:disabled):hover,.mclose:not(:disabled):hover,.rankbtn:not(:disabled):hover,.rk .acts button:not(:disabled):hover,.newwin .nwhead button:not(:disabled):hover,.newf .kinds button:not(:disabled):hover,.newf .acts button:not(:disabled):hover,.pbtn:not(:disabled):hover,.qmove button:not(:disabled):hover,.gfilt > summary:not(:disabled):hover,.grel:not(:disabled):hover,.gfoldall:not(:disabled):hover,.gfpop .gfclr:not(:disabled):hover,.artbtn:not(:disabled):hover,.usage .tmode:not(:disabled):hover,.ohead .tmode:not(:disabled):hover,.syncind:not(:disabled):hover,.aibtn:not(:disabled):hover,.aipanel button:not(:disabled):hover,.expair button:not(:disabled):hover,.exdev button:not(:disabled):hover,.fbtn[aria-expanded="true"],.syncind[aria-expanded="true"]{border-color:var(--accent); color:var(--accent)}
+.fbtn:disabled,.row button:disabled,.pbtn:disabled,.aipanel button:disabled{opacity:.5; cursor:default}
+.fbtn{display:inline-flex; align-items:center; gap:5px}
 .fbtn:hover,.fbtn[aria-expanded="true"]{border-color:var(--accent); color:var(--accent)}
 .fcount{font-size:.7rem; font-weight:600; color:var(--on-accent); background:var(--accent); border-radius:999px; padding:0 6px}
 .fpop{position:absolute; top:calc(100% + 4px); left:0; z-index:8; min-width:190px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18); padding:8px 10px; display:grid; gap:6px}
@@ -113,7 +117,7 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .qfloat[hidden]{display:none}
 .qfloat .qwrap input{padding-left:28px; padding-right:26px; width:100%}
 .qfloat input{font:inherit; font-size:.85rem; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; flex:1 1 auto; min-width:0}
-.qnav{flex:none; width:26px; height:26px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--muted); font-size:.7rem; line-height:1; cursor:pointer}
+.qnav{flex:none; width:26px; height:26px; padding:0; line-height:1}
 .qnav:hover{color:var(--accent); border-color:var(--accent)}
 .qcount{flex:none; font-size:.75rem; color:var(--muted); font-variant-numeric:tabular-nums; min-width:2.2em; text-align:right}
 .card.qhit{outline:3px solid var(--accent); outline-offset:2px}
@@ -185,7 +189,7 @@ body.selmode .card .hov{display:none !important}
 .fbtn.on{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .selbar{z-index:25; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom,0px)); display:flex; flex-wrap:wrap; align-items:center; gap:6px; background:var(--surface); color:var(--ink); border:1px solid var(--accent); border-radius:8px; padding:7px 10px; box-shadow:0 4px 16px rgba(0,0,0,.2); width:max-content; max-width:calc(100% - 32px); font-size:.85rem}
 .selbar b{font-variant-numeric:tabular-nums}
-.selbar button,.selbar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 8px; cursor:pointer}
+.selbar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 8px; cursor:pointer}
 .selbar button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
 .selbar button:disabled,.selbar select:disabled{opacity:.45; cursor:default}
 body.ro #selbtn{display:none}
@@ -281,7 +285,7 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .dq{display:grid; gap:4px}
 .dq .qt{font-size:.8rem; font-weight:600}
 .dq .ch{display:flex; flex-wrap:wrap; gap:4px}
-.dq button{font:inherit; font-size:.75rem; text-align:left; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:6px; padding:3px 7px; cursor:pointer; max-width:100%}
+.dq button{text-align:left; max-width:100%}
 .dq button.rec{border-style:dashed; border-color:var(--q)}
 .dq button[aria-pressed="true"]{background:var(--q); border-color:var(--q); color:var(--surface); border-style:solid}
 .dq .hint{font-size:.7rem; color:var(--muted)}
@@ -295,7 +299,7 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .chip::before{content:""; width:6px; height:6px; border-radius:50%; background:hsl(var(--h) 60% 45%); flex:none}
 .epics{display:flex; flex-direction:column; gap:6px; padding-bottom:4px}
 .epics h2{margin:0; padding:8px 2px 2px; font-size:.8rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; align-items:center; gap:6px}
-.ecbtn{font:inherit; border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:6px; cursor:pointer; min-width:26px; min-height:26px; padding:0 4px; line-height:1}
+.ecbtn{min-width:26px; min-height:26px; padding:0 4px; line-height:1}
 .ecbtn:hover{color:var(--ink); border-color:var(--accent)}
 .main.ecol{grid-template-columns:30px minmax(0,1fr)}
 .main.ecol .epics h2{flex-direction:column; padding:8px 0 2px}
@@ -398,7 +402,7 @@ img.zoom:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .card .meta{font-size:.75rem; color:var(--muted); display:flex; flex-wrap:wrap; gap:2px 10px}
 .row{display:flex; flex-wrap:wrap; gap:4px; align-items:center}
 .row .lbl{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); min-width:52px}
-.row button{font:inherit; font-size:.75rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:2px 8px; cursor:pointer}
+.row button{padding:2px 8px}
 .row button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .row select{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:2px 4px; min-width:0}
 .card textarea{font:inherit; font-size:.8rem; color:var(--ink); background:transparent; border:1px solid var(--line); border-radius:6px; padding:4px 6px; resize:vertical; min-height:2.4em; width:100%}
@@ -414,7 +418,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .mpanel{width:min(680px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
 .mhead{display:flex; align-items:center; gap:8px}
 .mcol{font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-left:3px solid var(--cc); padding-left:6px}
-.mclose{margin-left:auto; font:inherit; font-size:.8rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:3px 10px; cursor:pointer}
+.mclose{margin-left:auto}
 .card.full{cursor:auto; border:0; border-left:4px solid var(--pc,var(--line)); padding:2px 0 2px 12px; font-size:15px}
 .card.full .t{font-size:1.1rem; text-wrap:balance}
 .card.full .st,.card.full .d,.card.full .meta{font-size:.9rem}
@@ -424,8 +428,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .card.full textarea{min-height:5em; font-size:.9rem}
 .card.full textarea.other{min-height:2.4em; font-size:.85rem}
 body.modal-open{overflow:hidden}
-.rankbtn{font:inherit; font-size:.7rem; font-weight:600; letter-spacing:.04em; text-transform:none; border:1px solid var(--line); background:var(--surface); color:var(--accent); border-radius:999px; padding:1px 9px; cursor:pointer}
-.rankbtn:hover{border-color:var(--accent); background:var(--accent-soft)}
+.rankbtn{padding:1px 9px}
 .rk{width:min(820px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:12px}
 .rk h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
 .rk .rkq{color:var(--muted); font-size:.9rem}
@@ -440,7 +443,7 @@ body.modal-open{overflow:hidden}
 .rk .keys{font-size:.75rem; color:var(--muted)}
 .rk .acts{display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between}
 .rk .acts span{display:flex; flex-wrap:wrap; gap:8px}
-.rk .acts button{font:inherit; font-size:.85rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:5px 12px; cursor:pointer}
+.rk .acts button{padding:5px 12px}
 .rk .acts button.pri{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .rk ol{margin:0; padding-left:1.6em; max-height:50dvh; overflow:auto; font-size:.85rem}
 /* HUB120: the New dialog (a project, theme, epic or card made in the App) */
@@ -449,7 +452,7 @@ body.modal-open{overflow:hidden}
 .newwin .newf{width:auto; box-shadow:0 12px 40px rgba(0,0,0,.35)}
 .newwin .nwhead{display:flex; align-items:center; gap:8px; cursor:move; touch-action:none; user-select:none}
 .newwin .nwhead h3{flex:1}
-.newwin .nwhead button{font:inherit; font-size:.9rem; line-height:1; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; width:30px; height:28px; cursor:pointer}
+.newwin .nwhead button{line-height:1; width:30px; height:28px; padding:0}
 .newwin.min{left:12px !important; top:auto !important; bottom:12px; width:min(300px,calc(100vw - 24px)); overflow:visible}
 .newwin.min .newf > :not(.nwhead){display:none}
 .newwin.min .newf{padding:6px 10px}
@@ -458,7 +461,7 @@ body.modal-open{overflow:hidden}
 .newf{width:min(620px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
 .newf h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
 .newf .kinds{display:flex; flex-wrap:wrap; gap:6px}
-.newf .kinds button{font:inherit; font-size:.85rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:999px; padding:4px 12px; cursor:pointer; min-height:32px}
+.newf .kinds button{padding:4px 12px; min-height:32px}
 .newf .kinds button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .newf label{display:grid; gap:4px; font-size:.85rem; color:var(--muted)}
 .newf input,.newf select,.newf textarea{font:inherit; font-size:.9rem; color:var(--ink); padding:7px 9px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
@@ -467,7 +470,7 @@ body.modal-open{overflow:hidden}
 .newf .err{color:#d93025; font-size:.85rem; min-height:1.2em; margin:0}
 .newf .hint{color:var(--muted); font-size:.8rem; margin:0}
 .newf .acts{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end}
-.newf .acts button{font:inherit; font-size:.85rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:6px; padding:6px 14px; cursor:pointer; min-height:36px}
+.newf .acts button{padding:6px 14px; min-height:36px}
 .newf .acts button.pri{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
 .newf ul{margin:0; padding-left:18px; font-size:.8rem; color:var(--muted)}
 .ro #newbtn{opacity:.6}
@@ -478,7 +481,7 @@ body.modal-open{overflow:hidden}
 .setup label{display:grid; gap:4px; font-size:.85rem; color:var(--muted)}
 .setup input{font:inherit; color:var(--ink); padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
 .setup p{margin:0; font-size:.85rem; color:var(--muted)}
-.pbtn{font:inherit; color:var(--ink); border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:5px 12px; cursor:pointer; min-height:36px}
+.pbtn{padding:5px 12px; min-height:36px}
 body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 /* machines and jobs */
 .status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
@@ -501,7 +504,7 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 table.st td.num, table.st th.num{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
 table.st tr.heat td.num:first-of-type{font-weight:600}
 .qmove{display:flex; gap:4px}
-.qmove button{min-width:30px; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
+.qmove button{min-width:30px; padding:2px 6px}
 .qmove button:disabled{opacity:.35; cursor:default}
 .qbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .qgrip{cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; padding:2px 8px; color:var(--muted); font-size:1.05rem; line-height:1}
@@ -588,7 +591,7 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .pacehelp.preview b{color:var(--pc, var(--accent))}
 /* HUB171/HUB173: the settable limits, each with what it caps and the suggested value */
 .limits{display:grid; gap:8px; max-width:860px}
-/* HUB388: the limits beside the pace (two columns where there is room; stacked on a phone) */
+/* HUB388: the limits beside the pace (two columns where there is room; stacked on a narrow screen) */
 .pacelim{display:grid; grid-template-columns:minmax(0,560px); gap:6px; align-items:start}   /* HUB395: one column: the pace, its limits and the default model under it */
 .pacelim .limbox h3{margin-top:0}
 .pacelim .limrow{grid-template-columns:1fr auto} .pacelim .limrow .limtext{grid-column:1 / -1}
@@ -603,7 +606,7 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .glegend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.75rem; color:var(--muted)}
 .glegend i{display:inline-block; width:22px; height:10px; border-radius:4px; vertical-align:-1px; margin-right:4px; background:var(--muted)}
 .gwrap{overflow-x:auto; overflow-y:hidden; border:1px solid var(--line); border-radius:8px; background:var(--surface); max-width:100%; -webkit-overflow-scrolling:touch}
-/* HUB192: room under the last row for a horizontal scrollbar drawn over the content (phones, overlay scrollbars) */
+/* HUB192: room under the last row for a horizontal scrollbar drawn over the content (touch screens, overlay scrollbars) */
 .gwrap{padding-bottom:16px; box-sizing:border-box}
 /* HUB163, HUB191: a row's label is dragged up or down (a card's onto another epic too) */
 .glab.gdrag{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
@@ -689,7 +692,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 /* HUB152: an epic's bar across a gap between its cards' work (nothing worked on or planned then): dotted, lighter */
 .gspan.gap{top:calc(var(--grow) / 2 - 4px); height:8px; border:1.5px dotted hsl(var(--h,220) var(--gs) var(--gl-epic)); background:hsl(var(--h,220) var(--gs) var(--gl-epic) / .12); border-radius:0}
 .gfilt{position:relative; font-size:.8rem}
-.gfilt > summary, .grel, .gfoldall{list-style:none; font:inherit; font-size:.8rem; cursor:pointer; padding:3px 10px; min-height:28px; box-sizing:border-box; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink)}
+.gfilt > summary, .grel, .gfoldall{list-style:none; padding:3px 10px; min-height:28px; box-sizing:border-box; display:inline-flex; align-items:center; gap:4px}
 .gfilt > summary::-webkit-details-marker{display:none}
 .gfilt > summary::after{content:"\25BE"; color:var(--muted)}
 .gtools .glab{background-color:var(--sunk); cursor:default}
@@ -711,7 +714,7 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .gfpop label span{overflow:hidden; text-overflow:ellipsis}
 .gfpop input[type=checkbox]{flex:none; width:16px; height:16px; margin:0}
 .gfpop label i{flex:none; width:10px; height:10px; border-radius:2px; background:hsl(var(--h,210) var(--gs) var(--gl-card))}
-.gfpop .gfclr{font:inherit; font-size:.75rem; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); padding:2px 8px; cursor:pointer}
+.gfpop .gfclr{padding:2px 8px}
 .gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
 .gbar.held{border-right:3px dotted var(--p1); border-top-right-radius:0; border-bottom-right-radius:0}   /* HUB213: blocked outside the plan: no planned end */
@@ -772,10 +775,10 @@ table.st td small{color:var(--muted)}
 .tbox{margin-top:10px}
 table.arts tr.doomed td:first-child a, table.arts tr.doomed td:first-child span{text-decoration:line-through; color:var(--muted)}
 table.arts td:last-child{white-space:nowrap; text-align:right}
-.artbtn{font:inherit; font-size:.8rem; padding:2px 10px; margin-left:8px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}
+.artbtn{padding:2px 10px; margin-left:8px}
 .artbtn:hover{border-color:var(--accent)} .artbtn.on{background:var(--accent-soft)} .artbtn:disabled{opacity:.5; cursor:default}
 .tbox table td:nth-child(n+3){white-space:nowrap; font-variant-numeric:tabular-nums}
-.usage .tmode, .ohead .tmode{font:inherit; font-size:.75rem; padding:1px 8px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--muted); cursor:pointer}
+.usage .tmode, .ohead .tmode{padding:1px 8px}
 .usage .tmode.on, .ohead .tmode.on{background:var(--accent-soft); color:var(--ink); border-color:var(--accent)}
 .ohead{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px}
 .ohead .uleg{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; font-size:.75rem; color:var(--muted)}
@@ -811,16 +814,16 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .ico{display:inline-flex; align-items:center; flex:none} .ico svg.i, svg.i{width:16px; height:16px; flex:none}
 .ok{color:var(--ok)} .wy{color:var(--warn-y)} .wo{color:var(--warn-o)} .wr{color:var(--warn-r)} .mu{color:var(--muted)} .err{color:var(--warn-r)}
 .small{font-size:.8rem} .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.syncind{display:inline-flex; align-items:center; gap:5px; font:inherit; font-size:.8rem; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:3px 9px; cursor:pointer; align-self:center}
+.syncind{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; align-self:center}
 .syncind:hover,.syncind[aria-expanded="true"]{border-color:var(--accent)}
 .syncind .savest.ok{background:none; padding:0; color:var(--ink); font-weight:500}
-.aibtn{font:inherit; font-size:.8rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 12px 3px 8px; cursor:pointer; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; position:relative}   /* HUB254: top right */
+.aibtn{padding:3px 12px 3px 8px; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; position:relative}   /* HUB254: top right */
 .aibtn svg{width:18px; height:18px; flex:none}
 .aibtn.ison svg{color:var(--ok)}   /* HUB381 */
 .aibtn[aria-expanded="true"]{background:var(--sunk)}
 .aibtn.off{color:var(--muted); opacity:.75}   /* EXARCH F: greyed with "off" while Exarch AI is off */
 .aibtn .dot{position:absolute; top:-6px; right:-6px; display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--warn-r); color:#fff; font-size:10px; font-weight:600; line-height:1}
-/* the drawer: pushes the board left on a desktop; resizable from its left edge; full-screen on a phone */
+/* the drawer: pushes the board left on a desktop; resizable from its left edge; full-screen on a narrow screen */
 body.ai-open .wrap{margin-right:min(var(--dw),100%)}
 body.ai-open .aibtn{visibility:hidden; position:absolute}   /* HUB254: the drawer grows out of it; HUB258: out of the row too */
 body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(var(--dw),100%)) / 2)}
@@ -831,11 +834,11 @@ body.ai-open .selbar, body.ai-open .toast{left:calc((100% - min(var(--dw),100%))
 .airesize{position:absolute; left:-3px; top:0; bottom:0; width:8px; cursor:ew-resize; z-index:2; touch-action:none; border-left:3px solid transparent}
 .airesize:hover,.airesize.on,.airesize:focus-visible{border-left-color:var(--accent); outline:none}
 body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none !important}
-@media (max-width:820px){ body.ai-open .wrap{margin-right:0} body.ai-open .selbar, body.ai-open .toast{left:50%} .aipanel{width:100%; border-left:0; box-shadow:none} .airesize{display:none} body.ai-open{overflow:hidden} }   /* HUB254: on a phone the drawer takes the whole screen */
+@media (max-width:820px){ body.ai-open .wrap{margin-right:0} body.ai-open .selbar, body.ai-open .toast{left:50%} .aipanel{width:100%; border-left:0; box-shadow:none} .airesize{display:none} body.ai-open{overflow:hidden} }   /* HUB254: on a narrow screen the drawer takes the whole screen */
 .aihead{box-sizing:border-box; display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
 .aihead h2{font-size:.95rem; margin:0; flex:1; display:flex; align-items:center; gap:7px}
 .aihead h2 .ico svg{width:20px; height:20px}
-.aipanel button{font:inherit; font-size:.8rem; color:var(--ink); background:var(--sunk); border:1px solid var(--line); border-radius:6px; padding:3px 10px; cursor:pointer; display:inline-flex; gap:5px; align-items:center}
+.aipanel button{display:inline-flex; gap:5px; align-items:center}
 .aipanel button:disabled{opacity:.5; cursor:default}
 .aipanel .pbtn, .syncpop .pbtn{background:var(--accent); border-color:var(--accent); color:var(--on-accent); min-height:0}
 .dtabs{display:flex; gap:18px; padding:0 12px; border-bottom:1px solid var(--line)}
@@ -900,8 +903,8 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aigrip:hover,.aigrip.on,.aigrip:focus-visible{border-top-color:var(--accent); outline:none}
 .aihint{color:var(--muted); font-size:.8rem}
 .aipane{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
-.aipane .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
-.aipane .hl .t{color:var(--muted); font-size:.75rem; font-variant-numeric:tabular-nums; min-width:36px; flex:none}
+.aipane .hl,.aichat .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
+.aipane .hl .t,.aichat .hl .t{color:var(--muted); font-size:.75rem; font-variant-numeric:tabular-nums; min-width:36px; flex:none}
 .aipane .arow{display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); padding:6px 0}
 .seg{display:inline-flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:.8rem; justify-self:start}
 .seg.mdl button{border:0; border-radius:0; background:none; padding:3px 9px; font:inherit; color:var(--ink); cursor:pointer}   /* HUB337 */
@@ -912,7 +915,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .seg.mdl button:disabled{cursor:default; opacity:.7}
 .aipanel .seg button{border:0; border-radius:0; background:none; padding:3px 9px}
 .aipanel .seg button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
-/* the Sync popup: under the Sync indicator on a desktop, the full width on a phone */
+/* the Sync popup: under the Sync indicator on a desktop, the full width on a narrow screen */
 .syncpop{position:fixed; z-index:16; top:64px; left:var(--spx,16px); width:min(520px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
 .syncpop .phead b{flex:1}
@@ -939,11 +942,11 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .expair b{font-size:.9rem}
 .excode{font:600 1.6rem/1.1 ui-monospace, Menlo, Consolas, monospace; letter-spacing:.12em; text-align:center; padding:6px 0}
 .expair .exrow{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
-.expair button{font:inherit; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+
 .expair button.p{border-color:var(--ink); font-weight:600}
 .expair .mu, .exlocked{color:var(--muted); font-size:.8rem}
 .exdev{display:flex; gap:2px 8px; align-items:center; justify-content:space-between; flex-wrap:wrap; font-size:.8rem}
-.exdev button{font:inherit; padding:2px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+.exdev button{padding:2px 8px}
 .aichat.locked > :not(.aimsgs):not(.aiframe){display:none} .aichat.locked .aiframe > :not(.aimsgs){display:none}   /* HUB338: this device is not paired yet: the pairing card only */
 </style>
 
@@ -1048,6 +1051,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
   <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button><button type="button" role="tab" id="aitab-status">Status</button></div>
   <div class="offpanel" id="aioff" role="status" hidden></div>
   <div class="nbanner" id="ainotify" hidden></div>
+  <div class="nbanner" id="aiwhy" role="status" hidden></div>
   <div class="nbanner" id="aipair" hidden></div>
   <div class="aichat" id="aichat">
     <div class="ctabs"><div class="strip" id="aitabs" role="tablist" aria-label="Chats"></div><span class="tools"><button type="button" id="aichats" aria-haspopup="true" aria-expanded="false" title="Chats: show, hide and reorder"><svg class="i" aria-hidden="true"><use href="#i-tabs"/></svg><span class="cnt" id="aicnt">0</span></button><button type="button" id="ainew" title="New chat" aria-label="New chat">+</button></span></div>
@@ -1189,7 +1193,7 @@ function rebuild(){
   }
 }
 
-// ---------- writes: every change is one new file in inbox/phone/ of the board data; the desktop applies it through
+// ---------- writes: every change is one new file in inbox/phone/ (the inbox's name; it holds the Web UI's changes) of the board data; the desktop applies it through
 // the board's rules (and refuses anything else). Files go up one at a time, in the order the changes were made.
 //
 // A change made here is kept (in this browser's storage, so through a refresh, a reload and a closed tab) from the
@@ -1619,6 +1623,10 @@ function colTip(c){
 // a text with its web addresses as links that open in a new tab (the user, 2026-11-17, HUB98: a card's link was plain
 // text). Only http(s) addresses; a trailing full stop, comma or bracket stays text. A tap on one never opens the card.
 const URL_RX = /\bhttps?:\/\/[^\s<>"'`]+/g;
+// HUB419: a card id written in plain text (a Blocked reason, a status, a log line, a comment) is a link that opens that card;
+// only an id of a card this page has (CARD_LINK_OK) is linked, never a made-up one
+const CARD_ID_RX = /\b[A-Z]{2,}\d+\b/g;
+function CARD_LINK_OK(id){ return typeof cards !== "undefined" && cards.has(id); }
 // >>> markdown (tests/test_app.py runs this block)
 // HUB313: a comment is Markdown. Everything is HTML-escaped first; only http(s) links; no raw HTML ever passes through.
 const COMMENT_PREFIX_RX = /^(Comment from the user \(App\): |Your comment \(on its way\): )/;
@@ -1630,6 +1638,8 @@ function mdInline(raw){
   s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, t, u) => '<a href="' + u + '" target="_blank" rel="noopener noreferrer" class="tlink">' + t + "</a>");
   s = s.replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g, (_, a, b) => "<strong>" + (a || b) + "</strong>");
   s = s.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)|(^|[^_\w])_([^_\n]+)_(?![_\w])/g, (_, p1, a, p2, b) => (p1 || p2 || "") + "<em>" + (a || b) + "</em>");
+  s = s.split(/(<a [^>]*>.*?<\/a>|<[^>]+>|\u0001\d+\u0001)/).map((seg, k) => k % 2 || typeof CARD_LINK_OK !== "function" ? seg   // HUB419: card ids outside links and code
+    : seg.replace(/\b[A-Z]{2,}\d+\b/g, id => CARD_LINK_OK(id) ? '<a href="#" class="tlink cardlink" data-card="' + id + '">' + id + "</a>" : id)).join("");
   return s.replace(/\u0001(\d+)\u0001/g, (_, i) => codes[+i]);
 }
 function mdRender(text){
@@ -1668,16 +1678,33 @@ function linkify(text){
   const s = String(text == null ? "" : text), out = [];
   let i = 0, m;
   URL_RX.lastIndex = 0;
+  const plain = t => {   // HUB419: a card id in plain text opens that card
+    let j = 0, c;
+    const rx = new RegExp(CARD_ID_RX.source, "g");
+    while((c = rx.exec(t))){
+      const id = c[0];
+      if(!CARD_LINK_OK(id)) continue;
+      if(c.index > j) out.push(t.slice(j, c.index));
+      out.push(el("a",{href:"#", class:"tlink cardlink", "data-card":id, title:"Open " + id, onclick:ev=>{ ev.preventDefault(); ev.stopPropagation(); openCard(id); }}, id));
+      j = c.index + id.length;
+    }
+    if(j < t.length) out.push(t.slice(j));
+  };
   while((m = URL_RX.exec(s))){
     let url = m[0];
     while(/[.,;:!?)\]}'"]$/.test(url) && !(url.endsWith(")") && url.includes("("))) url = url.slice(0, -1);
-    if(m.index > i) out.push(s.slice(i, m.index));
+    if(m.index > i) plain(s.slice(i, m.index));
     out.push(el("a",{href:url, target:"_blank", rel:"noopener noreferrer", class:"tlink", onclick:ev=>ev.stopPropagation()}, url));
     i = m.index + url.length; URL_RX.lastIndex = i;
   }
-  if(i < s.length) out.push(s.slice(i));
+  if(i < s.length) plain(s.slice(i));
   return out;
 }
+// HUB419: card links (in linkify's text and in rendered Markdown) are anchors with data-card: one click handler opens the card
+document.addEventListener("click", ev => {
+  const a = ev.target && ev.target.closest ? ev.target.closest("a.cardlink[data-card]") : null;
+  if(a){ ev.preventDefault(); ev.stopPropagation(); openCard(a.dataset.card); }
+});
 // the description: text, with the vault's picture embeds (![[media/...|320]]) shown as pictures
 function descEl(d){
   const p = el("div",{class:"d"}), rx = /!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
@@ -3826,7 +3853,7 @@ function longCtx(info, started){   // {long, text}: is the context long, and the
   if(since > 0 && age >= 0) return {long: age >= AGE_LONG, text: `No context size recorded; running ${fmtDur(age)}. Long from ${AGE_LONG / 3600000} h.`};
   return {long: false, text: ""};
 }
-function longCtxEl(lc){   // the marker: the figure on hover, and on a tap for a phone
+function longCtxEl(lc){   // the marker: the figure on hover, and on a tap on a touch screen
   if(!lc.long) return null;
   const b = el("button",{type:"button", class:"longctx", title:lc.text, "aria-label":"Long context. " + lc.text}, "long context");
   b.addEventListener("click", ev => { ev.stopPropagation(); b.textContent = b.textContent === "long context" ? lc.text : "long context"; });
@@ -3974,7 +4001,7 @@ function tokHourly(){
       const e = bySess.get(l.name);
       if(e){ e.v = e.v.map((x, i) => x + l.v[i]); e.sum += l.sum; } else bySess.set(l.name, {name: l.name, kind: l.kind, v: l.v.slice(), sum: l.sum});
     }
-    if(lines.length > TOK_HOURLY_LINES){   // the smallest folded into one line, so a phone's legend stays short
+    if(lines.length > TOK_HOURLY_LINES){   // the smallest folded into one line, so a narrow screen's legend stays short
       const rest = lines.splice(TOK_HOURLY_LINES - 1);
       lines.push({name: "other (" + rest.length + ")", kind: "other", v: Array.from({length: n}, (_, i) => rest.reduce((t, l) => t + l.v[i], 0)), sum: rest.reduce((t, l) => t + l.sum, 0)});
     }
@@ -6285,7 +6312,7 @@ function showTab(name, fromHash){
     const on = b.dataset.tab === tab;
     b.setAttribute("aria-selected", on ? "true" : "false");
     b.tabIndex = on ? 0 : -1;
-    if(on) b.scrollIntoView({block:"nearest", inline:"nearest"});   // the chosen tab is in view on a phone
+    if(on) b.scrollIntoView({block:"nearest", inline:"nearest"});   // the chosen tab is in view on a narrow screen
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
@@ -6752,7 +6779,7 @@ function renderExarchHeader(){
   $("#aibtnstate").textContent = off ? " · " + (s.state === "halting" ? "halting" : "off") : "";
   b.title = off ? "Exarch AI is " + (s.state === "halting" ? "halting" : "off") + ": open the drawer to turn it on" : "Open the Exarch AI drawer";
   const n = aiWaiting(), dot = $("#aidot");
-  dot.hidden = !n || !$("#aipanel").hidden; dot.textContent = String(n); dot.title = n + " waiting";
+  dot.hidden = !n || !$("#aipanel").hidden; dot.textContent = String(n); dot.title = n ? aiWaitingText(aiWaitingParts()) + " (open the drawer)" : "";
   if($("#syncpop") && !$("#syncpop").hidden) renderSyncPop();
 }
 // ---- the Sync popup (EXARCH F): board, usage, projects, Exarch AI's switch, devices; HUB332 adds the Pace and the runs
@@ -6762,7 +6789,7 @@ function syncPopOpen(v){
   p.hidden = !v; b.setAttribute("aria-expanded", String(v));
   if(v){ exStart(); renderSyncPop(); placeSyncPop(); }
 }
-// HUB353: on a desktop the popup's left edge is the status box's (#syncind, the box it opens from), kept 8 px inside the window; a phone's is the CSS's
+// HUB353: on a desktop the popup's left edge is the status box's (#syncind, the box it opens from), kept 8 px inside the window; a narrow screen's is the CSS's
 // >>> syncpop-left
 const syncPopLeft = (box, w, win) => Math.max(8, Math.min(box, win - 8 - w));
 // <<< syncpop-left
@@ -6779,11 +6806,11 @@ function renderSyncPop(){
   const p = $("#syncpop"); if(!p || p.hidden) return;
   const keep = p.scrollTop, s = exarchNow(), figs = usageFigures();
   // HUB380: a figure shows its short value here; the refresh and runs-out times stay in its hover text
-  // HUB394: the worst check with its reason as text, then Exarch AI's icon and status, then the sync state and the board's time
-  const worst = worstWarn(figs), st = $("#savest").textContent || (changes.size ? "Syncing" : "Synced");
+  // HUB394/HUB416: the pill's check (bestWarn) with its reason as text, then Exarch AI's icon and status, then the sync state and the board's time
+  const worst = bestWarn(figs), st = $("#savest").textContent || (changes.size ? "Syncing" : "Synced");
   const sync = el("div",{class:"bblock"},
-    el("div",{class:"row"}, worst ? ico("alert-triangle", WARN_CLASS[worst.lvl], worst.label + " is low") : ico("circle-check", "ok", "Usage is fine"),
-      worst ? worst.label + " is low: " + worst.value : "Usage is fine"),
+    el("div",{class:"row"}, worst ? ico("alert-triangle", WARN_CLASS[worst.lvl], "Every usage check is low") : ico("circle-check", "ok", "Usage is fine"),
+      worst ? "Every usage check is low; the best is " + worst.label + ": " + worst.value : "Usage is fine"),   // HUB416: the same bestWarn as the pill, so the two always agree
     el("div",{class:"row"}, exarchStateIcon(s), exarchStateText(s)),
     el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
@@ -6879,15 +6906,21 @@ function notify(title, body, conv){
   try{
     const n = new Notification(title, {body: String(body || "").slice(0, 180), tag: "exarch-" + (conv || "status")});
     n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = "chat"; } else ai.tab = "status"; aiOpen(true); n.close(); };
-  }catch(e){ /* a phone browser that shows notifications only from a service worker: the compass count still says it */ }
+  }catch(e){ /* a browser that shows notifications only from a service worker: the compass count still says it */ }
+}
+function aiWaitingParts(){   // HUB417: what the compass count is made of
+  const out = {plan: 0, lead: 0, esc: 0}, leads = chatLeads();
+  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs){ const k = notifyKind(m, c); if(k && !m.seen) out[k]++; }
+  const since = ai.seen.status || "";
+  out.esc = exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since).length;
+  return out;
+}
+function aiWaitingText(o){   // "2 plans to approve, 1 Lead reply, 1 failure needing the user"
+  const n = (v, one, many) => v ? v + " " + (v === 1 ? one : many) : "";
+  return [n(o.plan, "plan to approve", "plans to approve"), n(o.lead, "Lead reply", "Lead replies"), n(o.esc, "failure needing the user (Status tab)", "failures needing the user (Status tab)")].filter(Boolean).join(", ");
 }
 function aiWaiting(){   // the compass count: plans to approve, Leads' replies, and escalations since the drawer was last open
-  let n = 0;
-  const leads = chatLeads();
-  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs) if(notifyKind(m, c) && !m.seen) n++;
-  const since = ai.seen.status || "";
-  n += exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since).length;
-  return n;
+  const o = aiWaitingParts(); return o.plan + o.lead + o.esc;
 }
 let exSeenHist = null;   // the newest history line notified, so a reload does not notify again
 function exarchWatch(){   // on each new export: an escalation the user must act on is notified once
@@ -6933,6 +6966,10 @@ function aiDraw(){
   // the notification banner, once per device
   const nb = $("#ainotify"), asked = ls(NOTE_KEY);
   nb.hidden = !!asked || !("Notification" in window);
+  const wb = $("#aiwhy");   // HUB417: the compass mark's reason, shown while the drawer is open, until dismissed
+  wb.hidden = !ai.why;
+  if(ai.why) wb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Waiting for the user: "), ai.why),
+    el("span",{class:"row"}, el("button",{type:"button", onclick:() => { ai.why = ""; aiDraw(); }}, "Seen")));
   const pend = exConfirmCards(), pb = $("#aipair");   // HUB338: a new device waits for its code to be confirmed here
   pb.hidden = !pend.length; pb.replaceChildren(...pend);
   if(!nb.hidden) nb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Notify this device?")),
@@ -7075,8 +7112,9 @@ function aiItems(c){   // the open chat: messages, and for a Lead its Status lin
     : c.kind === "lead" ? "Message " + c.lead + ". Each message is a fresh headless run of the Lead with its charter and notes, and the last few messages here."
     : "Ask about the board (what is blocked, what changed) or list new work for any project. With Plan on, a request comes back as a plan to approve."));
   for(const it of items){
-    if(it.h){ out.push(el("div",{class:"sline", title:"Status, for reference: not sent to the Lead"}, ico("compass"),
-      aiTime(it.h.at), String(it.h.text || ""), el("span",{class:"mu"}, " · status, not sent"))); continue; }
+    if(it.h){ out.push(el("div",{class:"hl" + (it.h.tag === "fail" ? " err" : ""), title:"Status, for reference: not sent to the Lead"},   // HUB418: the same look as the Status tab's lines
+      el("span",{class:"t", title:it.h.at ? new Date(it.h.at).toLocaleString() : null}, it.h.at ? new Date(it.h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""),
+      aiCardText(el("span",{}), String(it.h.text || ""), it.h.card ? [it.h.card] : []))); continue; }
     out.push(aiMsg(c, it.m));
   }
   return out;
@@ -7480,6 +7518,7 @@ function aiOpen(v){
   const still = !p.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(!v){
     if(p.hidden) return;
+    ai.why = "";   // HUB417: seen
     const done = () => { p.hidden = true; document.body.classList.remove("ai-open"); b.setAttribute("aria-expanded", "false"); b.focus(); renderExarchHeader(); };
     if(still || !ai.rect) return done();
     p.animate([{clipPath:"inset(0px 0px 0px 0px round 0px)"}, {clipPath:aiClip(ai.rect, p.getBoundingClientRect())}],
@@ -7492,6 +7531,7 @@ function aiOpen(v){
   if(!still) p.animate([{clipPath:aiClip(r, p.getBoundingClientRect())}, {clipPath:"inset(0px 0px 0px 0px round 0px)"}],
     {duration:280, easing:"cubic-bezier(.2,.8,.2,1)"});
   exStart();
+  ai.why = aiWaitingText(aiWaitingParts());   // HUB417: what the mark was for, kept until the user has seen it
   aiDraw.jump = true; aiDraw();
   aiRestart();
   const cur = aiConv(); if(cur && !exLocked() && cur.msgs.some(m => itemsOf(m).some(x => !x.done))) aiRefresh(cur);   // another device may have tapped them
