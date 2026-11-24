@@ -81,11 +81,12 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .tab .badge{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:9px; background:#d93025; color:#fff; font-size:.7rem; font-weight:700; line-height:1; vertical-align:2px; box-sizing:border-box}   /* the open count, a red circle (Decisions, Manual actions) */
 .tab{flex:none; white-space:nowrap; font:inherit; border:0; background:none; padding:8px 14px; cursor:pointer; color:var(--muted); font-weight:600; border-bottom:3px solid transparent; margin-bottom:-1px; min-height:40px}
 .tab[aria-selected=true]{color:var(--accent); border-bottom-color:var(--accent)}
+.bar[hidden]{display:none}
 .bar{position:sticky; top:calc(env(safe-area-inset-top,0px) + 41px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding-block:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 .bar input:not([type=checkbox]),.bar select{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
 .bar input:not([type=checkbox]){flex:1 1 180px; min-width:0}
 .fwrap{position:relative}
-.qwrap{position:relative; flex:1 1 180px; min-width:0; display:flex}
+.qwrap{position:relative; flex:1 1 120px; min-width:0; display:flex}
 .bar .qwrap input{flex:1 1 auto; width:100%; padding-left:28px; padding-right:26px}
 .qico{position:absolute; left:8px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--muted); pointer-events:none}
 input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; display:none}
@@ -106,6 +107,23 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; font-size:.82rem; text-decoration:underline}
 .floatbtns{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:1 / -1; grid-row:1 / -1; align-self:start; justify-self:end; margin-right:14px; z-index:4; display:flex; gap:6px}   /* HUB361/HUB408: New and Select float over the board's top right and stay in view when the page scrolls */
 .floatbtns .fbtn{box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.qfloat{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:2; grid-row:1 / -1; align-self:start; justify-self:start; margin-left:8px; z-index:4; display:flex; align-items:center; gap:4px; width:min(300px, calc(100% - 16px)); padding:4px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.18)}   /* HUB410: narrow, over the board's top left */
+.qfloat[hidden]{display:none}
+.qfloat .qwrap input{padding-left:28px; padding-right:26px; width:100%}
+.qfloat input{font:inherit; font-size:.85rem; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; flex:1 1 auto; min-width:0}
+.qnav{flex:none; width:26px; height:26px; padding:0; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--muted); font-size:.7rem; line-height:1; cursor:pointer}
+.qnav:hover{color:var(--accent); border-color:var(--accent)}
+.qcount{flex:none; font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums; min-width:2.2em; text-align:right}
+.card.qhit{outline:3px solid var(--accent); outline-offset:2px}
+.main.ecol .qfloat{grid-column:2}
+.ffbox{display:grid; gap:6px; padding:6px 0}
+.ffbox select{width:100%; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
+.ffbox label{display:flex; gap:8px; align-items:center; line-height:1.2; font-size:.85rem; cursor:pointer}
+.ffbox input[type=checkbox]{margin:0; flex:none; width:15px; height:15px; accent-color:var(--accent)}
+.epics h2 .fwrap{margin-left:auto; text-transform:none; letter-spacing:0}
+.epics h2 .fpop{left:auto; right:0}
+.epics h2 .fcount{text-transform:none; letter-spacing:0}
+.main.ecol .epics h2 .fwrap, .main.ecol .epics .ffbox{display:none}
 .main{position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
 /* HUB216: the projects panel's right border: a visible line in the gap, dragged to resize the panel (kept per viewer) */
 .eresize{position:absolute; top:0; bottom:0; left:calc(var(--ew,200px) + 1px); width:10px; cursor:col-resize; touch-action:none; z-index:4}
@@ -124,7 +142,7 @@ body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 /* HUB408: the sticky buttons overlay the whole grid, so the panel and the board are placed explicitly */
 .main > .epics{grid-column:1; grid-row:1}
 .main > .board{grid-column:2; grid-row:1}
-@media (max-width:720px){ .main > .board{grid-column:1; grid-row:2} .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+@media (max-width:720px){ .main > .board{grid-column:1; grid-row:2} .qfloat{grid-column:1} .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
 /* HUB302: swimlanes: a band per lane, the columns repeating inside it (docs/mockups/swimlanes.html, option A) */
 .board.lanes{display:block; cursor:auto}
 .lane{background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; min-width:calc(var(--ncol,8) * 270px)}
@@ -386,6 +404,9 @@ img.zoom:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .empty{color:var(--muted); padding:30px 0; text-align:center}
 .modal{position:fixed; inset:0; z-index:20; background:rgba(10,14,20,.55); display:flex; align-items:flex-start; justify-content:center; padding:calc(24px + env(safe-area-inset-top,0px)) 16px 24px; overflow:auto}
+.edbar button{font-size:1rem; font-weight:600; padding:10px 28px; min-height:44px}   /* HUB401: bigger Save and Discard */
+.blkflag{font:inherit; border:0; cursor:pointer}
+.assignedto{font-weight:600}
 .edbar{position:sticky; bottom:-16px; background:var(--surface); padding:8px 0; border-top:1px solid var(--line); align-items:center; gap:8px}   /* HUB293: Save at the bottom of the card editor */
 .eddiff{margin:8px 0; padding-left:18px; max-height:50vh; overflow:auto; overflow-wrap:anywhere}
 .mpanel{width:min(680px,100%); max-height:calc(100dvh - 48px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
@@ -945,22 +966,15 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
   <section class="status" id="streams" role="tabpanel" aria-labelledby="tab-streams" hidden></section>
   <section class="status" id="decisions" role="tabpanel" aria-labelledby="tab-decisions" hidden></section>
   <div id="view-board" role="tabpanel" aria-labelledby="tab-board">
-    <div class="bar">
-      <span class="qwrap"><svg class="qico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 10l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
-      <span class="fwrap">
-        <button type="button" id="ffbtn" class="fbtn" aria-haspopup="true" aria-expanded="false" title="Filter the cards">
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M1.5 2.5h13l-5 6v4.5l-3 1.5v-6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          <span>Filter</span><b id="ffcount" class="fcount" hidden></b>
-        </button>
-        <div id="ffpop" class="fpop" role="group" aria-label="Filter the cards" hidden>
-          <div class="fh">Filter</div>
+    <div class="bar" id="bar" hidden>   <!-- HUB409: holds the Filters contents and the view settings; the panel takes them over -->
+      <b id="ffcount" class="fcount" hidden></b>
+        <div id="ffpop" class="ffbox" role="group" aria-label="Filters">
           <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Low</option><option value="0">No priority</option></select>
           <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
           <label><input type="checkbox" id="fq"> Open questions</label>
           <label title="Cards that are blocked, not synced, refused by the board, or idle"><input type="checkbox" id="fx"> Blocked or issue</label>
           <label title="Cards with no estimate: the Gantt draws them dashed"><input type="checkbox" id="fne"> No estimate <b id="fnecount" class="fcount"></b></label>
         </div>
-      </span>
       <span class="fwrap">
         <button type="button" id="fcols" class="fbtn" aria-haspopup="true" aria-expanded="false" title="View settings: swimlanes and which columns show">
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M2 4.5h12M2 11.5h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="5.5" cy="4.5" r="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/><circle cx="10.5" cy="11.5" r="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -987,6 +1001,13 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
       <div class="floatbtns" id="floatbtns">
         <button type="button" id="newbtn" class="fbtn" title="Create a card, epic, theme or project">+ New</button>
         <button type="button" id="selbtn" class="fbtn" aria-pressed="false" title="Select several cards to reorder or move them together">☑ Select</button>
+      </div>
+      <div class="qfloat" id="qfloat" role="search" hidden>   <!-- HUB410: Ctrl+F reveals it; Enter / Shift+Enter step through the results -->
+        <span class="qwrap"><svg class="qico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 10l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
+        <span class="qcount" id="qcount" aria-live="polite"></span>
+        <button type="button" class="qnav" id="qprev" aria-label="Previous result" title="Previous result (Shift+Enter)">&#9650;</button>
+        <button type="button" class="qnav" id="qnext" aria-label="Next result" title="Next result (Enter)">&#9660;</button>
+        <button type="button" class="qnav" id="qclose" aria-label="Close search" title="Close search (Esc)">&#10005;</button>
       </div>
       <nav class="epics" id="epics" aria-label="Projects, themes and epics"></nav>
       <div class="eresize" id="eresize" role="separator" aria-orientation="vertical" aria-label="Width of the projects panel" tabindex="0" title="Drag to resize the projects panel (arrow keys too; double-click resets it)"></div>
@@ -1771,7 +1792,10 @@ function cardEl(c, full=false){
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
   // HUB215: the Blocked and warning indicators: in the card window's top row; on a board card, each on a line of its
   // own under the title
-  const flags = [c.blk ? el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked") : null,
+  const blkWhy = c.blk && full ? el("div",{class:"blkb", id:"blkwhy", hidden:true}, el("b",{},"🚩 Blocked: "), linkify(c.blk)) : null;   // HUB401: the reason shows on a click of the flag
+  const flags = [c.blk ? (full ? el("button",{type:"button", class:"blk blkflag", "aria-expanded":"false", "aria-controls":"blkwhy", title:"Blocked: click to show why",
+      onclick:ev=>{ ev.stopPropagation(); const on = blkWhy.hidden; blkWhy.hidden = !on; ev.currentTarget.setAttribute("aria-expanded", String(on)); }}, "🚩 Blocked")
+    : el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked")) : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
     handback(c) ? el("span",{class:"lab pend", title:"Handed back to the Lead by "+handback(c).by+": "+handback(c).why}, "⏳ Handed back") : null].filter(Boolean);
@@ -1786,7 +1810,7 @@ function cardEl(c, full=false){
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
     openQ(c) ? el("span",{class:"qmark", title:"Needs a decision from you", "aria-label":"Needs a decision"}, "❓") : null,
     openSteps(c).length ? el("span",{class:"qmark", title:"Waits on a step of yours: "+openSteps(c).map(s=>s.step).join("; "), "aria-label":"Waits on your step"}, "🧑") : null));
-  if(c.blk && full) e.append(el("div",{class:"blkb"}, el("b",{},"🚩 Blocked: "), linkify(c.blk)));
+  if(blkWhy) e.append(blkWhy);
   if(full) for(const s of openSteps(c)) e.append(el("div",{class:"blkb", onclick:ev=>ev.stopPropagation()}, el("b",{},"🧑 Your step: "), s.step, " ",
     readOnly ? null : el("button",{type:"button", class:"rec", title:"Mark this step done", onclick:()=>markStep(c, s.id, true)}, "Done"), " ", pendNote(c.id, s.id, "step.")));
   if(syncIssue(c) && full) e.append(el("div",{class:"blkb"}, el("b",{},"⚠ Sync: "), syncIssue(c)));
@@ -1921,6 +1945,7 @@ function cardEl(c, full=false){
   // The export carries the latest entries and log_n, how many there are in all.
   const acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
   const actN = Math.max(acts.length, Number(c.log_n) || 0);
+  let actBox = null;
   if(actN){
     if(!full){   // the state line, the same on the Obsidian board: tasks done, then the number of updates
       const ts = Array.isArray(c.tasks) ? c.tasks.filter(t => t && typeof t === "object") : [];
@@ -1941,7 +1966,7 @@ function cardEl(c, full=false){
             : el("div",{class:"ax"}, linkify(sp.text))) : null,
           imgs.length ? el("div",{class:"aimgs"}, ...imgs.map(src => pic(src, {alt:a.t||"screenshot", loading:"lazy", class:"zoom", tabindex:"0", title:"Click to enlarge"}))) : null));
       }
-      e.append(box);
+      actBox = box;   // HUB401: the card window shows it at the very bottom, below Save and Discard
     }
   }
   const [tdone, ttotal] = taskCount(c);
@@ -1978,6 +2003,7 @@ function cardEl(c, full=false){
     for(const col of COLS) sel.append(el("option",{value:col.k, selected:col.k===edVal(c, "col", c.col)}, col.name));
     more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
       el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
+    more.append(el("div",{class:"row", id:"assignedrow"}, el("span",{class:"lbl"}, "Assigned to"), el("span",{class:"assignedto", title:"The stream working on this card (read only)"}, streamOf(c) || (typeof c.assigned === "string" && c.assigned.trim()) || "—")));   // HUB412
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
     // HUB211: the typed text is kept per card (a redraw of the card brings it back). HUB309: it is an unsaved change
@@ -1991,6 +2017,7 @@ function cardEl(c, full=false){
       el("span",{class:"cspin", id:"cmtspin", role:"status", "data-card":c.id, hidden:!cmtSending(c.id), title:"Your comment is on its way to the board"}, "Saving")));
     more.append(ta);
     if(!readOnly && cards.has(c.id)) more.append(edBarEl(c));   // HUB293
+    if(actBox) more.append(actBox);   // HUB401
     e.append(more); return e;
   }
   if(!readOnly) e.append(el("div",{class:"hov place"}, ...placeBtns(c)));   // hover controls: rank within the column
@@ -2107,8 +2134,8 @@ function edDiff(c){   // [{field, was, now}] for each unsaved change
 function edBarFill(box, c){   // HUB346: a press on a button leaves the focus in the text box: the redraw held back until then would replace the button before its click
   const n = EDIT.id === c.id ? EDIT.v.size : 0;
   box.replaceChildren(
-    el("button",{type:"button", class:"pri edsave", disabled:!n, title:"Send every change to the board", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); edSave(); }}, "Save"),
-    el("button",{type:"button", class:"eddiscard", disabled:!n, title:"Throw the changes away", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); edReset(); renderModal(); }}, "Discard"),
+    el("button",{type:"button", class:"pri edsave", disabled:!n, title:"Send every change to the board", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); if(edSave()) closeCard(); }}, "Save"),   // HUB401: Save closes the card too
+    el("button",{type:"button", class:"eddiscard", disabled:!n, title:"Throw the changes away", onmousedown:ev=>ev.preventDefault(), onclick:ev=>{ ev.stopPropagation(); edReset(); closeCard(); }}, "Discard"),   // HUB401
     el("span",{class:"hint"}, n ? n + (n === 1 ? " unsaved change" : " unsaved changes") : "No unsaved changes"));
 }
 function edBarEl(c){ const box = el("div",{class:"row edbar", id:"edbar"}); edBarFill(box, c); return box; }
@@ -2549,15 +2576,19 @@ function setNoEpic(t){ if(filt.e === NO_EPIC && filt.t === t){ filt.e = ""; } el
 function setTheme(t){ filt.t = t; if(filt.e && filt.e !== NO_EPIC && epicTheme(filt.e)!==t) filt.e = ""; if(filt.e === NO_EPIC && filt.t !== t) filt.e = ""; syncFilters(); }   // an epic of another theme is dropped
 function setEpic(k){ filt.e = k; if(k) filt.t = epicTheme(k); syncFilters(); }                        // an epic sets its theme
 function syncFilters(){ ls("kb.filters",filt); render(); }
+const FF_BOX = $("#ffpop"), FF_COUNT = $("#ffcount"), FF_SETTINGS = $("#fcols").closest(".fwrap");   // HUB409: kept here, put into the panel by renderEpics
+function FILTER_ICON(){ const n = document.createElementNS("http://www.w3.org/2000/svg", "svg"); n.setAttribute("viewBox","0 0 16 16"); n.setAttribute("width","15"); n.setAttribute("height","15"); n.setAttribute("aria-hidden","true");
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d","M1.5 2.5h13l-5 6v4.5l-3 1.5v-6z"); p.setAttribute("fill","none"); p.setAttribute("stroke","currentColor"); p.setAttribute("stroke-width","1.5"); p.setAttribute("stroke-linejoin","round"); n.append(p); return n; }
 function renderEpics(all){
   const box = $("#epics"); const x = box.scrollTop, xl = box.scrollLeft; box.textContent = "";
   box.hidden = !epics.size && projects.size < 2;
   const folded = !!filt.ecol;
   box.closest(".main").classList.toggle("ecol", folded);
   box.append(el("h2",{}, el("button",{type:"button", class:"ecbtn", "aria-expanded":String(!folded),
-      title: folded ? "Show the projects and epics" : "Fold the projects and epics to the side", "aria-label": folded ? "Show the projects and epics" : "Fold the projects and epics to the side",
-      onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, folded ? "\u25B8" : "\u25C2"), el("span",{},"Projects")));
-  if(folded){ box.scrollTop = 0; return; }
+      title: folded ? "Show the filters, projects and epics" : "Fold the filters to the side", "aria-label": folded ? "Show the filters, projects and epics" : "Fold the filters to the side",
+      onclick:()=>{ filt.ecol = !folded; ls("kb.filters", filt); render(); }}, FILTER_ICON()), el("span",{},"Filters"), FF_COUNT, FF_SETTINGS));   // HUB409: the pullout is a filter icon; the settings button sits at the right
+  if(!folded) box.append(FF_BOX);
+  if(folded){ $("#bar").append(FF_BOX, FF_COUNT, FF_SETTINGS); box.scrollTop = 0; return; }   // folded: the controls wait in the hidden holder
   fillProjects();   // HUB148: the switcher sits beside the title (placeProjSel), not in this panel
   // HUB188: hovering an epic or a theme shows an edit icon that opens its editor (none when read-only)
   const editBtn = (kind, k, v) => readOnly ? null : el("button",{type:"button", class:"eedit", title:"Edit this " + kind,
@@ -2596,13 +2627,33 @@ function renderEpics(all){
 }
 // filters
 $("#q").value = filt.q||""; $("#fp").value = filt.p||""; $("#fq").checked = !!filt.qo;
-$("#q").addEventListener("input", e=>{ filt.q=e.target.value; $("#qclr").hidden = !filt.q; ls("kb.filters",filt); render(); });
-$("#qclr").hidden = !filt.q;
-// Ctrl+F (or Cmd+F) on the Board tab focuses the search box instead of the browser's find bar (HUB362).
+// HUB410: the search bar is hidden until Ctrl+F (or Cmd+F); it floats over the board's top left. Enter / Shift+Enter (and the
+// buttons) step through the cards that match, scrolling each into view; closing it clears the search.
+let qIdx = -1;
+function qHits(){ return filt.q ? [...document.querySelectorAll("#board .card")] : []; }
+function qUpdate(mark){
+  const h = qHits(); document.querySelectorAll("#board .card.qhit").forEach(x => x.classList.remove("qhit"));
+  if(qIdx >= h.length) qIdx = h.length - 1;
+  if(mark && h[qIdx]){ h[qIdx].classList.add("qhit"); h[qIdx].scrollIntoView({block:"center", inline:"center"}); }
+  $("#qcount").textContent = !filt.q ? "" : h.length ? (qIdx >= 0 ? (qIdx + 1) + "/" : "") + h.length : "0";
+}
+function qStep(d){ const n = qHits().length; if(!n) return qUpdate(false); qIdx = qIdx < 0 ? (d > 0 ? 0 : n - 1) : ((qIdx + d) % n + n) % n; qUpdate(true); }
+function qOpen(){ const f = $("#qfloat"); f.hidden = false; const q = $("#q"); q.focus(); q.select(); }
+function qClose(){ const q = $("#q"); $("#qfloat").hidden = true; if(q.value){ q.value = ""; q.dispatchEvent(new Event("input")); } }
+$("#q").addEventListener("input", e=>{ filt.q=e.target.value; qIdx = -1; $("#qclr").hidden = !filt.q; ls("kb.filters",filt); render(); qUpdate(false); });
+$("#qclr").hidden = !filt.q; $("#qfloat").hidden = !filt.q;
+$("#q").addEventListener("keydown", ev=>{
+  if(ev.key === "Enter"){ ev.preventDefault(); qStep(ev.shiftKey ? -1 : 1); }
+  else if(ev.key === "Escape"){ ev.preventDefault(); ev.stopPropagation(); qClose(); }
+});
+$("#qprev").addEventListener("click", ()=>qStep(-1));
+$("#qnext").addEventListener("click", ()=>qStep(1));
+$("#qclose").addEventListener("click", qClose);
+// Ctrl+F (or Cmd+F) on the Board tab opens the search box instead of the browser's find bar (HUB362).
 document.addEventListener("keydown", ev=>{
   if(!(ev.ctrlKey||ev.metaKey) || ev.altKey || ev.shiftKey || String(ev.key).toLowerCase()!=="f") return;
   const vb = $("#view-board"); if(!vb || vb.hidden) return;
-  ev.preventDefault(); const q=$("#q"); q.focus(); q.select();
+  ev.preventDefault(); qOpen();
 });
 $("#qclr").addEventListener("click", ()=>{ const q=$("#q"); q.value=""; q.dispatchEvent(new Event("input")); q.focus(); });
 $("#fp").addEventListener("change", e=>{ filt.p=e.target.value; ls("kb.filters",filt); render(); });
@@ -2624,8 +2675,8 @@ for(const col of COLS){   // which columns show
   $("#fpop").append(el("label",{}, cb, " "+col.name));
 }
 fcount();
-// The two board menus: Filter (#ffbtn / #ffpop) and View settings (#fcols / #fpop) (HUB360).
-const FMENUS = [["#ffbtn","#ffpop"], ["#fcols","#fpop"]];
+// The board menu: View settings (#fcols / #fpop); the filters are the Filters panel (#ffpop, HUB409).
+const FMENUS = [["#fcols","#fpop"]];
 function closeFMenus(except){ for(const [b,p] of FMENUS) if(p!==except && !$(p).hidden){ $(p).hidden = true; $(b).setAttribute("aria-expanded","false"); } }
 for(const [b,p] of FMENUS) $(b).addEventListener("click", ev=>{ ev.stopPropagation(); closeFMenus(p); $(p).hidden = !$(p).hidden; $(b).setAttribute("aria-expanded", String(!$(p).hidden)); });
 document.addEventListener("click", ev=>{ if(!ev.target.closest(".fwrap")) closeFMenus(); });
@@ -2656,7 +2707,7 @@ function fillProjects(){
   placeProjSel();
 }
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(drag && drag.active)){ ev.preventDefault(); closeCard(); } });
-document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#newm").hidden && $("#fpop").hidden && $("#ffpop").hidden){ ev.preventDefault(); setSelMode(false); } });
+document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#newm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
 $("#selbtn").addEventListener("click", ()=>setSelMode(!selMode));
 
 // Ranking game (Backlog, Parked, In refinement, Refined): binary insertion of the cards (in their current order), one
@@ -3229,7 +3280,7 @@ function placeSlot(d, t){   // shunt preview: the slot moves to the drop positio
 function dragAuto(){   // near the window's top/bottom edge the page scrolls; near the board's left/right edge the board does
   const d = drag; if(!d || !d.active) return;
   const Z = 48, sp = n => Math.ceil(20 * Math.min(1, n / Z));
-  const top = Math.max(0, $(".bar").getBoundingClientRect().bottom) + 24;
+  const top = Math.max(0, $(".tabs").getBoundingClientRect().bottom) + 24;
   let vy = 0; if(d.y < top) vy = -sp(top - d.y); else if(d.y > innerHeight - Z) vy = sp(d.y - (innerHeight - Z));
   if(vy) scrollBy(0, vy);
   const board = $("#board"), br = board.getBoundingClientRect();
@@ -5388,12 +5439,13 @@ function drawGantt(host){
   }
 }
 
-// HUB398: the resource strips (Streams, Art, Drawn art, Exarch: the most cards running at once against the limit; what
+// HUB398: the resource strips (Streams, Art, Exarch: the most cards running at once against the limit; what
 // ran before now, paler) moved from the Gantt to the Streams tab. o: {plan, list, now, t0, t1, X, sc, row, inner}.
+function gotoStreams(){ const t = $("#streams"); if(!t || t.hidden) showTab("streams"); }   // HUB399: a Stream, Art or Exarch header opens the Streams tab (it is already there on that tab)
 function ganttStrips(o){
   const {plan, list, now, t0, t1, X, sc, row, inner} = o;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
-  const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), dNow = nowIn("drawn"), sLim = plan.limit.stream, aLim = plan.limit.art, cLim = plan.limit.coord, dLim = plan.limit.drawn;
+  const sNow = nowIn("stream"), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
@@ -5402,13 +5454,11 @@ function ganttStrips(o){
   const poolHead = {
     stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
       "Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
-    art: [aNow > aLim, "Art: " + aNow + " of " + aLim + " now",
-      "ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; at most " + hubLimits().art + " at once (the Limits above)"],
-    drawn: [dNow > dLim, "Drawn art: " + dNow + " of " + dLim + " now",
-      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"],
+    drawn: [dNow > dLim, "Art: " + dNow + " of " + dLim + " now",   // HUB399: the drawn art is simply Art; ComfyUI art is jobs, no stream, no strip
+      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams, against its own limit (Hub tab)"],
     coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
       "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
-  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Exarch"]]){
+  for(const [pool, name] of [["stream", "Streams"], ["drawn", "Art"], ["coord", "Exarch"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
     let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
     const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
@@ -5425,7 +5475,7 @@ function ganttStrips(o){
     }
     if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
     const [over, head, why] = poolHead[pool];
-    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
+    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), onclick:gotoStreams, title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
   }
 }
 // ---------- Streams tab (HUB385): one row per stream like the Gantt's, time along the bottom. A row shows the card the
