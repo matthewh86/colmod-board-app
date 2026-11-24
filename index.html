@@ -872,7 +872,9 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .sline{font-size:.78rem; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-self:center; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); padding:3px 8px; max-width:100%}
 .aiform{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; padding:10px 12px; border-top:1px solid var(--line)}
 .aiform .aiact{flex:1 1 100%; display:flex; align-items:center; justify-content:space-between; gap:8px}   /* HUB373: Plan and Send under the box */
-.aiform textarea{flex:1 1 100%; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:vertical; min-height:2.6em; max-height:50vh}   /* HUB357 */
+.aiform textarea{flex:1 1 100%; min-width:0; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; resize:none; min-height:2.6em; max-height:50vh}   /* HUB357; HUB397: resized from the grip above it, not the corner (it can only grow upwards) */
+.aigrip{flex:1 1 100%; height:8px; margin:-6px 0 -2px; cursor:ns-resize; touch-action:none; border-top:3px solid transparent}   /* HUB397 */
+.aigrip:hover,.aigrip.on,.aigrip:focus-visible{border-top-color:var(--accent); outline:none}
 .aihint{color:var(--muted); font-size:.8rem}
 .aipane{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
 .aipane .hl{display:flex; gap:8px; font-size:.85rem; min-width:0; overflow-wrap:anywhere}
@@ -1031,7 +1033,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
     <div class="aiframe"><button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
       <div class="tmenu" id="aimenu" hidden></div>
       <div class="aimsgs" id="aimsgs" aria-live="polite"></div></div>
-    <form class="aiform" id="aiform"><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
+    <form class="aiform" id="aiform"><div class="aigrip" id="aigrip" role="separator" aria-orientation="horizontal" aria-label="Height of the message box" tabindex="0" title="Drag up to make the box taller (arrow keys too; double-click resets it)"></div><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
   </div>
   <div class="aipane" id="aidev" hidden></div>
   <div class="aipane" id="aistatus" hidden></div>
@@ -4140,7 +4142,7 @@ function workTable(list){
 function renderMachines(){
   const now = Date.now();
   rebuildPanel("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, [...tokPicks],
-    [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]),
+    [...usage.entries()].map(([k, d]) => [k, d.end]), [...tokens.entries()].map(([k, d]) => [k, d.end]), queuedJobs().list.map(j => [j.id, j.target]),
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
     sessSort, hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => (ctxOf(s.name) || {}).ctx || 0) : 0,
@@ -4149,9 +4151,29 @@ function renderMachines(){
     try { drawMachines(host); } finally { graphWin = null; }
   });
 }
+// HUB400: a machine's queue (where its Sessions and agents were, HUB398): the queued jobs it will take, in the Queues
+// tab's order: the ones aimed at it, and the ones aimed at no machine whose needs it offers. jobs: the queued list
+// (queuedJobs().list); m: the machine's export row (`offers`: "a, b" or "board only").
+function machineQueue(m, jobs){
+  const name = String(m.machine), offers = new Set(String(m.offers || "").split(",").map(x => x.trim()).filter(Boolean));
+  const mine = [];
+  for(const j of jobs){
+    const t = j.target && j.target !== "-" ? String(j.target) : "";
+    if(t ? t === name : (j.needs || []).every(n => offers.has(String(n)))) mine.push({j, aimed: !!t});
+  }
+  return mine;
+}
+function machineQueueEl(m, jobs){
+  const q = machineQueue(m, jobs);
+  if(!q.length) return el("p",{class:"note"}, "Nothing queued for this machine.");
+  return stTable(["#", "Job", "Card", "Needs", "Aimed at"], q.map(({j, aimed}, i) => el("tr",{},
+    el("td",{class:"num"}, String(i + 1)), jobCell(j), cardCell(j), el("td",{}, (j.needs || []).join(", ") || "-"),
+    el("td",{}, aimed ? "this machine" : "any machine that offers it"))), [0]);
+}
 function drawMachines(host){
     const machines = Array.isArray(hubStatus.machines) ? hubStatus.machines : [];
     const work = Array.isArray(hubStatus.work) ? hubStatus.work.filter(Boolean) : [];
+    const queued = queuedJobs().list;   // HUB400
     const names = new Set(machines.map(m => String(m.machine)));
     // Overview: every graph in one place, the total of all machines first
     const over = el("div",{class:"mach ov"});   // HUB288: one machine a row, going down; its graphs across
@@ -4203,6 +4225,7 @@ function drawMachines(host){
       const wt = workTable(work.filter(w => w.machine === m.machine));
       mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
         st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
+        el("h3",{}, "Queue"), machineQueueEl(m, queued),
         el("h3",{}, "Local work"), wt || el("p",{class:"note"}, "No local work recorded.")));
     });
     host.append(el("h2",{}, "Machines"), mach);
@@ -6767,19 +6790,25 @@ function aiDrawMenu(c){
   const item = (k, icon, name, text) => el("button",{type:"button", class:"it", onclick:() => { ai.confirm = k; aiDraw(); }}, el("span",{"aria-hidden":"true"}, icon), el("b",{}, name), el("span",{class:"small mu"}, text));
   setKids(m, item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
     item("archive", "🗄︎", "Archive", c.kind === "user" ? "Move this chat to Archived, with its history; no new chat opens." : "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
-    c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Close this chat and its tab. Its history is kept in Archived.") : null,
-    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Close this chat? Its history is kept in Archived." : "Archive this chat" + (who ? " with " + who : "") + "?"),
+    c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Close this chat's tab only. The chat and its history stay in the Chats list; Archive moves it to Archived.") : null,   // HUB397: Close is never offered for a Lead (or the Exarch chat)
+    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Close this chat's tab? The chat stays in the Chats list." : "Archive this chat" + (who ? " with " + who : "") + "?"),
       el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : ai.confirm === "close" ? "Close" : "Archive"),
       el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel")) : null);
 }
-function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archived) and opens a fresh one in its place
-  if((act === "archive" || act === "close") && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
+function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archived) and opens a fresh one in its place; Close (custom chats only) just closes its tab
+  if(act === "close"){   // HUB397: only closes: the chat stays in the Chats list with its history, nothing is archived, the node keeps its copy
+    if(c.kind !== "user") return;
+    if(c.msgs.length){ c.hidden = true; }
+    else{ const k = ai.chats.indexOf(c); if(k >= 0) ai.chats.splice(k, 1); if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: "clear"}); }   // an empty one has nothing to keep
+    ai.cur = ""; ai.menu = false; ai.confirm = ""; aiDraw(); return;
+  }
+  if(act === "archive" && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
   const fresh = {conv: aiId(), kind: c.kind, lead: c.lead, project: c.project, title: c.kind === "user" ? "" : c.title, n: 0, msgs: [], hidden: c.hidden};
   const i = ai.chats.indexOf(c); if(i >= 0) ai.chats[i] = fresh;
-  const noFresh = act === "close" || (act === "archive" && c.kind === "user");   // HUB368: closing or archiving a custom chat opens no new chat
+  const noFresh = act === "archive" && c.kind === "user";   // HUB368: closing or archiving a custom chat opens no new chat
   if(noFresh && i >= 0) ai.chats.splice(i, 1);   // HUB354: a custom chat closes with no fresh one; the next tab opens
   if(c.ref){ ai.gone.push(c.ref); if(i >= 0) ai.chats.splice(i, 1); }   // HUB330: a refinement plan's chat is not shown again before its next revision
-  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: act === "close" ? (c.msgs.length ? "archive" : "clear") : act});   // the node drops (or archives) its copy
+  if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act});   // the node drops (or archives) its copy
   ai.cur = c.ref || noFresh ? "" : fresh.conv; ai.menu = false; ai.confirm = ""; aiDraw();
 }
 function aiDrawChatsPop(leads){
@@ -7277,6 +7306,23 @@ addEventListener("resize", () => dwSet(Number(ls(DW_KEY)) || DW_DEF, false));
   h.addEventListener("keydown", ev => { const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--dw")) || DW_DEF;
     if(ev.key === "ArrowLeft"){ ev.preventDefault(); dwSet(w + 20, true); } else if(ev.key === "ArrowRight"){ ev.preventDefault(); dwSet(w - 20, true); } });
   h.addEventListener("dblclick", () => dwSet(DW_DEF, true));
+})();
+// HUB397: the message box is resized from a grip above it (it can only grow upwards), by drag, arrow keys or double-click
+(() => { const g = $("#aigrip"), q = $("#aiq"); if(!g || !q) return;
+  const MIN_H = 44;
+  const maxH = () => Math.round(innerHeight * 0.5);
+  const setH = (v, keep) => { const n = Math.max(MIN_H, Math.min(maxH(), Math.round(v))); q.style.height = n + "px"; if(keep){ try{ localStorage.setItem("hub.aiBoxH", String(n)); }catch(e){} } return n; };
+  try{ const s = Number(localStorage.getItem("hub.aiBoxH")); if(s >= MIN_H) setH(s, false); }catch(e){}
+  g.addEventListener("pointerdown", ev => {
+    if(ev.button) return; ev.preventDefault(); g.classList.add("on"); try{ g.setPointerCapture(ev.pointerId); }catch(e){}
+    const y0 = ev.clientY, h0 = q.getBoundingClientRect().height;
+    const move = e => setH(h0 + (y0 - e.clientY), false);
+    const up = e => { g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); g.removeEventListener("pointercancel", up); g.classList.remove("on"); setH(h0 + (y0 - e.clientY), true); };
+    g.addEventListener("pointermove", move); g.addEventListener("pointerup", up); g.addEventListener("pointercancel", up);
+  });
+  g.addEventListener("keydown", ev => { const h0 = q.getBoundingClientRect().height;
+    if(ev.key === "ArrowUp"){ ev.preventDefault(); setH(h0 + 20, true); } else if(ev.key === "ArrowDown"){ ev.preventDefault(); setH(h0 - 20, true); } });
+  g.addEventListener("dblclick", () => { q.style.height = ""; try{ localStorage.removeItem("hub.aiBoxH"); }catch(e){} });
 })();
 // the tab row scrolls sideways: a wheel turns into a sideways scroll, a mouse drag on the row's free space pans it
 (() => { const s = $("#aitabs");
