@@ -6826,7 +6826,7 @@ async function check(){
     if (r.status !== 304){
       const etag = r.headers.get("ETag");
       const sha = (await r.json()).object.sha;
-      if (sha !== tip){ await load(sha); tip = sha; fresh = true; }
+      if (sha !== tip){ fresh = (await load(sha)) !== false; tip = sha; }
       refEtag = etag;                                                    // only once the new tip is loaded: a failed load is tried again
     }
     if (!loaded){ loaded = true; fresh = true; }
@@ -6838,42 +6838,78 @@ async function check(){
   }
   if (changes.size) wake();   // HUB374: keep looking quickly
 }
-async function load(sha){
-  const data = await (await gh(`contents/export/board.json?ref=${sha}`, {raw: true})).json();
-  meta = {exported_at: data.exported_at};
-  ansAt = data.ans_at && typeof data.ans_at === "object" ? data.ans_at : {};
-  raw.clear();
-  for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
-  sessDocs.clear();
-  artDocs.clear(); manDocs.clear();
-  for (const [id, doc] of Object.entries(data.manual || {})) if (doc && typeof doc === "object" && /^MAN-\d{1,6}$/.test(id)) manDocs.set(id, Object.assign({}, doc, {id}));
-  for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
-  for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
-  epics.clear(); themes.clear(); projects.clear(); areas.clear();
-  for (const [k, v] of Object.entries(data.projects || {})) if (v && typeof v === "object") projects.set(k, Object.assign({name: k, hue: 210}, v));
-  if (filt.j && !projects.has(filt.j)){ filt.j = ""; ls("kb.filters", filt); }   // a remembered project that is gone
-  for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
-  for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
-  RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
-  RELEASES.length = 0; REL_DOCS.clear();
-  for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id){
-    const {doc, ...row} = r;   // HUB199: the archived card is kept apart (and out of the tab's redraw signature)
-    if (doc && typeof doc === "object" && !raw.has(String(r.id))) REL_DOCS.set(String(r.id), Object.assign({}, doc, {id: String(r.id), col: doc.col || "done", arch: true}));
-    RELEASES.push(row);
+// HUB446: the board export is downloaded only when its file changed. The node pushes about every minute but board.json
+// changes in one push of five (the HUB444 report), so each tip is first asked for the blob shas of the three export files
+// (two small tree reads; the export tree's sha is remembered so a push that left export/ alone costs one). A file is read
+// again only when its sha is not the one already loaded; if the shas cannot be read, every file is read, as before.
+const have = {board: null, status: null, refused: null}, dl = {board: 0, status: 0, refused: 0, trees: 0};   // dl: downloads, counted for the test
+let expTree = null, expShas = null;
+async function exportShas(sha){
+  try {
+    dl.trees++;
+    const root = await (await gh(`git/trees/${sha}`)).json();
+    const e = (root.tree || []).find(t => t.path === "export" && t.type === "tree");
+    if(!e) return null;
+    if(e.sha === expTree && expShas) return expShas;
+    dl.trees++;
+    const t = await (await gh(`git/trees/${e.sha}`)).json();
+    const by = {}; for(const f of t.tree || []) if(f.type === "blob") by[f.path] = f.sha;
+    expShas = {board: by["board.json"] || null, status: by["status.json"] || null, refused: by["phone-refused.json"] || null}; expTree = e.sha;
+    return expShas;
+  } catch(e) {
+    if(e && (e.status === 401 || e.status === 404)) throw e;   // check() shows the setup form
+    return null;                                               // the blobs cannot be compared: read the files
   }
-  for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
-  snapMeta();   // HUB188: the exported epics and themes, under this page's edits on their way (overlayMeta)
-  ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
-    .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
-  if (filt.t && themes.size && !themes.has(filt.t)){ filt.t = ""; ls("kb.filters", filt); }   // a remembered theme that is gone
-  if (filt.e && filt.e !== NO_EPIC && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
-  try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); } catch { hubStatus = null; }
+}
+// Returns false when nothing the page shows has changed (the caller then redraws nothing: HUB458's rule).
+async function load(sha){
+  const sh = await exportShas(sha);
+  const stale = k => !(sh && sh[k] && sh[k] === have[k]);
+  const newBoard = stale("board"), newStatus = stale("status"), newRefused = stale("refused");
+  if(!newBoard && !newStatus && !newRefused) return false;
+  let data = null;
+  if(newBoard){
+    data = await (await gh(`contents/export/board.json?ref=${sha}`, {raw: true})).json();
+    dl.board++;
+    meta = {exported_at: data.exported_at};
+    ansAt = data.ans_at && typeof data.ans_at === "object" ? data.ans_at : {};
+    raw.clear();
+    for (const [id, doc] of Object.entries(data.cards || {})) if (doc && typeof doc === "object") raw.set(id, Object.assign({}, doc, {id}));
+    sessDocs.clear();
+    artDocs.clear(); manDocs.clear();
+    for (const [id, doc] of Object.entries(data.manual || {})) if (doc && typeof doc === "object" && /^MAN-\d{1,6}$/.test(id)) manDocs.set(id, Object.assign({}, doc, {id}));
+    for (const [id, doc] of Object.entries(data.artifacts || {})) if (doc && typeof doc === "object" && /^ART-\d{1,6}$/.test(id)) artDocs.set(id, Object.assign({}, doc, {id}));
+    for (const [id, doc] of Object.entries(data.sessions || {})) if (doc && typeof doc === "object") sessDocs.set(id, Object.assign({}, doc, {id}));
+    epics.clear(); themes.clear(); projects.clear(); areas.clear();
+    for (const [k, v] of Object.entries(data.projects || {})) if (v && typeof v === "object") projects.set(k, Object.assign({name: k, hue: 210}, v));
+    if (filt.j && !projects.has(filt.j)){ filt.j = ""; ls("kb.filters", filt); }   // a remembered project that is gone
+    for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
+    for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
+    RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
+    RELEASES.length = 0; REL_DOCS.clear();
+    for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id){
+      const {doc, ...row} = r;   // HUB199: the archived card is kept apart (and out of the tab's redraw signature)
+      if (doc && typeof doc === "object" && !raw.has(String(r.id))) REL_DOCS.set(String(r.id), Object.assign({}, doc, {id: String(r.id), col: doc.col || "done", arch: true}));
+      RELEASES.push(row);
+    }
+    for (const [k, v] of Object.entries(data.themes || {})) if (v) themes.set(k, Object.assign({name: k, hue: 210}, v));
+    snapMeta();   // HUB188: the exported epics and themes, under this page's edits on their way (overlayMeta)
+    ARCH.items = (Array.isArray(data.archive) ? data.archive : []).filter(r => Array.isArray(r) && !raw.has(r[0]))
+      .map(r => ({id: String(r[0]), col: r[1], epic: r[2], tri: r[3], pri: r[4], arch: true}));
+    if (filt.t && themes.size && !themes.has(filt.t)){ filt.t = ""; ls("kb.filters", filt); }   // a remembered theme that is gone
+    if (filt.e && filt.e !== NO_EPIC && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
+    have.board = sh && sh.board;
+  }
+  if(newStatus){
+    try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); dl.status++; have.status = sh && sh.status; } catch { hubStatus = null; have.status = null; }
+  }
   try { await loadUsage(sha); } catch { /* the graphs are an extra: the board still loads */ }
   // a change made here is done once this export names its file as applied, or shows what it asked for (see
   // changeSettled); until then it stays on screen whatever the export says
-  settleChanges(data);
-  try {
+  if(data) settleChanges(data);
+  if(newRefused) try {
     const refused = await (await gh(`contents/export/phone-refused.json?ref=${sha}`, {raw: true})).json();
+    dl.refused++; have.refused = sh && sh.refused;
     const fresh = refused.filter(x => changes.has(x.change) || (seenRefused !== null && x.time > seenRefused));
     seenRefused = refused.length ? refused[refused.length - 1].time : (seenRefused || "");
     for (const x of refused) aiRefused(String(x.change), x.why);   // HUB322: a tap the node refused shows why, with its buttons again
@@ -6886,7 +6922,7 @@ async function load(sha){
     }
   } catch { if (seenRefused === null) seenRefused = ""; }
   pendSave();
-  rebuild();
+  if(newBoard || newRefused) rebuild();
   exarchWatch(); if(!$("#aipanel").hidden) aiDraw();   // HUB322: a new export: escalations notified, the drawer redrawn
   aiSettled();   // HUB331: the chats whose taps the board has settled are read again: the node's item states rule
   aiPlans();   // HUB330: the refinement plans' chats
@@ -6942,7 +6978,7 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
   ex.doc = null; ex.at = 0; ex.was = false; ex.asked = 0; ex.note = ""; ex.missing = 0;
   aiClear();   // HUB338: the chats and their content keys leave this browser with the connection
-  tip = refEtag = null; loaded = false; hubStatus = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
+  tip = refEtag = null; loaded = false; hubStatus = null; have.board = have.status = have.refused = null; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
