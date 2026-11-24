@@ -18,6 +18,7 @@
   --pri-ink:#ffffff; --sheen:rgba(255,255,255,.85); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6; --t-rel:#c25e00; --t-rel-bg:#fdeedd; --t-test:#ad1457; --t-test-bg:#fce4ec; --t-plan:#6a3fb5; --t-plan-bg:#efe8fa; --t-spike:#795548; --t-spike-bg:#f3ece9;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-assign:#2f6f8f; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
   --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
+  --logo-gold:#a97b1f; --logo-gold2:#d3a846; --logo-por:#4b1d5e; --logo-por-a:.14;   /* HUB454: the header logo's imperial gold and porphyry */
   --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
@@ -25,6 +26,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
+    --logo-gold:#f3d37e; --logo-gold2:#fff1bd; --logo-por:#d9a8f0; --logo-por-a:.3;
     --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
     --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
     --pace-conservative:#7fa9e6; --pace-moderate:#6fcf8a; --pace-turbo:#b58cf0; --on-pace:#0e131b;
@@ -36,6 +38,7 @@
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
+  --logo-gold:#f3d37e; --logo-gold2:#fff1bd; --logo-por:#d9a8f0; --logo-por-a:.3;
   --bg:#0e131b; --surface:#171f2a; --sunk:#121922; --ink:#e5e9ef; --muted:#9aa3b2; --line:#2a3443;
   --accent:#7fa9e6; --accent-soft:#1d2b40; --on-accent:#0e131b;
   --pace-conservative:#7fa9e6; --pace-moderate:#6fcf8a; --pace-turbo:#b58cf0; --on-pace:#0e131b;
@@ -56,6 +59,21 @@ header.top{padding-block:14px 4px; display:grid; gap:8px}
 header.top h1{font-family:"Jost",var(--f-body); font-weight:300; letter-spacing:.01em}   /* EXARCH F: the Hub's name in Jost Light */
 h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
+/* HUB454: the header logo, a pearled gold roundel with a Greek pi, and the name in Jost Light */
+h1.logo{display:flex; align-items:center; gap:14px; align-self:center; line-height:1}
+.logo .lmark{width:56px; height:56px; flex:none}
+.logo .lword{display:grid; gap:4px}
+.logo .lname{font-weight:300; font-size:2rem; letter-spacing:.32em; margin-right:-.32em; text-transform:uppercase}
+.logo .lsub{display:flex; align-items:center; gap:8px; font-weight:400; font-size:.66rem; letter-spacing:.34em; text-transform:uppercase; color:var(--logo-gold)}
+.logo .lsub::before,.logo .lsub::after{content:""; height:1px; flex:1; background:linear-gradient(90deg,transparent,var(--logo-gold))}
+.logo .lsub::after{transform:scaleX(-1)}
+.logo .lsub i{width:5px; height:5px; background:var(--logo-gold); transform:rotate(45deg); flex:none}
+@media (max-width:600px){   /* narrow: the name under the mark, narrower, no subtitle */
+  h1.logo{flex-direction:column; align-items:flex-start; gap:4px}
+  .logo .lmark{width:40px; height:40px}
+  .logo .lname{font-size:1rem; letter-spacing:.2em; margin-right:-.2em}
+  .logo .lsub{display:none}
+}
 .hrow .projsel{width:auto; max-width:46vw; margin:0; align-self:center}   /* HUB148: beside the title */
 .sync{font-size:.8rem; color:var(--muted)}
 .sync b{font-weight:600; color:var(--ink)}
@@ -987,8 +1005,21 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
 </style>
 
 <div class="wrap" id="app">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <linearGradient id="lgold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--logo-gold2)"/><stop offset=".55" style="stop-color:var(--logo-gold)"/><stop offset="1" style="stop-color:var(--logo-gold2)"/></linearGradient>
+    <symbol id="lmark" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="29" fill="none" stroke="url(#lgold)" stroke-width="2.6" stroke-dasharray="0 5.7" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="25" fill="none" stroke="url(#lgold)" stroke-width="1.4"/>
+      <circle cx="32" cy="32" r="22" style="fill:var(--logo-por); fill-opacity:var(--logo-por-a)"/>
+      <path d="M32 9v11M26.5 14.5h11" stroke="url(#lgold)" stroke-width="2.4" stroke-linecap="square"/>
+      <path d="M17 26h30" stroke="url(#lgold)" stroke-width="3.2" stroke-linecap="square"/>
+      <path d="M15.5 23.8v4.4M48.5 23.8v4.4" stroke="url(#lgold)" stroke-width="1.6"/>
+      <path d="M23 28v18M41 28v18" stroke="url(#lgold)" stroke-width="3.2"/>
+      <path d="M19.5 47.5h7M37.5 47.5h7" stroke="url(#lgold)" stroke-width="2.2" stroke-linecap="square"/>
+      <path d="M32 34l3.2 4-3.2 4-3.2-4z" fill="url(#lgold)"/>
+    </symbol></defs></svg>
   <header class="top">
-    <div class="hrow"><h1>Primarch Project Manager</h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
+    <div class="hrow"><h1 class="logo" aria-label="Primarch Project Manager"><svg class="lmark" aria-hidden="true"><use href="#lmark"/></svg><span class="lword" aria-hidden="true"><span class="lname">Primarch</span><span class="lsub"><i></i>Project Manager<i></i></span></span></h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
