@@ -4076,7 +4076,7 @@ function noData(why){ return el("span",{class:"nodata", title:why, "aria-label":
 // HUB386: a row with no token series says so, in words and with the reason on hover, never a bare dash
 function tokWhy(name, s, now){
   const t = Date.parse((s || {}).started), young = !isNaN(t) && (now == null ? Date.now() : now) - t < 30 * 60000;
-  if(name === "exarch-console") return "The Console is woken on demand: it has used no Claude tokens in the last day, so there is nothing to count";
+  if(name === "primarch-core") return "Primarch-core is woken on demand: it has used no Claude tokens in the last day, so there is nothing to count";
   if(s && s.idle) return "Idle: no Claude tokens in the last day";
   if(young) return "Started less than half an hour ago: none of its Claude replies is counted yet (the node counts a session or agent from its first hub command naming it, by the HUB_SESSION name or the session tool, and publishes every ten minutes)";
   return NO_TOK + ". If it names itself differently, or never, its tokens are counted under its parent's " + String.fromCharCode(34) + "agents" + String.fromCharCode(34) + " row or as " + String.fromCharCode(34) + "unnamed" + String.fromCharCode(34) + ".";
@@ -6182,7 +6182,7 @@ async function load(sha){
   exarchWatch(); if(!$("#aipanel").hidden) aiDraw();   // HUB322: a new export: escalations notified, the drawer redrawn
   aiSettled();   // HUB331: the chats whose taps the board has settled are read again: the node's item states rule
   aiPlans();   // HUB330: the refinement plans' chats
-  aiConsole();   // HUB390: the Console's rows and the waiting / read mark in the Exarch chat
+  aiConsole();   // HUB390: primarch-core's rows and the waiting / read mark in the Exarch chat
 }
 const POLL_MS = 3000;   // HUB374: was 6 s (a 304 costs no API quota)
 let nextCheck = null;   // when the next look at the board is due (HUB135: the ring beside "checked")
@@ -6843,8 +6843,8 @@ function aiMsg0(c, m){
   if(m.role === "moved") return el("div",{class:"moved"}, el("span",{}, m.text), m.undo ? el("button",{type:"button", class:"small", onclick:() => aiUnmove(c, m)}, "Undo") : null);
   if(m.role === "user"){
     const mark = consoleMark(c, m), box = aiCardText(el("div",{class:"aimsg user"}), m.text);
-    if(m.con) box.append(el("span",{class:"small mu cmark", title:"Typed to the Console in the desktop session"}, " · to the Console"));
-    if(mark) box.append(el("span",{class:"small mu cmark", title: mark === "read" ? "The Console has read this message" : "The Console has not read this message yet"}, " · " + mark));
+    if(m.con) box.append(el("span",{class:"small mu cmark", title:"Typed to primarch-core in the desktop session"}, " · to primarch-core"));
+    if(mark) box.append(el("span",{class:"small mu cmark", title: mark === "read" ? "Primarch-core has read this message" : "Primarch-core has not read this message yet"}, " · " + mark));
     return box;
   }
   if(m.wait) return el("div",{class:"aimsg assistant wait"}, m.late ? aiNoAnswer(m.queued) : "Thinking…");
@@ -6987,9 +6987,9 @@ function undoOpen(x, now){
   if(!x || x.auto !== true || x.done !== "create" || x.pend || !x.undo || typeof x.undo !== "object" || !x.undo.card) return false;
   const t = Date.parse(x.at || ""); return !isNaN(t) && (now == null ? Date.now() : now) - t < UNDO_MS;
 }
-// HUB390: the Console's rows of the Exarch chat (hub/exarch/consolechat.py: by "console", n from 100000, `ask` = what the
-// user typed to the Console, `text` = its answer) as the drawer's messages, in time order with the others; and the mark
-// of a message the user sent (`console` of its reply row: "waiting" until the Console has read it, then "read")
+// HUB390: primarch-core's rows of the Exarch chat (hub/exarch/consolechat.py: by "console", n from 100000, `ask` = what the
+// user typed to primarch-core, `text` = its answer) as the drawer's messages, in time order with the others; and the mark
+// of a message the user sent (`console` of its reply row: "waiting" until primarch-core has read it, then "read")
 const CONSOLE_N0 = 100000;
 function consoleMsgs(r){
   const at = r.at || new Date().toISOString(), out = [];
@@ -7122,7 +7122,7 @@ async function aiFetch(c, want){   // the chat's replies of its export file (tho
   }
   return out;
 }
-async function aiConsole(){   // HUB390: the Console's rows of the Exarch chat, and the waiting / read mark of the user's messages there
+async function aiConsole(){   // HUB390: primarch-core's rows of the Exarch chat, and the waiting / read mark of the user's messages there
   const c = ai.chats.find(x => x.kind === "exarch");
   if(!c || !conn || ai.polling.has("console") || exLocked() || !c.msgs.length) return;
   const open = c.msgs.some(m => m.role === "assistant" && m.console === "waiting");   // a mark to settle: look sooner
