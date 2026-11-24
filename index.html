@@ -59,7 +59,7 @@ header.top{padding-block:14px 4px; display:grid; gap:8px}
 header.top h1{font-family:"Jost",var(--f-body); font-weight:300; letter-spacing:.01em}   /* EXARCH F: the Hub's name in Jost Light */
 h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
-/* HUB454: the header logo, a pearled gold roundel with a Greek pi, and the name in Jost Light */
+/* HUB454: the header logo, a pearled gold roundel with the Π Ρ Μ Χ monogram, and the name in Jost Light */
 h1.logo{display:flex; align-items:center; gap:14px; align-self:center; line-height:1}
 .logo .lmark{width:56px; height:56px; flex:none}
 .logo .lword{display:grid; gap:4px}
@@ -1011,12 +1011,14 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
       <circle cx="32" cy="32" r="29" fill="none" stroke="url(#lgold)" stroke-width="2.6" stroke-dasharray="0 5.7" stroke-linecap="round"/>
       <circle cx="32" cy="32" r="25" fill="none" stroke="url(#lgold)" stroke-width="1.4"/>
       <circle cx="32" cy="32" r="22" style="fill:var(--logo-por); fill-opacity:var(--logo-por-a)"/>
-      <path d="M32 9v11M26.5 14.5h11" stroke="url(#lgold)" stroke-width="2.4" stroke-linecap="square"/>
-      <path d="M17 26h30" stroke="url(#lgold)" stroke-width="3.2" stroke-linecap="square"/>
-      <path d="M15.5 23.8v4.4M48.5 23.8v4.4" stroke="url(#lgold)" stroke-width="1.6"/>
-      <path d="M23 28v18M41 28v18" stroke="url(#lgold)" stroke-width="3.2"/>
-      <path d="M19.5 47.5h7M37.5 47.5h7" stroke="url(#lgold)" stroke-width="2.2" stroke-linecap="square"/>
-      <path d="M32 34l3.2 4-3.2 4-3.2-4z" fill="url(#lgold)"/>
+      <g transform="translate(3.6 3.6) scale(.89)" fill="none" stroke="url(#lgold)" stroke-width="2.9" stroke-linecap="square" stroke-linejoin="miter">
+        <path d="M12 17H52"/><path d="M15.5 17V47M48.5 17V47"/>
+        <path d="M32 11V51"/><path d="M27.5 13.5H36.5" stroke-width="2"/>
+        <path d="M32 21H37Q43 21 43 27.5Q43 34 37 34H32"/>
+        <path d="M20 46V27L24 35.5L28 27V46" stroke-width="2.4"/>
+        <path d="M35.5 38L44.5 47M44.5 38L35.5 47" stroke-width="2.4"/>
+        <path d="M12.5 48.5H18.5M45.5 48.5H51.5" stroke-width="2"/>
+      </g>
     </symbol></defs></svg>
   <header class="top">
     <div class="hrow"><h1 class="logo" aria-label="Primarch Project Manager"><svg class="lmark" aria-hidden="true"><use href="#lmark"/></svg><span class="lword" aria-hidden="true"><span class="lname">Primarch</span><span class="lsub"><i></i>Project Manager<i></i></span></span></h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
