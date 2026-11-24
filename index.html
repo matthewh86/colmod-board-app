@@ -2884,6 +2884,89 @@ function createProblem(v, ctx){
   return "";
 }
 // <<< create-rules
+// >>> list-rules (tests/test_app.py runs this block)
+// HUB348: "Add from a list": text of items, one per line, made as cards, epics, themes and projects. A line is an item;
+// "* " / "- " lines nested by two spaces belong to the item above them. The mode names what the top level holds
+// (cards | epics | themes | projects); the levels below follow project > theme > epic > card. "multi" takes "# Cards",
+// "# Epics + Cards", "# Themes, Epics, Cards" and "# Projects, Themes, Epics, Cards" headings, each starting a
+// list of its own. parseList gives the items, planList the creates (the same `create` changes as the New form).
+const LIST_LEVELS = ["project", "theme", "epic", "card"];
+const LIST_MAX = 200;
+function listKey(name, taken){   // the desktop's key for a name (pm.py _new_key_for), made here so a card can name its new epic
+  let base = String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28).replace(/-+$/g, "");
+  if(!base || !/^[a-z]/.test(base)) base = ("n-" + base).replace(/-+$/g, "");
+  if(base.length < 2) base += "-x";
+  let key = base, n = 2;
+  while(taken.has(key)) key = base + "-" + n++;
+  return key;
+}
+function listPrefix(name, taken){   // id letters for a new project: the initials, else the first letters, else a free pair
+  const words = String(name || "").toUpperCase().replace(/[^A-Z ]+/g, " ").split(/\s+/).filter(Boolean), flat = words.join("");
+  const cands = [words.map(w => w[0]).join("").slice(0, 3), flat.slice(0, 3), flat.slice(0, 4), flat.slice(0, 2)];
+  for(const a of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") cands.push(flat.slice(0, 2) + a);
+  return cands.find(x => /^[A-Z]{2,4}$/.test(x) && !taken.has(x)) || "";
+}
+// -> {items: [{kind, name, depth, line}], problem}; a heading line of "multi" starts a section with its own top kind
+function parseList(text, mode){
+  const items = [];
+  let top = mode === "multi" ? "" : String(mode).replace(/s$/, ""), prev = -1, sect = [];
+  const flush = () => { if(sect.length){ const lo = Math.min(...sect.map(s => s.depth)); for(const s of sect){ s.depth -= lo; items.push(s); } } sect = []; };
+  const rows = String(text || "").split(/\r?\n/);
+  for(let i = 0; i < rows.length; i++){
+    const raw = rows[i].replace(/\s+$/, "");
+    if(!raw.trim()) continue;
+    const head = /^\s*#+\s*(.*)$/.exec(raw);
+    if(head){
+      if(mode !== "multi") return {items: [], problem: "Line " + (i + 1) + ": headings are for the Multi-format mode."};
+      flush();
+      const k = /\b(project|theme|epic|card)s?\b/i.exec(head[1]);
+      if(!k) return {items: [], problem: "Line " + (i + 1) + ": a heading names what the list holds: Cards, Epics, Themes or Projects."};
+      top = k[1].toLowerCase(); prev = -1; continue;
+    }
+    if(!top) return {items: [], problem: "Line " + (i + 1) + ": start with a # heading (Cards, Epics + Cards, ...) in the Multi-format mode."};
+    const m = /^(\s*)([*-]\s+)?(.*)$/.exec(raw), name = m[3].trim();
+    if(!name) continue;
+    const indent = m[1].replace(/\t/g, "  ").length, depth = m[2] ? 1 + Math.floor(indent / 2) : 0;
+    if(prev >= 0 && depth > prev + 1) return {items: [], problem: "Line " + (i + 1) + ": nested too deep under the line above."};
+    prev = depth; sect.push({name, depth, line: i + 1, top});
+    if(items.length + sect.length > LIST_MAX) return {items: [], problem: "A list is at most " + LIST_MAX + " lines."};
+  }
+  flush();
+  for(const s of items){ s.kind = LIST_LEVELS[LIST_LEVELS.indexOf(s.top) + s.depth]; if(!s.kind) return {items: [], problem: "Line " + s.line + ": nested below a card."}; }
+  return {items, problem: items.length ? "" : "The list is empty."};
+}
+// opts = {project, theme, epic ("" | key | ADHOC_EPIC), type, pri, col}: what a line without its parent takes
+// -> {creates: [value], problem, counts}; ctx as for createProblem (Maps are copied: a new theme is known to its epics)
+function planList(items, opts, ctx){
+  const c = {projects: new Map(ctx.projects), themes: new Map(ctx.themes), epics: new Map(ctx.epics), kinds: ctx.kinds};
+  const creates = [], stack = [], counts = {project: 0, theme: 0, epic: 0, card: 0}, prefixes = new Set();
+  for(const [, p] of c.projects) for(const x of (p.id_prefixes || [])) prefixes.add(x);
+  for(const s of items){
+    stack.length = s.depth;
+    const up = k => { for(let i = stack.length - 1; i >= 0; i--) if(stack[i].kind === k) return stack[i].key; return ""; };
+    let v;
+    if(s.kind === "project"){
+      v = {kind: "project", name: s.name, key: listKey(s.name, new Set(c.projects.keys())), prefix: listPrefix(s.name, prefixes)};
+    } else if(s.kind === "theme"){
+      v = {kind: "theme", name: s.name, key: listKey(s.name, new Set(c.themes.keys())), project: up("project") || opts.project};
+    } else if(s.kind === "epic"){
+      v = {kind: "epic", name: s.name, key: listKey(s.name, new Set(c.epics.keys())), theme: up("theme") || opts.theme};
+    } else {
+      const ep = up("epic") || (opts.epic !== ADHOC_EPIC ? opts.epic : "");
+      v = {kind: "card", t: s.name, type: opts.type, pri: opts.pri, col: opts.col};
+      if(ep) v.epic = ep; else { v.project = up("project") || opts.project; v.adhoc = true; }
+    }
+    for(const k of Object.keys(v)) if(v[k] == null || v[k] === "") delete v[k];
+    const why = createProblem(v, c);
+    if(why) return {creates: [], counts, problem: "Line " + s.line + " (" + s.name.slice(0, 40) + "): " + why};
+    if(v.kind === "project"){ c.projects.set(v.key, {name: v.name, id_prefixes: [v.prefix]}); prefixes.add(v.prefix); }
+    if(v.kind === "theme") c.themes.set(v.key, {name: v.name, project: v.project});
+    if(v.kind === "epic") c.epics.set(v.key, {name: v.name, theme: v.theme, project: (c.themes.get(v.theme) || {}).project});
+    counts[v.kind]++; creates.push(v); stack.push({kind: v.kind, key: v.key});
+  }
+  return {creates, counts, problem: creates.length ? "" : "The list is empty."};
+}
+// <<< list-rules
 let newKind = "card";
 // HUB250: the form keeps what was typed (per kind, also over a reload) until Cancel or Create; clicking away, Esc or
 // switching between card, epic, theme and project no longer loses it
@@ -2924,7 +3007,7 @@ function renderNew(){
   const projSelect = (id, def) => el("select",{id}, ...byOrder(projects).map(([k, p]) => opt(k, p.name || k, k === def)));
   const defProj = filt.j && projects.has(filt.j) ? filt.j : (byOrder(projects)[0] || [""])[0];
   const kinds = el("div",{class:"kinds", role:"group", "aria-label":"What to make"},
-    ...[["card", "Card"], ["epic", "Epic"], ["theme", "Theme"], ["project", "Project"]].map(([k, t]) =>
+    ...[["card", "Card"], ["epic", "Epic"], ["theme", "Theme"], ["project", "Project"], ["list", "From a list"]].map(([k, t]) =>
       el("button",{type:"button", "aria-pressed": String(newKind === k), onclick:()=>{ newKind = k; renderNew(); }}, t)));
   const form = el("form",{class:"newf", role:"dialog", "aria-label":"New " + newKind});
   const head = el("div",{class:"nwhead", title:"Drag to move the window"}, el("h3",{}, "New " + newKind),
@@ -2989,6 +3072,31 @@ function renderNew(){
     form.append(field("Name (at most " + EPIC_NAME_MAX + " characters)", nm), field("Theme", th), field("Blurb", bl),
       el("p",{class:"hint"}, "Its project is its theme's."));
     read = () => ({kind:"epic", name: nm.value.trim(), theme: th.value, blurb: bl.value.trim() || null});
+  } else if(newKind === "list"){   // HUB348
+    const md = el("select",{id:"nMode"}, ...[["cards", "Cards"], ["epics", "Epics (with cards)"], ["themes", "Themes (with epics, cards)"], ["projects", "Projects (with themes, epics, cards)"], ["multi", "Multi-format (# headings)"]].map(([k, t]) => opt(k, t, k === "cards")));
+    const li = el("textarea",{id:"nList", rows:"10", spellcheck:"false", placeholder:"One item per line. Nest the lines under another with \"* \", two spaces a level."});
+    const pj = projSelect("nProj", defProj);
+    const th = el("select",{id:"nTheme"}, ...byOrder(themes).map(([k, t]) => opt(k, (projects.get(t.project)?.name ? projects.get(t.project).name + " · " : "") + (t.name || k), k === filt.t)));
+    const ep = el("select",{id:"nEpic"}, opt(ADHOC_EPIC, "(ad hoc: no epic)"), ...byOrder(epics).filter(([, e]) => !e.retired).map(([k, e]) => opt(k, (projects.get(e.project)?.name ? projects.get(e.project).name + " · " : "") + (e.name || k))));
+    const ty = el("select",{id:"nType"}, ...KINDS.map(k => opt(k, k, k === "Feature")));
+    const pr = el("select",{id:"nPri"}, ...[[1, "P1 Critical"], [2, "P2 High"], [3, "P3 Normal"], [4, "P4 Low"]].map(([k, t]) => opt(k, t, k === 3)));
+    const co = el("select",{id:"nCol"}, ...CREATE_COLS.map(k => opt(k, COL_NAME[k], k === "back")));
+    const sum = el("p",{class:"hint", id:"nListSum", role:"status"});
+    const plan = () => {
+      const parsed = parseList(li.value, md.value);
+      if(parsed.problem) return {problem: parsed.problem, creates: [], counts: {}};
+      return planList(parsed.items, {project: pj.value, theme: th.value, epic: ep.value, type: ty.value, pri: Number(pr.value), col: co.value}, newCtx());
+    };
+    const show = () => {
+      if(!li.value.trim()){ sum.textContent = ""; return; }
+      const r = plan(), c = r.counts || {}, n = k => c[k] ? c[k] + " " + k + (c[k] === 1 ? "" : "s") : "";
+      sum.textContent = r.problem ? r.problem : "Will make " + ["project", "theme", "epic", "card"].map(n).filter(Boolean).join(", ") + ".";
+    };
+    for(const x of [li, md, pj, th, ep, ty, pr, co]){ x.addEventListener("input", show); x.addEventListener("change", show); }
+    form.append(field("What the list holds", md), field("The list", li), sum,
+      el("div",{class:"two"}, field("Project", pj), field("Theme", th), field("Epic", ep)), el("div",{class:"two"}, field("Type", ty), field("Priority", pr), field("Column", co)),
+      el("p",{class:"hint"}, "Project, theme and epic are used where the list does not give them (a card with no epic of its own takes the Epic above; ad hoc takes the Project). Epic names are at most " + EPIC_NAME_MAX + " characters. A new project's id letters are made from its name."));
+    read = () => ({kind:"list", plan});
   } else if(newKind === "theme"){
     const pj = projSelect("nProj", defProj);
     const nm = el("input",{id:"nName", maxlength:"200", autocomplete:"off", required:true});
@@ -3021,12 +3129,21 @@ function renderNew(){
   form.addEventListener("submit", ev => {
     ev.preventDefault();
     const v = read();
-    for(const k of Object.keys(v)) if(v[k] == null) delete v[k];
-    const why = createProblem(v, newCtx());
-    if(why){ err.textContent = why; return; }
-    change(NEW_CARD, "create", v);
+    let said;
+    if(v.kind === "list"){   // HUB348: every line is one create change, oldest first: a parent is made before what is under it
+      const r = v.plan();
+      if(r.problem){ err.textContent = r.problem; return; }
+      for(const x of r.creates) change(NEW_CARD, "create", x);
+      said = "Sent " + r.creates.length + (r.creates.length === 1 ? " item" : " items") + ": the board makes them within about a minute.";
+    } else {
+      for(const k of Object.keys(v)) if(v[k] == null) delete v[k];
+      const why = createProblem(v, newCtx());
+      if(why){ err.textContent = why; return; }
+      change(NEW_CARD, "create", v);
+      said = "Sent: the board makes the new " + v.kind + " within about a minute.";
+    }
     dropNewDraft(newKind); closeNew();
-    toast("Sent: the board makes the new " + v.kind + " within about a minute.");
+    toast(said);
   });
   box.append(form);
   const first = form.querySelector("input, textarea"); if(first && !newWin.min) first.focus({preventScroll:true});
