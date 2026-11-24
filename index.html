@@ -4747,17 +4747,23 @@ function budgetInput(u, wins, cr, ex, now){
     exLeft: ex ? Math.max(0, ex.limit > 0 ? (ex.left != null ? ex.left : ex.limit - ex.spent) : exCap - ex.spent) : exCap,
     c: Math.max(2, Math.min(25, wkPct / (weeks * .5))), apiRate: rate, assumed: {rate: rate == null}};
 }
-// a pace's planned use: development streams x the assumed share of a window (Turbo: every window used up)
-function budgetPace(base, pace, lim){
-  const turbo = pace === "turbo", streams = Number(lim && lim.streams) || 0, drawn = Number(lim && lim.drawn) || 0, rate = base.apiRate || 7.5;
-  const name = (BG_PACES.find(p => p[0] === pace) || [0, pace])[1];
-  return Object.assign({}, base, {pace, name, streams, drawn, turbo, fF: turbo ? 1 : Math.max(0, Math.min(1, streams * BG_STREAM_USE)),
-    rAf: turbo ? rate * 1.6 : rate, rUf: turbo ? 2 : 0});
+// a pace's use. HUB457 (the user): no plan is guessed. `demand` = the development streams actually running or queued (null: a what-if,
+// the pace's own stream limit as if that many ran). The plan is min(limit, demand): with none active, no development use at all
+// (Turbo included: "every window used up" is only the what-if).
+function budgetPace(base, pace, lim, demand){
+  const turbo = pace === "turbo", limit = Number(lim && lim.streams) || 0, drawn = Number(lim && lim.drawn) || 0, rate = base.apiRate || 7.5;
+  const name = (BG_PACES.find(p => p[0] === pace) || [0, pace])[1], whatIf = demand == null || isNaN(Number(demand)), dn = whatIf ? 0 : Math.max(0, Math.floor(Number(demand)));
+  const streams = whatIf ? limit : turbo ? dn : Math.min(limit, dn), idle = !whatIf && streams === 0;
+  return Object.assign({}, base, {pace, name, streams, limit, drawn: whatIf ? drawn : 0, turbo, whatIf, idle,
+    fF: whatIf ? (turbo ? 1 : Math.max(0, Math.min(1, streams * BG_STREAM_USE))) : Math.max(0, Math.min(1, streams * BG_STREAM_USE)),
+    rAf: idle ? 0 : turbo && whatIf ? rate * 1.6 : rate, rUf: turbo && whatIf ? 2 : 0});
 }
 function budgetCaption(S){
-  return "Forecast (dashed): " + S.name + ", " + (S.turbo ? "no stream limit, every window used up" : S.streams + " development streams + " + S.drawn + " drawn art")
-    + "; a stream is assumed to use " + (BG_STREAM_USE * 100).toFixed(1) + " % of a window, a full window " + S.c.toFixed(1) + " % of the week, API credits "
-    + S.rAf.toFixed(1) + " USD an hour" + (S.turbo ? ", usage credits " + S.rUf + " USD an hour" : "") + (S.assumed.rate ? " (assumed)" : "") + ".";
+  if(S.idle) return "Forecast (dashed): No streams active, so no development use is forecast; the curve stays flat. Pick another pace to see a what-if.";
+  const rates = "; a stream is assumed to use " + (BG_STREAM_USE * 100).toFixed(1) + " % of a window, a full window " + S.c.toFixed(1) + " % of the week, API credits "
+    + S.rAf.toFixed(1) + " USD an hour" + (S.turbo && S.whatIf ? ", usage credits " + S.rUf + " USD an hour" : "") + (S.assumed.rate ? " (assumed)" : "") + ".";
+  if(S.whatIf) return "What if (dashed, not the plan): " + S.name + ", " + (S.turbo ? "no stream limit, every window used up" : S.streams + " development streams + " + S.drawn + " drawn art") + rates;
+  return "Forecast (dashed): " + S.name + ", " + S.streams + " development " + (S.streams === 1 ? "stream" : "streams") + " running or queued now" + (S.turbo ? "" : " (the pace allows " + S.limit + ")") + rates;
 }
 function budgetModel(S){
   const {now, R1} = S, sec = budgetSections(S.apiCap, S.exCap), R0 = R1 - 7 * BG_DAY;
@@ -4820,7 +4826,7 @@ function budgetFacts(S, m){
   const nr = m.rowAt(S.now), out = ["Plan: " + Math.round(nr.P) + " % left, refreshes " + fmtTime(S.R1),
     "API credits: $" + Math.round(nr.A) + " left of $" + Math.round(S.apiCap), "Usage credits: $" + Math.round(nr.U) + " left of $" + Math.round(S.exCap)];
   if(S.five) out.push("5-hour window: " + (S.p5 >= 99.5 ? "used up" : Math.round(S.p5) + " % used") + ", next window " + fmtTime(S.W0));
-  out.push("Forecast on " + S.name + ": " + (m.cutover ? "the plan reaches its last " + BG_KEEP + " % about " + fmtTime(m.cutover) + ", then the API credits carry the work" : "the plan lasts to its refresh")
+  out.push((S.whatIf ? "What if on " : "Forecast on ") + S.name + (S.idle ? " (no streams active)" : "") + ": " + (m.cutover ? "the plan reaches its last " + BG_KEEP + " % about " + fmtTime(m.cutover) + ", then the API credits carry the work" : "the plan lasts to its refresh")
     + "; at the refresh " + Math.round(m.end.P) + " % of the plan, $" + Math.round(m.end.A) + " API credits and $" + Math.round(m.end.U) + " usage credits are left");
   return out;
 }
@@ -4928,15 +4934,19 @@ function budgetGraph(S, m, o){
 // <<< usage-graphs
 // the pace buttons, the graph's state (kept across redraws; the checkbox is one setting across scales and paces until it is touched) and the drag and wheel scrolling
 const budgetUI = {zoom: "2d", off: 0, logY: false, pace: null, showAll: ls("budgetShowAll")};
+// HUB457: the development streams really there: running or assigned, plus the Next up cards queued for one (the core starts them within the pace)
+function streamDemand(){
+  return [...cards.values()].filter(c => (c.col === "prog" || c.col === "assign" || c.col === "next") && cardKind(c) !== "Release" && gPool(c) === "stream").length;
+}
 function budgetPanel(u, wins, cr, ex, curPace){
   const base = budgetInput(u, wins, cr, ex, Date.now());
   if(!base) return el("p",{class:"note"}, "No usage reading yet.");
   const host = el("div",{class:"bgraph bug"}), cache = new Map();
-  const model = pace => { if(!cache.has(pace)){ const S = budgetPace(base, pace, hubLimits(pace)), m = budgetModel(S); cache.set(pace, {S, m}); } return cache.get(pace); };
+  const model = pace => { if(!cache.has(pace)){ const S = budgetPace(base, pace, hubLimits(pace), pace === curPace ? streamDemand() : null), m = budgetModel(S); cache.set(pace, {S, m}); } return cache.get(pace); };
   const paint = () => {
     const pace = budgetUI.pace && PACE_LIMIT_DEFS[budgetUI.pace] ? budgetUI.pace : curPace, {S, m} = model(pace);
     budgetUI.off = budgetViewOff(S, m, budgetUI.zoom, budgetUI.off);
-    const lab = k => { const l = hubLimits(k), n = (BG_PACES.find(p => p[0] === k) || [0, k])[1]; return n + (k === "turbo" ? " (no stream limit)" : " (" + l.streams + " streams)"); };
+    const lab = k => { const l = hubLimits(k), n = (BG_PACES.find(p => p[0] === k) || [0, k])[1]; return n + (k === "turbo" ? " (what if: no stream limit)" : k === curPace ? "" : " (what if: " + l.streams + " streams)"); };
     host.replaceChildren(el("div",{class:"bzoom", role:"group", "aria-label":"Pace to forecast"}, el("span",{class:"bsmall"}, "Pace:"),
       ...BG_PACES.map(([k]) => el("button",{type:"button", class:k === pace ? "on" : "", "data-bpace":k}, lab(k)))), ...budgetGraph(S, m, budgetUI));
   };
@@ -6172,8 +6182,9 @@ function drawStreams(host){
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderStreams(); };
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
     el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
+  if(!live.length && !streamsWorking(rows)) host.append(el("p",{class:"note nostreams", role:"status"}, "No streams active" + (rows.length ? ": the rows below are queued cards, not a running plan." : ".")));   // HUB457
   const sessions = () => { graphWin = graphWindow(); try { return sessionsSection(); } finally { graphWin = null; } };   // HUB177: one window for every rate
-  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams running or planned" + (filt.j ? " with this project filter." : "."))); host.append(...sessions()); return; }
+  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams active or queued" + (filt.j ? " with this project filter." : "."))); host.append(...sessions()); return; }
   const hour = t => Math.floor(t / G_H) * G_H;
   const t0 = hour(now - 3 * G_H);
   const end = rows.reduce((m, r) => r.bars.reduce((x, b) => Math.max(x, b.e), m), now);
@@ -7280,8 +7291,14 @@ function renderSyncPop(){
     el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
-  p.replaceChildren(el("div",{class:"phead"}, el("b",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
-    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")])));
+  const kids = [el("div",{class:"phead"}, el("b",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
+    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]))];
+  // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
+  // the nodes stay as they are unless what they show changed (every handler closes over values that are part of the markup)
+  const sig = kids.map(k => k.outerHTML).join("");
+  if(p.hasChildNodes() && p.dataset.sig === sig) return;
+  p.dataset.sig = sig;
+  p.replaceChildren(...kids);
   p.scrollTop = keep;
 }
 const EXARCH_OFF_WARN = "Turning Exarch AI off stops planning and Lead wakes, and halts the running Leads' work. Running work finishes its current step, keeps its branch and goes back to Next up within 10 min.";
