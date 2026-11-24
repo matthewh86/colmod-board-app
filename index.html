@@ -4036,7 +4036,7 @@ function setSessSort(key){   // a click: a new column sorts (text A-Z, figures h
   const was = sessSort && sessSort.key === key ? sessSort.dir : null;
   sessSort = {key, dir: was ? (was === "asc" ? "desc" : "asc") : SESS_TEXT_COLS.includes(key) ? "asc" : "desc"};
   ls(SESS_SORT_KEY, sessSort);
-  renderStatus();
+  renderStatus(); renderStreams();
 }
 function sortSessRows(list){   // list: [{v: {key: value}, ...}]: numbers numerically, text by locale, rows with no figure last
   if(!sessSort) return list;
@@ -4151,7 +4151,6 @@ function renderMachines(){
 }
 function drawMachines(host){
     const machines = Array.isArray(hubStatus.machines) ? hubStatus.machines : [];
-    const sessions = Array.isArray(hubStatus.sessions) ? hubStatus.sessions.filter(s => s && s.name) : [];
     const work = Array.isArray(hubStatus.work) ? hubStatus.work.filter(Boolean) : [];
     const names = new Set(machines.map(m => String(m.machine)));
     // Overview: every graph in one place, the total of all machines first
@@ -4182,10 +4181,6 @@ function drawMachines(host){
     const allm = over.querySelector(".allm");
     if(allm && ![...allm.querySelectorAll(".ubox, .rbox")].some(b => !b.hidden)) allm.remove();   // no token file yet: no empty frame
     // one card per machine: online while the last report is under 30 minutes old (worked out here, so it is always current)
-    const per = machines.map(m => machineRows(String(m.machine), sessions.filter(s => s.machine === m.machine)));
-    const loose = sessions.filter(s => !names.has(String(s.machine)));
-    const looseRows = machineRows("", loose);
-    const most = Math.max(0, ...per.flat().map(r => r.rate));
     const mach = el("div",{class:"mach rows"});
     machines.forEach((m, i) => {
       const age = (Date.now() - new Date(m.seen)) / 60000, st = age <= 30 ? "online" : "offline";   // HUB181: the user's word for it (was stale)
@@ -4205,19 +4200,32 @@ function drawMachines(host){
       add("Queued for it", m.queued);
       if(m.hub_version) add("Hub version", m.hub_version);
       if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
-      const rows = per[i], wt = workTable(work.filter(w => w.machine === m.machine));
+      const wt = workTable(work.filter(w => w.machine === m.machine));
       mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
         st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
-        el("h3",{}, "Sessions and agents"), rows.length ? sessionTable(rows, most) : el("p",{class:"note"}, "None on this machine right now."),
         el("h3",{}, "Local work"), wt || el("p",{class:"note"}, "No local work recorded.")));
     });
     host.append(el("h2",{}, "Machines"), mach);
-    if(looseRows.length) host.append(el("h3",{}, "Sessions on no machine listed"), sessionTable(looseRows, most));
     const lw = workTable(work.filter(w => !names.has(String(w.machine))));
     if(lw) host.append(el("h3",{}, "Local work on no machine listed"), lw);
-    host.append(el("p",{class:"note"}, "Tokens/hr: Claude tokens in the last hour (" + (tokMode === "all" ? "all tokens" : "without cache reads")
-      + "), highest first; the hotter the row, the more. Tap a name to show it alone in the Overview's token graph."
-      + " Last seen: its latest Claude reply or hub command, whichever is newer. \u2014: no figure (hover for why)."));
+}
+// HUB398: the Sessions and agents tables (one per machine, and one for those on no machine listed) moved from the
+// Machines tab to the Streams tab, under the Streams Gantt; the same sessionTable, sort and token figures.
+function sessionsSection(){
+  const hs = hubStatus || {}, machines = Array.isArray(hs.machines) ? hs.machines : [];
+  const sessions = Array.isArray(hs.sessions) ? hs.sessions.filter(s => s && s.name) : [];
+  const names = new Set(machines.map(m => String(m.machine)));
+  const per = machines.map(m => machineRows(String(m.machine), sessions.filter(s => s.machine === m.machine)));
+  const looseRows = machineRows("", sessions.filter(s => !names.has(String(s.machine))));
+  const most = Math.max(0, ...per.flat().map(r => r.rate), ...looseRows.map(r => r.rate));
+  const out = [el("h2",{}, "Sessions and agents")];
+  machines.forEach((m, i) => out.push(el("h3",{}, m.machine),
+    per[i].length ? sessionTable(per[i], most) : el("p",{class:"note"}, "None on this machine right now.")));
+  if(looseRows.length) out.push(el("h3",{}, "Sessions on no machine listed"), sessionTable(looseRows, most));
+  out.push(el("p",{class:"note"}, "Tokens/hr: Claude tokens in the last hour (" + (tokMode === "all" ? "all tokens" : "without cache reads")
+    + "), highest first; the hotter the row, the more. Last seen: its latest Claude reply or hub command, whichever is newer."
+    + " \u2014: no figure (hover for why). The span of the Tokens column is set in the Machines tab's Overview."));
+  return out;
 }
 
 // ---------- Hub: the hub's own facts, and whether this App is the hub's
@@ -5192,8 +5200,6 @@ function drawGantt(host){
   const plan = ganttPlan(list, now);
   const shownAll = [...plan.items.values(), ...past].filter(it => inProject(it.c) && gPass(it.c) && (gRel || it.kind !== "milestone"));
   const shown = shownAll;
-  const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
-  const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), dNow = nowIn("drawn"), sLim = plan.limit.stream, aLim = plan.limit.art, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   const planEnd = shown.reduce((m, it) => Math.max(m, it.e), now);
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderGantt(); };
   // HUB153: one button folds every epic shown (its cards hidden), or unfolds them all when all are folded
@@ -5228,39 +5234,6 @@ function drawGantt(host){
   // HUB286: the Day / Week selector sits in the top-left header cell
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
-  // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
-  // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
-  const ran = {stream: [], coord: [], art: [], drawn: []};
-  for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
-  // HUB217: each strip's label entry counts its pool In progress now against the limit (the header's pills, before)
-  const poolHead = {
-    stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
-      "Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
-    art: [aNow > aLim, "Art: " + aNow + " of " + aLim + " now",
-      "ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; at most " + hubLimits().art + " at once (the Limits above)"],
-    drawn: [dNow > dLim, "Drawn art: " + dNow + " of " + dLim + " now",
-      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"],
-    coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
-      "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
-  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Exarch"]]){
-    const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
-    let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
-    const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
-    for(let t = t0; t < t1; t += step){
-      if(t < now && ran[pool].length){ const n = gPeak(ran[pool], t, Math.min(t + step, now)); slices.push([t, n, true]); peak = Math.max(peak, n); }
-      if(t + step <= now) continue;
-      const n = gPeak(iv, Math.max(t, now), t + step); slices.push([t, n, false]); peak = Math.max(peak, n);
-    }
-    const hpx = 28, top = 34 - 2 - hpx;
-    for(const [t, n, was] of slices) if(n){
-      const a = was ? t : Math.max(t, now), b = was ? Math.min(t + step, now) : t + step;
-      kids.push(el("span",{class:"gslice" + (was ? " past" : "") + (n > lim ? " over" : ""), title:name + ": " + n + (isFinite(lim) ? " of " + lim : "") + (was ? " ran" : "") + " at " + fmtTime(new Date(t).toISOString()),
-        style:"left:" + X(a) + "px; width:" + Math.max(1, X(b) - X(a) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
-    }
-    if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
-    const [over, head, why] = poolHead[pool];
-    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
-  }
   // HUB158: the fold-all button sits right above where the projects start listing (the label column, kept in view)
   if(epicKeys.length) inner.append(row("gtools", el("div",{class:"glab"},
     el("button",{type:"button", class:"gfoldall", "aria-pressed":String(allFolded), title:allFolded ? "Show every epic's cards" : "Fold every epic: one row each", onclick:foldAll}, allFolded ? "Expand epics" : "Collapse epics")), null));
@@ -5392,6 +5365,46 @@ function drawGantt(host){
   }
 }
 
+// HUB398: the resource strips (Streams, Art, Drawn art, Exarch: the most cards running at once against the limit; what
+// ran before now, paler) moved from the Gantt to the Streams tab. o: {plan, list, now, t0, t1, X, sc, row, inner}.
+function ganttStrips(o){
+  const {plan, list, now, t0, t1, X, sc, row, inner} = o;
+  const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
+  const sNow = nowIn("stream"), cNow = nowIn("coord"), aNow = nowIn("art"), dNow = nowIn("drawn"), sLim = plan.limit.stream, aLim = plan.limit.art, cLim = plan.limit.coord, dLim = plan.limit.drawn;
+  // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
+  // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
+  const ran = {stream: [], coord: [], art: [], drawn: []};
+  for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
+  // HUB217: each strip's label entry counts its pool In progress now against the limit (the header's pills, before)
+  const poolHead = {
+    stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
+      "Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
+    art: [aNow > aLim, "Art: " + aNow + " of " + aLim + " now",
+      "ComfyUI art streams (Artwork cards made with ComfyUI) In progress now, apart from the development streams; at most " + hubLimits().art + " at once (the Limits above)"],
+    drawn: [dNow > dLim, "Drawn art: " + dNow + " of " + dLim + " now",
+      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams and the ComfyUI art, against its own limit (Hub tab)"],
+    coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
+      "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
+  for(const [pool, name] of [["stream", "Streams"], ["art", "Art"], ["drawn", "Drawn art"], ["coord", "Exarch"]]){
+    const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
+    let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
+    const limTxt = isFinite(lim) ? String(lim) : "no limit (Turbo)", slices = [];
+    for(let t = t0; t < t1; t += step){
+      if(t < now && ran[pool].length){ const n = gPeak(ran[pool], t, Math.min(t + step, now)); slices.push([t, n, true]); peak = Math.max(peak, n); }
+      if(t + step <= now) continue;
+      const n = gPeak(iv, Math.max(t, now), t + step); slices.push([t, n, false]); peak = Math.max(peak, n);
+    }
+    const hpx = 28, top = 34 - 2 - hpx;
+    for(const [t, n, was] of slices) if(n){
+      const a = was ? t : Math.max(t, now), b = was ? Math.min(t + step, now) : t + step;
+      kids.push(el("span",{class:"gslice" + (was ? " past" : "") + (n > lim ? " over" : ""), title:name + ": " + n + (isFinite(lim) ? " of " + lim : "") + (was ? " ran" : "") + " at " + fmtTime(new Date(t).toISOString()),
+        style:"left:" + X(a) + "px; width:" + Math.max(1, X(b) - X(a) - 1) + "px; height:" + Math.round(hpx * n / peak) + "px"}));
+    }
+    if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
+    const [over, head, why] = poolHead[pool];
+    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
+  }
+}
 // ---------- Streams tab (HUB385): one row per stream like the Gantt's, time along the bottom. A row shows the card the
 // stream works now, the cards assigned to it (HUB379's `assigned`, queued behind it) and the cards the plan puts next
 // under a predicted stream by name (dashed until the stream claims the card and the bar turns solid).
@@ -5465,6 +5478,7 @@ function drawStreams(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), live = streamLive();
   const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), live,
+    hubStatus && [hubStatus.machines, hubStatus.sessions], sessSort, tokMode, tokHours, [...tokens.entries()].map(([k, d]) => [k, d.end]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
   host.dataset.sig = sig;
@@ -5477,7 +5491,8 @@ function drawStreams(host){
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderStreams(); };
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
     el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
-  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams running or planned" + (filt.j ? " with this project filter." : "."))); return; }
+  const sessions = () => { graphWin = graphWindow(); try { return sessionsSection(); } finally { graphWin = null; } };   // HUB177: one window for every rate
+  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams running or planned" + (filt.j ? " with this project filter." : "."))); host.append(...sessions()); return; }
   const hour = t => Math.floor(t / G_H) * G_H;
   const t0 = hour(now - 3 * G_H);
   const end = rows.reduce((m, r) => r.bars.reduce((x, b) => Math.max(x, b.e), m), now);
@@ -5493,6 +5508,8 @@ function drawStreams(host){
   }
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
+  const strips = {plan, list, now, t0, t1, X, sc, row, inner};
+  ganttStrips(strips);
   for(const r of rows){
     const idle = !r.bars.length, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";
     const tip0 = r.name + (r.predicted ? " (predicted: no stream by this name yet; Exarch starts it for its planned card)" : "")
@@ -5514,7 +5531,7 @@ function drawStreams(host){
   }
   inner.append(el("span",{class:"gline", style:"left:calc(var(--glw) + " + X(now) + "px)"}, el("span",{}, "now")));
   const wrap = el("div",{class:"gwrap", "data-scale":scaleKey, onscroll:() => gTip(null, "")}, inner);
-  host.append(wrap);
+  host.append(wrap, ...sessions());
   wrap.scrollLeft = keepX != null ? keepX : Math.max(0, X(now) - 2 * sc.pxh * (scaleKey === "day" ? 1 : 12));
 }
 
