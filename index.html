@@ -70,6 +70,8 @@ h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.
 .syncpill::before, .tab.syncing::after{content:""; position:absolute; pointer-events:none;
   background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%); transform:translateX(-100%); animation:sheen 1s infinite}
 .syncpill::before{inset:0}
+.bblock{display:grid; gap:4px; min-width:0}
+.bblock .row button.syncpill{border:0; margin-left:0; padding:2px 10px}
 .tab.syncing{position:relative; overflow:hidden; color:var(--pend-fg)}
 .tab.syncing::after{left:0; right:0; bottom:0; height:3px; background:linear-gradient(to right, transparent 0%, var(--pend-fg) 50%, transparent 100%)}
 .synconly{display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:.8rem; background:var(--pend-bg); color:var(--pend-fg); border-radius:8px; padding:6px 10px; margin:6px 0}
@@ -1375,11 +1377,12 @@ async function send(id){
 function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
 function saveState(){
   const n = changes.size, unsent = [...changes.keys()].filter(k => !sentAt.has(k)).length, s = $("#savest");
-  // HUB264: changes on their way are said once, by the sync chip beside this ("N changes syncing to the desktop")
-  s.textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : n ? "" : loaded ? "Synced" : "";
+  // HUB394: changes on their way are said inside the pill: "3 changes syncing"
+  s.textContent = readOnly ? (conn ? (unsent ? unsent + " not sent (read-only)" : "Read-only") : "") : n ? n + (n === 1 ? " change syncing" : " changes syncing") : loaded ? "Synced" : "";
   const ok = s.textContent === "Synced";   // HUB255/HUB265: everything is on the board: "Synced" in one chip
   s.classList.toggle("ok", ok);   // HUB322: the circled check beside it is the Sync indicator's icon
   s.title = ok ? "Synced: every change is on the board" : "";
+  const pop = $("#syncpop"); if(pop && !pop.hidden) renderSyncPop();   // HUB394: the popup's Board block says the same
 }
 // how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
 function openCount(c, col){
@@ -2445,12 +2448,7 @@ function askPosition(id){   // "Move to position": a number within the card's co
 
 function renderSync(){
   const sync = $("#sync"); if(!conn || !loaded) return;
-  sync.replaceChildren(meta.exported_at ? el("span",{}, "Board as of ", el("b",{}, fmtTime(meta.exported_at)),
-    lastCheck ? " · checked " + new Date(lastCheck).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit", second:"2-digit"}) : "",
-    lastCheck ? el("span",{class:"rspin", role:"img", title:SAVE_NOTE, "aria-label":SAVE_NOTE}) : "")
-    : el("span",{}, "No board export yet: the desktop's node writes it."),
-    changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:gotoSyncing},   // HUB68
-      el("b",{}, String(changes.size)), changes.size === 1 ? " change syncing to the desktop" : " changes syncing to the desktop") : "");
+  sync.replaceChildren(meta.exported_at ? "" : el("span",{}, "No board export yet: the desktop's node writes it."));   // HUB394: "Board as of" is in the Sync popup
   if(conn.branch === LEGACY_BRANCH)   // a connection saved before the board data had its own repository
     sync.append(el("span",{class:"warn"}, " · old connection: the board data has moved to its own repository; sign out and connect to it (branch main)"));
   renderExarchHeader();   // HUB322: the Sync indicator and the compass
@@ -4532,6 +4530,8 @@ function extraAge(x){
   const t = new Date(x.recorded).getTime(), m = (Date.now() - t) / 60000;
   return isNaN(t) || m < EXTRA_STALE_MIN ? "" : " (as of " + (m < 1440 ? Math.round(m / 60) + " h" : Math.round(m / 1440) + " d") + " ago)";
 }
+// HUB394 (the user, 2026-11-24): the usage credits are red below 25 % of the budget; above it HUB283's scale
+function extraLevel(pct){ return Number(pct) < 25 ? "tk-red" : tokLevel(pct); }
 function usageExtra(u){
   const x = u && u.extra && typeof u.extra === "object" ? u.extra : null;
   if(!x || x.spent == null || isNaN(Number(x.spent))) return null;
@@ -6411,15 +6411,7 @@ function startPolling(){
   check();
 }
 const SAVE_NOTE = "Answers, notes, priorities, epics, moves and card order are saved to the board straight away and reach Obsidian on both PCs within about a minute.";
-// HUB135: a small ring that fills up until the next check of the board, beside "checked hh:mm:ss"
-setInterval(() => {
-  const rings = document.querySelectorAll(".rspin"); if(!rings.length || nextCheck == null) return;
-  const left = Math.max(0, nextCheck - Date.now()), span = left > POLL_MS ? left : POLL_MS;
-  const frac = document.hidden ? 0 : 1 - left / span, secs = Math.ceil(left / 1000);
-  const tip = (document.hidden ? "Checks pause while the page is hidden" : left ? "Next check in " + secs + " s" : "Checking now")
-    + ". " + SAVE_NOTE;   // HUB245: the save note lives in this tooltip
-  for(const r of rings){ r.style.setProperty("--p", (frac * 100).toFixed(1) + "%"); r.title = tip; r.setAttribute("aria-label", tip); }
-}, 250);
+// HUB394 (the user, 2026-11-24): no "checked hh:mm:ss" and no ring any more; the board's time is in the Sync popup
 document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
 
 function showSetup(msg){
@@ -6696,6 +6688,13 @@ function exarchStateIcon(s){
   if(s.state === "unknown") return ico("compass", "mu", "Exarch AI: no reading in the export yet");
   return ico("compass", "ok", "Exarch AI is on and running");
 }
+function exarchStateText(s){   // HUB394: the popup says it in words beside the icon
+  if(s.state === "halting") return "Halting: " + s.running + (s.running === 1 ? " run" : " runs") + " finishing";
+  if(s.state === "off") return "Exarch AI is off";
+  if(s.state === "unseen") return "Exarch AI not seen for " + s.quiet + " min";
+  if(s.state === "unknown") return "Exarch AI: no reading yet";
+  return "Exarch AI is on and running";
+}
 // ---- the usage figures (the former Gantt pills, HUB281-HUB285, HUB290), each with its tokLevel; HUB283's scale
 const WARN_RANK = {"tk-yellow": 1, "tk-orange": 2, "tk-red": 3};
 function usageFigures(){
@@ -6714,7 +6713,7 @@ function usageFigures(){
   }
   const x = usageExtra(u);   // HUB272: the usage credits, apart from the API credits; HUB290: a stale reading says its age
   if(x){
-    const lvl = x.rising ? "tk-red" : x.left != null && x.limit ? tokLevel(100 * x.left / x.limit) : "";
+    const lvl = x.rising ? "tk-red" : x.left != null && x.limit ? extraLevel(100 * x.left / x.limit) : "";
     out.push({k: "extra", label: "Usage credits", lvl, tip: extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : ""),
       value: (x.left != null ? "$" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "$" + x.spent.toFixed(2) + " used") + extraAge(x)});
   }
@@ -6725,11 +6724,18 @@ function worstWarn(figs){   // the most severe figure at yellow or lower, else n
   for(const f of figs) if(WARN_RANK[f.lvl] && (!w || WARN_RANK[f.lvl] > WARN_RANK[w.lvl])) w = f;
   return w;
 }
+// HUB394 (the user's answer "best_of"): the pill shows the BEST state of all the checks: the good state while any
+// check is fine, else the mildest warning; the worst check with its reason is only in the popup
+function bestWarn(figs){
+  let b = null;
+  for(const f of figs){ if(!WARN_RANK[f.lvl]) return null; if(!b || WARN_RANK[f.lvl] < WARN_RANK[b.lvl]) b = f; }
+  return b;
+}
 const WARN_CLASS = {"tk-yellow": "wy", "tk-orange": "wo", "tk-red": "wr"};
 // ---- the header: the Sync indicator (circled check, or the worst ⚠; Exarch AI's state beside it) and the compass
 function renderExarchHeader(){
-  const s = exarchNow(), figs = usageFigures(), w = worstWarn(figs), icons = $("#syncicons");
-  if(icons) icons.replaceChildren(w ? ico("alert-triangle", WARN_CLASS[w.lvl], w.label + " is low: " + w.value) : ico("circle-check", "ok", "Usage is fine"), exarchStateIcon(s));
+  const s = exarchNow(), figs = usageFigures(), w = bestWarn(figs), icons = $("#syncicons");   // HUB394: the best state, not the worst
+  if(icons) icons.replaceChildren(w ? ico("alert-triangle", WARN_CLASS[w.lvl], "Every usage check is low; the best is " + w.label + ": " + w.value) : ico("circle-check", "ok", "Usage is fine"), exarchStateIcon(s));
   const b = $("#aibtn"), off = s.state === "off" || s.state === "halting";
   b.classList.toggle("off", off); b.classList.toggle("ison", s.state === "on");   // HUB381: the compass is green while Exarch AI is on
   $("#aibtnstate").textContent = off ? " · " + (s.state === "halting" ? "halting" : "off") : "";
@@ -6762,7 +6768,14 @@ function renderSyncPop(){
   const p = $("#syncpop"); if(!p || p.hidden) return;
   const keep = p.scrollTop, s = exarchNow(), figs = usageFigures();
   // HUB380: a figure shows its short value here; the refresh and runs-out times stay in its hover text
-  const sync = el("div",{class:"kv"}, el("span",{class:"row"}, ($("#syncicons") || el("span")).cloneNode(true), $("#savest").textContent || (changes.size ? "Syncing" : "Synced")));
+  // HUB394: the worst check with its reason as text, then Exarch AI's icon and status, then the sync state and the board's time
+  const worst = worstWarn(figs), st = $("#savest").textContent || (changes.size ? "Syncing" : "Synced");
+  const sync = el("div",{class:"bblock"},
+    el("div",{class:"row"}, worst ? ico("alert-triangle", WARN_CLASS[worst.lvl], worst.label + " is low") : ico("circle-check", "ok", "Usage is fine"),
+      worst ? worst.label + " is low: " + worst.value : "Usage is fine"),
+    el("div",{class:"row"}, exarchStateIcon(s), exarchStateText(s)),
+    el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
+    el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), f.label), f.short || f.value, {title: f.tip}))   // HUB363: a check circle when fine, the warning symbol otherwise
     : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
   const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
@@ -6791,6 +6804,11 @@ const EXARCH_OFF_WARN = "Turning Exarch AI off stops planning and Lead wakes, an
 // the usage stage (CLAUDE.md "Usage order", HUB227): the export's usage.stage, 1 to 4
 const USAGE_STAGES = {1: "Plan to 95 %: business as usual", 2: "Cutover: the API credits carry development",
   3: "Plan 95 to 100 %: finishing only", 4: "Usage credits: handovers only"};
+// HUB394: streams in use above the Pace's allowance: yellow 1 over, orange 2 over, red 3 or more; null when within it
+function streamsOver(live, allowed){
+  const by = live - allowed;
+  return isNaN(by) || by < 1 ? null : {by, cls: by >= 3 ? "wr" : by === 2 ? "wo" : "wy"};
+}
 function syncPopExtra(){
   const {u, pace} = usageNow(), st = Number(u && u.stage), live = Number(u && u.streams_live);
   const a = u && u.allowed_streams, cap = hubLimits().streams;
@@ -6798,9 +6816,10 @@ function syncPopExtra(){
   const inUse = u && u.streams_live != null && live >= 0 ? live + " of " + allowed : "-";   // "-" alone while there is no reading
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
   const pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
+  const over = pace === "turbo" ? null : streamsOver(live, Number(allowed));
   return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Hub tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
-    kv("Streams in use", inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
+    kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
 // >>> runs-rows (tests/test_app.py runs this block)
