@@ -118,7 +118,16 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .floatbtns{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:1 / -1; grid-row:1 / -1; align-self:start; justify-self:end; margin-right:14px; z-index:4; display:flex; gap:6px}   /* HUB361/HUB408: New and Select float over the board's top right and stay in view when the page scrolls */
 .floatbtns .fbtn{box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .qfloat{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:2; grid-row:1 / -1; align-self:start; justify-self:start; margin-left:8px; z-index:4; display:flex; align-items:center; gap:4px; width:min(300px, calc(100% - 16px)); padding:4px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.18)}   /* HUB410: narrow, over the board's top left */
-.qfloat[hidden]{display:none}
+.qfloat[hidden],.fsrch[hidden]{display:none}
+/* HUB442/HUB443: Search is a square icon button (top left, where the bar opens), New the one filled accent button, Select an
+   outlined checkbox button in normal weight; all three on the shared .fbtn style */
+.fbtn .bi{width:14px; height:14px; flex:none}
+.fsrch{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:2; grid-row:1 / -1; align-self:start; justify-self:start; margin-left:8px; z-index:4; width:30px; height:30px; padding:0; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.main.ecol .fsrch{grid-column:2}
+@media (max-width:720px){ .fsrch{grid-column:1} }
+.floatbtns .fbtn.fnew,.floatbtns .fbtn.fnew:not(:disabled):hover{background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:600}
+.floatbtns .fbtn.fnew:not(:disabled):hover{filter:brightness(1.1)}
+.floatbtns .fbtn.fsel{font-weight:400}
 .qfloat .qwrap input{padding-left:28px; padding-right:26px; width:100%}
 .qfloat input{font:inherit; font-size:.85rem; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; flex:1 1 auto; min-width:0}
 .qnav{flex:none; width:26px; height:26px; padding:0; line-height:1}
@@ -489,19 +498,17 @@ body.modal-open{overflow:hidden}
 body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 /* machines and jobs */
 .status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
-.status h2{margin:0; font:600 .78rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
+/* HUB438: one style per heading level in every tab (the page title is the h1 in the header): h2 a section, h3 a part of it */
+.status h2{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink)}
+.status h3{margin:4px 0 0; font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
 .mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0; align-content:start}
 .mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
 .mach.rows{grid-template-columns:1fr}
-.mcard h3{font-size:.9rem; margin:6px 0 0; color:var(--muted); font-weight:600}
 /* HUB263: the Decisions tab's headings step down in size, weight and colour: the page's title, then each section
    (Manual actions, Past manual actions, Decisions), then its parts (Active, Snoozed, Your steps), then a project's
    group; a rule between the sections */
-#decisions > h2:first-child{font:400 1.4rem/1.2 var(--f-display); text-transform:none; letter-spacing:0; color:var(--ink)}
-#decisions h2{font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink); margin:0}
-#decisions h3{font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:4px 0 0}
 #decisions h3.inactive{margin-top:10px}
 #decisions h4{font:500 .8rem/1.3 var(--f-body); color:var(--muted); margin:6px 0 0}
 #decisions hr.secrule{border:0; border-top:1px solid var(--line); margin:8px 0; width:100%}
@@ -929,7 +936,16 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
 .syncpop .phead b{flex:1}
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
-.runs{display:grid}   /* HUB332: Exarch AI runs, two lines each (the Sync popup and the Hub tab) */
+/* HUB439: the Hub tab's sections are panels side by side on a wide screen; a row stays as wide as it reads */
+#hub{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); align-items:start; gap:14px 32px}
+.hsec{display:grid; gap:10px; align-content:start; min-width:0; max-width:760px}
+.hsec.wide{grid-column:1 / -1; max-width:none}
+.hsec.wide .tblwrap{max-width:1200px}
+.status > .tblwrap, .status > .mcard, .status > .mach.rows, .status > .rels, .status > details{max-width:1300px}   /* the other tabs: a table or card stops where its label and value are still read together */
+.status > p.note{max-width:100ch}
+table.hubdet td:first-child{width:11em; white-space:nowrap}
+.finding .fbody{display:grid; gap:6px}
+.runs{display:grid; max-width:640px}   /* HUB332: Exarch AI runs, two lines each (the Sync popup and the Hub tab) */
 .runs > div{display:grid; grid-template-columns:auto 1fr auto; gap:0 8px; padding:5px 0; border-bottom:1px solid var(--line); font-size:.8rem; font-variant-numeric:tabular-nums}
 .runs > div:last-child{border-bottom:0}
 .runs .t{color:var(--muted)} .runs .d{grid-column:2 / 4; color:var(--muted)}
@@ -1013,9 +1029,10 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
     </form>
     <div class="main">
       <div class="floatbtns" id="floatbtns">
-        <button type="button" id="newbtn" class="fbtn" title="Create a card, epic, theme or project">+ New</button>
-        <button type="button" id="selbtn" class="fbtn" aria-pressed="false" title="Select several cards to reorder or move them together">☑ Select</button>
+        <button type="button" id="newbtn" class="fbtn fnew" title="Create a card, epic, theme or project"><svg class="bi" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>New</span></button>
+        <button type="button" id="selbtn" class="fbtn fsel" aria-pressed="false" title="Select several cards to reorder or move them together"><svg class="bi" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.2 8.2l2 2 3.6-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Select</span></button>
       </div>
+      <button type="button" id="qbtn" class="fbtn fsrch" aria-label="Search" title="Search the cards (Ctrl+F)"><svg class="bi" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 10l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       <div class="qfloat" id="qfloat" role="search" hidden>   <!-- HUB410: Ctrl+F reveals it; Enter / Shift+Enter step through the results -->
         <span class="qwrap"><svg class="qico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 10l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search id, title, note…" aria-label="Search"><button type="button" class="qclr" id="qclr" aria-label="Clear search" title="Clear search" hidden>×</button></span>
         <span class="qcount" id="qcount" aria-live="polite"></span>
@@ -2321,7 +2338,7 @@ function toggleSel(id, range){
 function setSelMode(on){
   selMode = on; if(!on){ picked.clear(); selAnchor = null; }
   document.body.classList.toggle("selmode", on);
-  const b = $("#selbtn"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "☑ Done selecting" : "☑ Select";
+  const b = $("#selbtn"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); b.querySelector("span").textContent = on ? "Done selecting" : "Select";
   render();
 }
 function selByCol(){ const m = new Map(); for(const id of selOrder()){ const k = cards.get(id).col; if(!m.has(k)) m.set(k, []); m.get(k).push(id); } return m; }
@@ -2683,10 +2700,11 @@ function qUpdate(mark){
   $("#qcount").textContent = !filt.q ? "" : h.length ? (qIdx >= 0 ? (qIdx + 1) + "/" : "") + h.length : "0";
 }
 function qStep(d){ const n = qHits().length; if(!n) return qUpdate(false); qIdx = qIdx < 0 ? (d > 0 ? 0 : n - 1) : ((qIdx + d) % n + n) % n; qUpdate(true); }
-function qOpen(){ const f = $("#qfloat"); f.hidden = false; const q = $("#q"); q.focus(); q.select(); }
-function qClose(){ const q = $("#q"); $("#qfloat").hidden = true; if(q.value){ q.value = ""; q.dispatchEvent(new Event("input")); } }
+function qOpen(){ const f = $("#qfloat"); f.hidden = false; $("#qbtn").hidden = true; const q = $("#q"); q.focus(); q.select(); }
+function qClose(){ const q = $("#q"); $("#qfloat").hidden = true; $("#qbtn").hidden = false; if(q.value){ q.value = ""; q.dispatchEvent(new Event("input")); } }
 $("#q").addEventListener("input", e=>{ filt.q=e.target.value; qIdx = -1; $("#qclr").hidden = !filt.q; ls("kb.filters",filt); render(); qUpdate(false); });
-$("#qclr").hidden = !filt.q; $("#qfloat").hidden = !filt.q;
+$("#qclr").hidden = !filt.q; $("#qfloat").hidden = !filt.q; $("#qbtn").hidden = !!filt.q;   // HUB442: the magnifier button shows until the bar is open
+$("#qbtn").addEventListener("click", qOpen);
 $("#q").addEventListener("keydown", ev=>{
   if(ev.key === "Enter"){ ev.preventDefault(); qStep(ev.shiftKey ? -1 : 1); }
   else if(ev.key === "Escape"){ ev.preventDefault(); ev.stopPropagation(); qClose(); }
@@ -4845,15 +4863,16 @@ function triageSealedLines(f){
   }
   return box;
 }
-function triageSection(host){
+// HUB443: each finding is a row of the Hub details table, with its detail and its actions in the value cell (no separate section)
+function triageRows(){
   const t = hubStatus && hubStatus.triage;
-  if(!t || typeof t !== "object") return;
-  const cards = [], res = Array.isArray(t.results) ? t.results : [];
+  if(!t || typeof t !== "object") return [];
+  const rows = [], res = Array.isArray(t.results) ? t.results : [];
   const results = kind => res.filter(r => r.kind === kind).slice(-3).reverse().map(r => el("div",{class:"small mu"},
     fmtTime(r.at) + " " + r.act.replace(/_/g, " ") + ": " + r.state + (r.text ? ", " + r.text : "")));
-  const box = (title, kind, ...kids) => cards.push(el("div",{class:"mcard", "data-triage":kind}, el("h3",{}, title), ...kids, ...results(kind)));
+  const row = (label, kind, ...kids) => rows.push(el("tr",{class:"finding", "data-triage":kind}, el("td",{}, label), el("td",{}, el("div",{class:"fbody"}, ...kids, ...results(kind)))));
   const un = t.unpushed && t.unpushed.count ? t.unpushed : null;
-  if(un) box("Unpushed commits here: " + un.count, "unpushed",
+  if(un) row("Unpushed commits", "unpushed", el("div",{}, un.count + (un.count === 1 ? " commit here is" : " commits here are") + " not pushed"),
     el("ul",{class:"small"}, ...un.commits.map(c => el("li",{}, c.sha + " " + c.subject))),
     el("div",{class:"small mu"}, "Files: " + (un.files.join(", ") || "none")),
     un.left ? el("div",{class:"small"}, "Left for the owner since " + fmtTime(un.left)) : null,
@@ -4862,7 +4881,7 @@ function triageSection(host){
       triageBtn("Leave for the owner", "Marks the batch as left on purpose", () => triageAsk("unpushed", "leave")),
       triageAskBtn("unpushed")));
   const sy = t.sync && t.sync.error ? t.sync : null;
-  if(sy) box("Sync error", "sync", el("div",{class:"small"}, sy.error), el("div",{class:"small mu"}, "Blocks: " + sy.blocks),
+  if(sy) row("Sync error", "sync", el("div",{class:"small"}, sy.error), el("div",{class:"small mu"}, "Blocks: " + sy.blocks),
     sy.lock && sy.lock.time ? el("div",{class:"small mu"}, "Lock file from " + fmtTime(new Date(sy.lock.time * 1000).toISOString()) + (sy.lock.owner_alive ? ", its owner is running" : ", its owner is gone")) : null,
     el("div",{class:"row"},
       triageBtn("Retry", "One sync cycle now", () => triageAsk("sync", "retry")),
@@ -4870,7 +4889,7 @@ function triageSection(host){
       sy.lock && sy.lock.time && !sy.lock.owner_alive ? triageBtn("Clear the stuck lock", "Removes the lock file; refused if it changed or its owner runs", () => triageAsk("sync", "unlock", null, {time: sy.lock.time}, null, "Remove the stale board lock file? It is refused if the lock changed or its owner is running."), true) : null,
       triageAskBtn("sync")));
   const pv = Array.isArray(t.privacy) ? t.privacy : [];
-  if(pv.length) box("Files held back by the privacy rule: " + pv.length, "privacy", ...pv.map(f => el("div",{class:"triageitem"},
+  if(pv.length) row("Held back by the privacy rule", "privacy", el("div",{}, pv.length + (pv.length === 1 ? " file" : " files")), ...pv.map(f => el("div",{class:"triageitem"},
     el("strong",{}, f.path), el("span",{class:"small mu"}, " rule: " + f.rules.join(", ")),
     ...(f.enc ? [triageSealedLines(f)] : f.lines.map(l => el("div",{class:"small mono"}, "line " + l.n + ": " + l.text))),
     f.false_positive ? el("div",{class:"small"}, "Marked a false positive: " + f.false_positive.reason + " (the guard still holds the file)") : null,
@@ -4881,7 +4900,7 @@ function triageSection(host){
       }),
       triageAskBtn("privacy", f.key, "Ask a session to fix the wording")))));
   const cf = Array.isArray(t.conflicts) ? t.conflicts : [];
-  if(cf.length) box("Conflict copies: " + cf.length, "conflict", ...cf.map(c => el("details",{class:"triageitem"},
+  if(cf.length) row("Conflict copies", "conflict", el("div",{}, cf.length + (cf.length === 1 ? " copy" : " copies")), ...cf.map(c => el("details",{class:"triageitem"},
     el("summary",{}, c.copy + " beside " + c.path + (c.machine ? " (" + c.machine + ")" : "")),
     c.text ? el("pre",{class:"small mono"}, c.diff.join("\n") || "no differences") : el("div",{class:"small mu"}, "Not shown as text (binary or large)."),
     el("div",{class:"row"},
@@ -4890,8 +4909,32 @@ function triageSection(host){
       el("button",{type:"button", class:"pbtn", title:"Edit both files by hand", onclick:ev => { const n = ev.currentTarget.parentNode.nextSibling; n.hidden = !n.hidden; }}, "Merge by hand"),
       triageAskBtn("conflict", c.key)),
     el("p",{class:"small mu", hidden:true}, "Edit the original on the node by hand so it holds what should stay, then press Keep original to drop the copy."))));
-  if(!cards.length) return;
-  host.append(el("h2",{}, "Triage"), el("p",{class:"note"}, "What the Hub findings above are, and what can be done about them from here. A button posts a request the node carries out; a destructive one asks first and the node refuses it if the state changed."), ...cards);
+  return rows;
+}
+// >>> heading-audit
+// HUB438: the headings of a rendered tab, in order, as [{level, size, text}]; the problems with them: a level skipped (h2 then h4;
+// the page's h1 is the header's, so a tab starts at h2), or a level not styled smaller than the one above it
+function headingList(root){
+  return [...root.querySelectorAll("h1,h2,h3,h4,h5,h6")].map(e => ({level: Number(e.tagName[1]), size: parseFloat(getComputedStyle(e).fontSize) || 0, text: e.textContent.slice(0, 30)}));
+}
+function headingProblems(hs){
+  const out = [], size = {}; let prev = 1;
+  for(const h of hs){
+    if(h.level > prev + 1) out.push("skips from h" + prev + " to h" + h.level + ": " + h.text);
+    if(size[h.level] != null && size[h.level] !== h.size) out.push("h" + h.level + " has two sizes: " + h.text);
+    size[h.level] = h.size; prev = h.level;
+  }
+  for(let l = 3; l <= 6; l++) if(size[l] != null && size[l - 1] != null && size[l] >= size[l - 1]) out.push("h" + l + " is not smaller than h" + (l - 1));
+  return out;
+}
+// <<< heading-audit
+// HUB439: a tab's sections (each an h2 and what follows it) become panels, so a wide screen lays independent ones side by side
+function sectionPanels(host, wide){
+  const kids = [...host.children]; let cur = null;
+  for(const k of kids){
+    if(k.tagName === "H2" || !cur){ cur = el("section",{class:"hsec" + (k.tagName === "H2" && wide && wide.includes(k.textContent) ? " wide" : "")}); host.insertBefore(cur, k); }
+    cur.append(k);
+  }
 }
 function renderHubTab(){
   rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly, hubStatus && hubStatus.triage], host => {
@@ -4906,8 +4949,8 @@ function renderHubTab(){
     const hb = facts.filter(f => f.group === "hub" && !/^coord/i.test(f.label)).map(f => el("tr",{}, el("td",{}, f.label),
       el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value, f.help ? el("div",{class:"small mu factdo"}, "What to do: " + String(f.help)) : null)));
     hb.splice(Math.max(0, hb.findIndex(r => r.firstChild.textContent === "Published App")), 0, el("tr",{}, el("td",{}, "Exarch"), el("td",{}, exl.value)));
-    host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
-    triageSection(host);     // HUB429-HUB432: each finding above with its detail and its actions
+    hb.push(...triageRows());     // HUB443 (HUB429-HUB432): each finding is a row here, with its detail and its actions
+    host.append(el("h2",{}, "Hub details"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st hubdet"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
     // the hub's own jobs (the user, 2026-11-17, HUB96): for a HUB card, or for no card (summaries, syncs)
     const hubJobs = (Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : []).filter(j => !j.card || /^HUB/.test(j.card));
     const queued = hubJobs.filter(j => j.state === "queued");
@@ -4918,6 +4961,7 @@ function renderHubTab(){
     host.append(el("div",{class:"discon"}, el("button",{type:"button", class:"dangerbtn", id:"signout",
       title:"Forget this browser's connection to the board",
       onclick:() => { if(confirm("Disconnect this browser from the board? The connection details have to be entered again to reconnect.")) disconnect(); }}, "Disconnect")));
+    sectionPanels(host, ["Hub jobs"]);     // HUB439
   });
 }
 
