@@ -1177,6 +1177,14 @@ function rebuild(){
     else c[f] = ch.value;   // un, pri, rank, epic, type
     c._pending++;
   }
+  // HUB376: a new card on its way shows at once as a ghost where it will land, with the syncing swoosh; it goes when the board has it
+  let top = 0; for(const c of cards.values()) if(c.rank > top) top = c.rank;
+  const news = [...changes.entries()].filter(([, ch]) => ch.card === "new" && ch.field === "create" && ch.value && ch.value.kind === "card").sort((x, y) => (x[1].ts || "").localeCompare(y[1].ts || ""));
+  for(const [k, ch] of news){
+    const v = ch.value, col = CREATE_COLS.includes(v.col) ? v.col : "back";
+    cards.set("new-" + k, {id: "new-" + k, _new: true, _pending: 1, t: v.t || "", type: v.type, pri: v.pri, col, column: COL_NAME[col], rank: ++top,
+      project: v.project || "", epic: v.epic || "", cat: v.area || "", ans: {}, steps_done: {}, log: [], colSince: ch.ts});
+  }
 }
 
 // ---------- writes: every change is one new file in inbox/phone/ of the board data; the desktop applies it through
@@ -1800,9 +1808,9 @@ function cardEl(c, full=false){
     refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
     handback(c) ? el("span",{class:"lab pend", title:"Handed back to the Lead by "+handback(c).by+": "+handback(c).why}, "⏳ Handed back") : null].filter(Boolean);
   e.append(el("div",{class:"top"},
-    !readOnly && cards.has(c.id) && (kind || full) ? kindBtn(c, kind, full)   // HUB349
+    !readOnly && cards.has(c.id) && !c._new && (kind || full) ? kindBtn(c, kind, full)   // HUB349
       : kind ? el("span",{class:"kind", title:kind, role:"img", "aria-label":kind, "data-i":KIND_ICON[kind]}, KIND_ICON[kind]) : null,
-    el("span",{class:"id"},c.id),
+    el("span",{class:"id"}, c._new ? "NEW" : c.id),
     artTool(c) ? el("span",{class:"lab arttool", title:ART_TOOL[artTool(c)][1]}, ART_TOOL[artTool(c)][0]) : null,
     ...(full ? flags : []),
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
@@ -2020,6 +2028,7 @@ function cardEl(c, full=false){
     if(actBox) more.append(actBox);   // HUB401
     e.append(more); return e;
   }
+  if(c._new){ e.removeAttribute("tabindex"); e.title = "Your new card: the board gives it its id when it has it"; e.append(el("span",{class:"lab pend corner"}, "Syncing")); return e; }   // HUB376: a ghost has no controls
   if(!readOnly) e.append(el("div",{class:"hov place"}, ...placeBtns(c)));   // hover controls: rank within the column
   if(picked.has(c.id)){ e.classList.add("sel"); e.setAttribute("aria-selected","true"); }
   e.addEventListener("click", ev=>{ if(selMode) toggleSel(c.id, ev.shiftKey); else openCard(c.id); });
