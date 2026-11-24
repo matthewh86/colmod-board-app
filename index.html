@@ -2576,9 +2576,38 @@ function laneOrder(f){
   return [...sortedEpics().map(([k]) => k), ""];
 }
 // one column (all its cards `inCol`, the filtered ones `list`) appended to `host`; `lane` is the swimlane's key ("" = none)
-function buildCol(col, host, inCol, list, lane){
+// HUB447: the board is patched, not rebuilt. A card's node is kept while its signature (its data and everything its tile
+// shows that is not in the card: the epic's look, the selection, the idle and ETA texts, the sync notes) is the same.
+function cardSig(c){
+  let j; try{ j = JSON.stringify(c); }catch(e){ return null; }   // null: never reused
+  const ep = epics.get(c.epic), eta = etaText(c);
+  return [j, readOnly ? 1 : 0, picked.has(c.id) ? 1 : 0, cards.has(c.id) ? 1 : 0, ep ? [ep.name, ep.hue, ep.blurb || ""].join("") : "", cardKind(c), artTool(c),
+    syncIssue(c), refusedNote(c.id), idleMin(c), eta ? eta.text + eta.late : "", c.col === "prog" ? colTip(c) : ""].join("");
+}
+// puts `want` (nodes) into `parent` in that order with the fewest moves; anything else in `parent` is removed
+function reconcileKids(parent, want){
+  let cur = parent.firstElementChild;
+  for(const n of want){
+    if(cur === n) cur = cur.nextElementSibling; else parent.insertBefore(n, cur);
+  }
+  while(cur){ const nx = cur.nextElementSibling; cur.remove(); cur = nx; }
+}
+// ctx (optional, HUB447): {nodes: the board's card nodes by id from the last draw, out: Map filled with this draw's, secs: the kept columns by key}
+function buildCol(col, host, inCol, list, lane, ctx){
   const total = inCol.length, lanes = host.classList.contains("lcols");
   const isC = collapsed.has(col.k);
+  const na0 = ARCH.items.filter(c=>c.col===col.k).length;
+  const hsig = [col.name, isC ? 1 : 0, list.length, total, lanes ? 1 : 0, readOnly ? 1 : 0, col.hint || "", na0].join("");
+  const kept = ctx && ctx.secs.get(col.k);
+  const cardNodes = () => list.map(c => {
+    if(!ctx) return cardEl(c);
+    const sig = cardSig(c), old = ctx.nodes.get(c.id);
+    let n;
+    if(old && sig !== null && old._sig === sig){ n = old; n.classList.remove("dragging","shunt"); n.style.transform = ""; }
+    else { n = cardEl(c); n._sig = sig; }
+    ctx.out.set(c.id, n); return n;
+  });
+  if(kept && kept.hsig === hsig){ reconcileKids(kept.ul, cardNodes()); kept.ul.classList.remove("over"); ctx.secs.set(col.k, kept); return kept.ul; }
   const sec = el("section",{class:"col"+(isC?" collapsed":"")+(lanes && !list.length?" emptycol":""), style:"--cc:var("+col.cc+")", "aria-label":col.name, "data-col":col.k});
   const rankBtn = lanes ? null : ((col.k === "back" || col.k === "park" || col.k === "refining" || col.k === "refined") && !readOnly && total > 1)
     ? el("button",{type:"button", class:"rankbtn", title:"Rank "+col.name+" by choosing between pairs of cards",
@@ -2591,13 +2620,14 @@ function buildCol(col, host, inCol, list, lane){
   h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
   sec.append(h);
   if(col.hint && !lanes) sec.append(el("p",{class:"hint"}, col.hint));
-  const ul = el("div",{class:"list", "data-col":col.k}); if(lanes) ul.dataset.lane = lane;
-  for(const c of list) ul.append(cardEl(c));
+  const ul = kept ? kept.ul : el("div",{class:"list", "data-col":col.k}); if(lanes) ul.dataset.lane = lane;
+  if(kept) ul.classList.remove("over");
+  if(ctx) reconcileKids(ul, cardNodes()); else for(const c of list) ul.append(cardEl(c));
   sec.append(ul);
-  const na = ARCH.items.filter(c=>c.col===col.k).length;
+  const na = na0;
   if(na && !isC && !lanes) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)"
     + (col.k === "done" ? "; the latest 60 of the last 7 days are shown here." : ".")));   // HUB230 (hub/phone.py DONE_MAX)
-  host.append(sec);
+  if(ctx) ctx.secs.set(col.k, {sec, ul, hsig}); else host.append(sec);   // with a ctx the caller puts the columns in order
   return ul;
 }
 // Redraws the board. It keeps the place: the page's scroll, the board's sideways scroll, each list's and the epic
@@ -2615,7 +2645,6 @@ function render(){
   const px = window.scrollX, py = window.scrollY;
   const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
   const hold = board.offsetHeight; if(hold) board.style.minHeight = hold + "px";   // the page keeps its height while the board is rebuilt
-  board.textContent = "";
   const all = [...cards.values()].filter(inProject);   // the project switcher: one project's cards, or all
   const allA = [...all, ...ARCH.items.filter(inProject)];   // stats count archived Done / Rejected cards too
   $("#empty").hidden = all.length>0;
@@ -2625,11 +2654,21 @@ function render(){
   const lf = LANE_FIELDS.includes(filt.l) ? filt.l : "";
   board.classList.toggle("lanes", !!lf);
   if(!lf){
+    // HUB447: the same columns as the last draw: keep their nodes and patch only what changed; a change of layout (lanes, the
+    // shown columns) is the fallback: a full rebuild
+    const lk = "cols:" + shown.map(c => c.k).join(",");
+    if(board._lk !== lk){ board.textContent = ""; board._lk = lk; board._nodes = new Map(); board._secs = new Map(); }
+    const ctx = {nodes: board._nodes, out: new Map(), secs: new Map(board._secs)};
+    const want = [];
     for(const col of shown){
-      const inCol = colCards(col.k), ul = buildCol(col, board, inCol, inCol.filter(matches), "");
+      const inCol = colCards(col.k), ul = buildCol(col, board, inCol, inCol.filter(matches), "", ctx);
       if(sc[col.k]) ul.scrollTop = sc[col.k];
+      want.push(ctx.secs.get(col.k).sec);
     }
+    reconcileKids(board, want);
+    board._nodes = ctx.out; board._secs = ctx.secs;
   } else {
+    board.textContent = ""; board._lk = "lanes"; board._nodes = new Map(); board._secs = new Map();
     const byCol = new Map(shown.map(col => [col.k, colCards(col.k)]));
     const seen = new Set(); for(const [, l] of byCol) for(const c of l) if(matches(c)) seen.add(laneOf(lf, c));
     for(const key of laneOrder(lf).filter(k => seen.has(k))){
