@@ -631,6 +631,10 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .glab .gid{overflow:hidden; text-overflow:ellipsis}
 .glab.gstream.idle .gid, .glab.gstream.pred .gid{color:var(--muted); font-weight:500}
 .glab.gstream.pred{font-style:italic}
+.gdot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; flex:none; border:2px solid var(--c-park); box-sizing:border-box}   /* HUB433 */
+.gdot.alive{background:var(--c-done); border-color:var(--c-done)} .gdot.quiet{background:var(--c-decide); border-color:var(--c-decide)} .gdot.cold{background:var(--c-next); border-color:var(--c-next)} .gdot.unknown{border-style:dashed}
+.bgraph{max-width:560px; margin:4px 0 8px} .bhead{display:flex; justify-content:space-between; gap:8px; font-size:12px; flex-wrap:wrap} .bhead span{color:var(--muted); font-variant-numeric:tabular-nums}
+svg.burn{display:block; width:100%; height:auto} .ubreak{max-width:560px; display:grid; gap:3px; margin-top:6px}   /* HUB427 */
 .gbar.gs{color:var(--on-bar,#fff); font-size:.7rem; line-height:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 4px}
 .gbar.gs.planned{color:var(--ink)}
 .gbar.gs.pred{outline:2px dashed var(--accent); outline-offset:-2px}
@@ -1241,6 +1245,7 @@ function changeText(ch){
   if(f === "exarch.on") return "Exarch AI turned " + (v ? "on" : "off");
   if(f === "exarch.model") return "default model: " + String(v);
   if(f === "exarch.plan") return "plan " + (v && v.act === "approve" ? "approved" : "discarded");
+  if(f === "exarch.triage") return "triage request: " + (v && v.kind) + " " + (v && String(v.act).replace(/_/g, " "));
   if(f === "exarch.chat") return "chat " + (v && v.act === "clear" ? "cleared" : v && v.act === "archive" ? "archived" : "message put back");
   if(f === "queue") return Array.isArray(v) && v.length ? "new queue order" : "queue back to the automatic order";
   return f + " changed";
@@ -1349,7 +1354,7 @@ function change(card, field, value, extra){
   const ts = new Date(lastStamp).toISOString();
   const id = `${card.id}__${field}__${ts.replace(/[-:.TZ]/g, "")}`.replace(/[^\w.~+-]/g, "_");
   const doc = Object.assign({card: card.id, field, value: value ?? null, ts, base_upd: card.upd || null}, extra || {});
-  if(!["comment", "create", "item", "exarch.plan", "exarch.chat"].includes(field))   // each comment (HUB117), each new thing (HUB120), each Exarch AI item's dismissal (HUB322), plan tap and chat change is its own; for any other field the later edit wins on screen
+  if(!["comment", "create", "item", "exarch.plan", "exarch.chat", "exarch.triage"].includes(field))   // each comment (HUB117), each new thing (HUB120), each Exarch AI item's dismissal (HUB322), plan tap and chat change is its own; for any other field the later edit wins on screen
     for(const [k, v] of changes) if(v.card === card.id && v.field === field){ changes.delete(k); sentAt.delete(k); }
   changes.set(id, doc);
   pendSave();
@@ -4463,7 +4468,7 @@ function sessionsSection(){
 // ---------- the plan's token limits and the development pace (HUB128-130): status/usage.json, recorded by the coordinator
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
-  ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM, the ComfyUI art pool and the machines' game slots still apply"]];
+  ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM and the machines' game slots still apply"]];
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
   let pace = u && u.pace || "moderate";
@@ -4471,25 +4476,23 @@ function usageNow(){
   return {u, pace, wins: u && Array.isArray(u.windows) ? u.windows.filter(w => w && w.label) : []};
 }
 // HUB171: the hub's limits, set here and stored beside the pace (hub/usage.py LIMITS: the same defaults and bounds),
-// sent the same way (card "hub", field "limit.<key>"); HUB173: the suggested values and why. HUB194: the ComfyUI art
-// pool was fixed, HUB262 made it settable again (art); HUB195: art Claude draws has a limit of its own (drawn)
+// sent the same way (card "hub", field "limit.<key>"); HUB173: the suggested values and why. HUB195: art Claude draws
+// has a limit of its own (drawn); HUB424: no limit for ComfyUI art (it is jobs, no stream)
 const HUB_LIMITS = [
   {k: "streams", name: "Development streams", def: 5, min: 1, max: 12,
    what: "Game development streams at once, all projects together. Conservative and Moderate may allow fewer; Turbo lifts it.",
    hint: "Suggested: 5 on Moderate, 3 on Conservative (fewer streams burn the plan's tokens more slowly). Each stream's game tests queue for the machines' game slots, so past about 5 the extra streams mostly wait for a slot."},
   {k: "drawn", name: "Art Claude draws", def: 2, min: 1, max: 6,
-   what: "Artwork cards Claude draws itself (SVG, pixel art or images written by code) at once, apart from the development streams and the ComfyUI art, on every pace.",
+   what: "Artwork cards Claude draws itself (SVG, pixel art or images written by code) at once, apart from the development streams, on every pace.",
    hint: "Suggested: 2 on Moderate and Turbo, 1 on Conservative. Drawing art by code spends the plan's tokens like a development stream, and every picture waits for the user's sign-off, so more at once mostly adds to the pictures waiting."},
   {k: "coord", name: "Exarch's hub cards", def: 2, min: 1, max: 6,
    what: "Hub cards Exarch's agents work at once. Turbo lifts it.",
-   hint: "Suggested: 2. Hub cards change the hub's own code and documents, so more at once means more of them touch the same files and wait on each other's merge."},
-  {k: "art", name: "ComfyUI art streams", def: 3, min: 1, max: 6,
-   what: "Artwork cards made with ComfyUI at once, apart from the development streams, on every pace.",
-   hint: "Suggested: 3. One graphics card runs ComfyUI's queue one picture at a time: 3 keeps the queue busy while the others pick or wait for a sign-off; more mostly makes the queue longer."}];
+   hint: "Suggested: 2. Hub cards change the hub's own code and documents, so more at once means more of them touch the same files and wait on each other's merge."}];
 // HUB388: each Pace has its own limits and defaults (hub/usage.py PACE_DEFAULTS): Conservative 3 development streams
 // and 1 art stream Claude draws, the others the HUB173 suggestions; the export's limits_by_pace holds the values
 // (limits, the current pace's, for an older hub)
 const PACE_LIMIT_DEFS = {conservative: {streams: 3, drawn: 1}, moderate: {}, turbo: {}};
+const PACE_LIMIT_SUMMARY = "Conservative: 3 development streams, 1 art stream Claude draws; Moderate: 5 and 2; Turbo: 5 and 2 kept, but the development stream, hub card and drawn art limits are lifted";
 function limitDef(L, pace){ const d = PACE_LIMIT_DEFS[pace] || {}; return d[L.k] != null ? d[L.k] : L.def; }
 function hubLimits(pace){
   const us = usageNow(), u = us.u;
@@ -4497,8 +4500,10 @@ function hubLimits(pace){
   const per = u && u.limits_by_pace && typeof u.limits_by_pace === "object" && u.limits_by_pace[pace] && typeof u.limits_by_pace[pace] === "object" ? u.limits_by_pace[pace] : null;
   const got = per || (u && u.pace === pace && u.limits && typeof u.limits === "object" ? u.limits : {});
   const out = {};
+  let fresh = false;   // HUB426: choosing a pace sets its limits to its defaults: shown at once, before the export has them
+  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "pace" && ch.value === pace && !(u && u.pace === pace)) fresh = true;
   for(const L of HUB_LIMITS){
-    let v = got[L.k];
+    let v = fresh ? null : got[L.k];
     for(const ch of changes.values()) if(ch.card === "hub" && (ch.field === "limit." + pace + "." + L.k || ch.field === "limit." + L.k && us.pace === pace)) v = ch.value;   // the user's choice, on its way
     out[L.k] = Number.isInteger(v) && v >= L.min && v <= L.max ? v : limitDef(L, pace);
   }
@@ -4634,18 +4639,70 @@ function nowRunoutTable(u, rw, wins, c){
     el("thead",{}, el("tr",{}, el("th",{}, ""), el("th",{}, "Value"), el("th",{}, "What it means"), el("th",{}, "When it changes"))),
     el("tbody",{}, rows.map(r => el("tr",{}, el("th",{scope:"row"}, r.k), el("td",{}, r.value), el("td",{}, r.means), el("td",{}, r.changes)))))) : null;
 }
+// >>> usage-graphs (tests/test_app.py runs this block)
+// HUB427: burndown graphs: what is left (plan %, API credits $, usage credits $) from the start of its period to its end,
+// the ideal straight line dashed, the actual line solid, the 5-hour window a separate short line. pts: [[ms, left]].
+function burnPoints(list, mode, full){   // [[iso, value]] to [[ms, left]]: mode "pct" (used %) or "spent" ($ spent); full: the 100 % level
+  return (Array.isArray(list) ? list : []).map(p => [Date.parse(p && p[0]), Number(p && p[1])])
+    .filter(p => !isNaN(p[0]) && isFinite(p[1])).map(p => [p[0], Math.max(0, full - (mode === "pct" ? p[1] / 100 * full : p[1]))]).sort((a, b) => a[0] - b[0]);
+}
+function burnGraph(o){   // o: {label, value, pts, start, end, full, now, span, unit, short}; returns an element
+  const W = 560, H = o.short ? 54 : 96, L = 34, R = 8, T = 6, B = 16, pw = W - L - R, ph = H - T - B;
+  const x = t => L + Math.max(0, Math.min(1, (t - o.start) / (o.end - o.start))) * pw, y = v => T + (1 - Math.max(0, Math.min(1, v / o.full))) * ph;
+  const day = t => new Date(t).toLocaleString(undefined, o.span <= 864e5 ? {hour:"2-digit", minute:"2-digit"} : {month:"short", day:"numeric"});
+  const kids = [sv("rect",{x:L, y:T, width:pw, height:ph, fill:"none", stroke:"var(--line)"}),
+    sv("line",{class:"bideal", x1:x(o.start), y1:y(o.full), x2:x(o.end), y2:y(0), stroke:"var(--muted)", "stroke-width":1, "stroke-dasharray":"4 3"})];
+  for(const v of [o.full, 0]) kids.push(sv("text",{x:L - 4, y:y(v) + 3, "text-anchor":"end", fill:"var(--muted)", "font-size":9}, o.unit(v)));
+  kids.push(sv("text",{x:L, y:H - 3, fill:"var(--muted)", "font-size":9}, day(o.start)), sv("text",{x:W - R, y:H - 3, "text-anchor":"end", fill:"var(--muted)", "font-size":9}, day(o.end)));
+  if(o.now >= o.start && o.now <= o.end) kids.push(sv("line",{x1:x(o.now), x2:x(o.now), y1:T, y2:T + ph, stroke:"var(--muted)", "stroke-width":1.5, opacity:.6}));
+  const pts = o.pts.filter(p => p[0] >= o.start - 1 && p[0] <= o.end);
+  if(pts.length > 1) kids.push(sv("polyline",{class:"bact", fill:"none", stroke:"var(--accent)", "stroke-width":2, "stroke-linejoin":"round", points:pts.map(p => x(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1)).join(" ")}));
+  if(pts.length){ const q = pts[pts.length - 1]; kids.push(sv("circle",{cx:x(q[0]), cy:y(q[1]), r:3, fill:"var(--accent)"})); }
+  const svg = sv("svg",{class:"burn", viewBox:"0 0 " + W + " " + H, role:"img", "aria-label":o.label + ": " + o.value, preserveAspectRatio:"xMidYMid meet"}, ...kids);
+  return el("div",{class:"bgraph"}, el("div",{class:"bhead"}, el("b",{}, o.label), el("span",{}, o.value)), svg);
+}
+function usageGraphs(u, wins, cr, ex){
+  if(!u) return [el("p",{class:"note"}, "No usage reading yet.")];
+  const h = u.history && typeof u.history === "object" ? u.history : {}, now = Date.now(), out = [];
+  const winHours = w => { if(/^weekly/i.test(w.label)) return 168; const m = /(\d+(?:\.\d+)?)-hour/i.exec(w.label); return m ? Number(m[1]) : null; };
+  const plan = w => {
+    const hrs = winHours(w), end = Date.parse(w.resets_at || ""), left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));
+    if(!hrs || isNaN(end)) return null;
+    return burnGraph({label: w.label, value: left + " % left" + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : " · lasts"),
+      pts: burnPoints(h.plan && h.plan[w.label], "pct", 100), start: end - hrs * 36e5, end, full: 100, now, span: hrs * 36e5, unit: v => v + " %", short: hrs < 24});
+  };
+  for(const w of wins.filter(w => /^weekly/i.test(w.label))){ const g = plan(w); if(g) out.push(g); }
+  if(cr && cr.month && cr.cap > 0){   // API credits: the cap less the month's spend, over the calendar month
+    const [yy, mm] = cr.month.split("-").map(Number), start = Date.UTC(yy, mm - 1, 1), end = Date.UTC(yy, mm, 1);
+    if(!isNaN(start)){
+      const real = Math.max(0, cr.cap - cr.spent), pts = burnPoints(u.credits && u.credits.spend_hist, "spent", cr.cap);
+      pts.unshift([start, cr.cap]); pts.push([Math.min(Math.max(now, start), end), real]);
+      out.push(burnGraph({label: "API credits " + cr.month, value: "$" + real.toFixed(2) + " left of $" + cr.cap.toFixed(0) + (cr.on ? "" : " · overflow off"), pts, start, end, full: cr.cap, now, span: end - start, unit: v => "$" + Math.round(v)}));
+    }
+  }
+  if(ex && ex.limit > 0){   // usage credits: the budget less the spend (the readings of the last hours, then now)
+    const d = new Date(now), start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), end = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1), left = ex.left != null ? ex.left : Math.max(0, ex.limit - ex.spent);
+    const pts = burnPoints(h.extra, "spent", ex.limit); pts.unshift([start, ex.limit]); pts.push([now, left]);
+    out.push(burnGraph({label: "Usage credits", value: "$" + left.toFixed(2) + " left of $" + ex.limit.toFixed(0), pts, start, end, full: ex.limit, now, span: end - start, unit: v => "$" + Math.round(v)}));
+  } else if(ex) out.push(el("div",{class:"bgraph"}, el("div",{class:"bhead"}, el("b",{}, "Usage credits"), el("span",{}, "$" + ex.spent.toFixed(2) + " used · no budget set"))));
+  for(const w of wins.filter(w => !/^weekly/i.test(w.label))){ const g = plan(w); if(g) out.push(g); }   // the 5-hour window, a separate line
+  return out.length ? out : [el("p",{class:"note"}, "No usage reading yet.")];
+}
+// <<< usage-graphs
+// the Sync popup's usage breakdown (one line a check), shared with the Exarch tab (HUB427)
+function usageBreakdownRows(figs){
+  return figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), f.label), f.short || f.value, {title: f.tip}))   // HUB363: a check circle when fine, the warning symbol otherwise
+    : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
+}
 function usageSection(host){
   const {u, pace, wins} = usageNow();
   const rw = usageRunway(u), cr = usageCredits(u), ex = usageExtra(u);
   addKids(host, el("h2",{}, "Pace"),
     el("div",{class:"pacelim"}, paceSelector(pace, "hub"), paceAutoHint(u, pace), limitsSection(), ...defaultModelSec()),   // HUB395: the limits and the default model under the pace
     el("h2",{}, "Usage"),
-    ex ? el("p",{class:"note credleft", title:extraLine(ex)}, "Usage credits (extra usage past the plan, for handovers only): ",
-      ex.left != null ? el("b",{}, "$" + ex.left.toFixed(2) + " left") : el("b",{}, "$" + ex.spent.toFixed(2) + " used"),
-      ex.left != null ? " of $" + ex.limit.toFixed(0) + " ($" + ex.spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
-      extraBudgetInput(u)) : null,
-    nowRunoutTable(u, rw, wins, cr) || el("p",{class:"note"}, "No usage reading yet: Exarch records the plan's limits on each wake."),
-    wins.length && u.recorded ? el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + ".") : null,
+    ...usageGraphs(u, wins, cr, ex),   // HUB427: burndown graphs, then the Sync popup's breakdown
+    ex ? el("div",{class:"row small"}, extraBudgetInput(u)) : null,
+    el("div",{class:"ubreak"}, ...usageBreakdownRows(usageFigures())),
     el("h2",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's
 }
 // HUB210: the hub dropped the pace to Conservative by itself when the API credits started being used; said under the
@@ -4751,12 +4808,78 @@ function limitsSection(){   // HUB388: the chosen pace's own limits, drawn besid
       el("div",{class:"limval"}, sel, lifted ? el("span",{class:"state"}, "lifted on Turbo") : null),
       el("div",{class:"limtext", id:id + "-what"}, el("div",{}, L.what), el("div",{class:"limhint"}, L.hint)));
   });
-  return el("div",{class:"limbox", "data-pace":pace}, el("h3",{}, "Limits on " + pname), el("div",{class:"limits"}, ...rows),
-    el("p",{class:"note"}, "Each pace has its own limits and defaults; these are " + pname + "'s. A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
+  return el("div",{class:"limbox", "data-pace":pace}, el("h3",{}, "Limits"), el("div",{class:"limits"}, ...rows),
+    el("p",{class:"note"}, "Each pace has its own limits and defaults; these are " + pname + "'s. Choosing a pace sets its limits to its suggested values (" + PACE_LIMIT_SUMMARY + "); a limit changed here then stands until that pace is chosen again. A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
       + (u && u.limits_set ? " Last set " + fmtTime(u.limits_set) + "." : "")));
 }
+// ---------- HUB429-HUB432: triage of the hub's own findings (hub/exarch/triage.py, docs/EXARCH.md section L). The page only posts
+// an `exarch.triage` change; the node carries it out in its next cycle and the outcome comes back in status.json `triage.results`.
+function triageAsk(kind, act, key, expect, extra, confirmText){
+  if(readOnly){ toast("This view is read-only."); return; }
+  if(confirmText && !confirm(confirmText)) return;
+  const v = Object.assign({kind, act}, key ? {key} : {}, expect ? {expect} : {}, extra || {});
+  change({id: "exarch", upd: null}, "exarch.triage", v);
+  toast("Request sent: the node carries it out within about a minute and its outcome shows here.");
+}
+function triageBtn(label, title, fn, danger){
+  return el("button",{type:"button", class:"pbtn" + (danger ? " dangerbtn" : ""), title, onclick:fn}, label);
+}
+function triageAskBtn(kind, key, label){
+  return triageBtn(label || "Ask a session", "Sends a message to a session (Exarch by default) naming this finding", () => {
+    const to = prompt("Which session or role? (a session name, or role:<role>)", "role:coordinator");
+    if(to) triageAsk(kind, "ask", key, null, {to: to.trim()});
+  });
+}
+function triageSection(host){
+  const t = hubStatus && hubStatus.triage;
+  if(!t || typeof t !== "object") return;
+  const cards = [], res = Array.isArray(t.results) ? t.results : [];
+  const results = kind => res.filter(r => r.kind === kind).slice(-3).reverse().map(r => el("div",{class:"small mu"},
+    fmtTime(r.at) + " " + r.act.replace(/_/g, " ") + ": " + r.state + (r.text ? ", " + r.text : "")));
+  const box = (title, kind, ...kids) => cards.push(el("div",{class:"mcard", "data-triage":kind}, el("h3",{}, title), ...kids, ...results(kind)));
+  const un = t.unpushed && t.unpushed.count ? t.unpushed : null;
+  if(un) box("Unpushed commits here: " + un.count, "unpushed",
+    el("ul",{class:"small"}, ...un.commits.map(c => el("li",{}, c.sha + " " + c.subject))),
+    el("div",{class:"small mu"}, "Files: " + (un.files.join(", ") || "none")),
+    un.left ? el("div",{class:"small"}, "Left for the owner since " + fmtTime(un.left)) : null,
+    el("div",{class:"row"},
+      triageBtn("Push after checks", "The privacy check runs on the files, then one sync cycle pushes; refused if the commits changed", () => triageAsk("unpushed", "push", null, {tip: un.tip, count: un.count}, null, "Push " + un.count + " commit(s) after the privacy check? It is refused if they changed meanwhile."), true),
+      triageBtn("Leave for the owner", "Marks the batch as left on purpose", () => triageAsk("unpushed", "leave")),
+      triageAskBtn("unpushed")));
+  const sy = t.sync && t.sync.error ? t.sync : null;
+  if(sy) box("Sync error", "sync", el("div",{class:"small"}, sy.error), el("div",{class:"small mu"}, "Blocks: " + sy.blocks),
+    sy.lock && sy.lock.time ? el("div",{class:"small mu"}, "Lock file from " + fmtTime(new Date(sy.lock.time * 1000).toISOString()) + (sy.lock.owner_alive ? ", its owner is running" : ", its owner is gone")) : null,
+    el("div",{class:"row"},
+      triageBtn("Retry", "One sync cycle now", () => triageAsk("sync", "retry")),
+      triageBtn("Show the log", "The last lines of the watcher's log, below", () => triageAsk("sync", "log")),
+      sy.lock && sy.lock.time && !sy.lock.owner_alive ? triageBtn("Clear the stuck lock", "Removes the lock file; refused if it changed or its owner runs", () => triageAsk("sync", "unlock", null, {time: sy.lock.time}, null, "Remove the stale board lock file? It is refused if the lock changed or its owner is running."), true) : null,
+      triageAskBtn("sync")));
+  const pv = Array.isArray(t.privacy) ? t.privacy : [];
+  if(pv.length) box("Files held back by the privacy rule: " + pv.length, "privacy", ...pv.map(f => el("div",{class:"triageitem"},
+    el("strong",{}, f.path), el("span",{class:"small mu"}, " rule: " + f.rules.join(", ")),
+    ...f.lines.map(l => el("div",{class:"small mono"}, "line " + l.n + ": " + l.text)),
+    f.false_positive ? el("div",{class:"small"}, "Marked a false positive: " + f.false_positive.reason + " (the guard still holds the file)") : null,
+    el("div",{class:"row"},
+      triageBtn("False positive", "Records your reason and tells Exarch; the guard still holds the file", () => {
+        const r = prompt("Why is this a false positive? (the reason is recorded)", "");
+        if(r && r.trim().length >= 8) triageAsk("privacy", "false_positive", f.key, null, {reason: r.trim()}); else if(r) toast("Give a reason of at least 8 characters.");
+      }),
+      triageAskBtn("privacy", f.key, "Ask a session to fix the wording")))));
+  const cf = Array.isArray(t.conflicts) ? t.conflicts : [];
+  if(cf.length) box("Conflict copies: " + cf.length, "conflict", ...cf.map(c => el("details",{class:"triageitem"},
+    el("summary",{}, c.copy + " beside " + c.path + (c.machine ? " (" + c.machine + ")" : "")),
+    c.text ? el("pre",{class:"small mono"}, c.diff.join("\n") || "no differences") : el("div",{class:"small mu"}, "Not shown as text (binary or large)."),
+    el("div",{class:"row"},
+      triageBtn("Keep original", "Removes the copy", () => triageAsk("conflict", "keep_original", c.key, {orig_sha: c.orig_sha, copy_sha: c.copy_sha}, null, "Remove the copy and keep the original? Refused if either changed."), true),
+      triageBtn("Keep copy", "Puts the copy's text in the original's place", () => triageAsk("conflict", "keep_copy", c.key, {orig_sha: c.orig_sha, copy_sha: c.copy_sha}, null, "Replace the original with the copy? Refused if either changed."), true),
+      el("button",{type:"button", class:"pbtn", title:"Edit both files by hand", onclick:ev => { const n = ev.currentTarget.parentNode.nextSibling; n.hidden = !n.hidden; }}, "Merge by hand"),
+      triageAskBtn("conflict", c.key)),
+    el("p",{class:"small mu", hidden:true}, "Edit the original on the node by hand so it holds what should stay, then press Keep original to drop the copy."))));
+  if(!cards.length) return;
+  host.append(el("h2",{}, "Triage"), el("p",{class:"note"}, "What the Hub findings above are, and what can be done about them from here. A button posts a request the node carries out; a destructive one asks first and the node refuses it if the state changed."), ...cards);
+}
 function renderHubTab(){
-  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly], host => {
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly, hubStatus && hubStatus.triage], host => {
     usageSection(host);      // HUB172: tokens and pace first; HUB193: the limits inside it, right under the pace
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
@@ -4769,6 +4892,7 @@ function renderHubTab(){
       el("td",{}, /^\d{4}-\d\d-\d\dT/.test(f.value) ? fmtTime(f.value) : f.value, f.help ? el("div",{class:"small mu factdo"}, "What to do: " + String(f.help)) : null)));
     hb.splice(Math.max(0, hb.findIndex(r => r.firstChild.textContent === "Published App")), 0, el("tr",{}, el("td",{}, "Exarch"), el("td",{}, exl.value)));
     host.append(el("h2",{}, "Hub"), hb.length ? el("div",{class:"tblwrap"}, el("table",{class:"st"}, el("tbody",{}, hb))) : el("p",{class:"note"}, "No hub facts in the export yet."));
+    triageSection(host);     // HUB429-HUB432: each finding above with its detail and its actions
     // the hub's own jobs (the user, 2026-11-17, HUB96): for a HUB card, or for no card (summaries, syncs)
     const hubJobs = (Array.isArray(hubStatus.jobs) ? hubStatus.jobs.filter(Boolean) : []).filter(j => !j.card || /^HUB/.test(j.card));
     const queued = hubJobs.filter(j => j.state === "queued");
@@ -4994,9 +5118,9 @@ function renderQueues(){
 // to fill the next 24 hours (HUB131); Artwork cards have their own art slots (HUB125),
 // as slots free up: the game projects share the stream slots, the coordinator's projects have their own, and a card
 // whose `blocked` text names another card starts after that card ends. Release cards are milestones at their eta.
-// the pools' limits are the user's, set in the Hub tab (HUB171, hubLimits(): streams 5, drawn 2, coord 2, art 3 by default):
-// game development streams across all game projects, ComfyUI art streams apart from them (HUB125/HUB183; the art
-// limit, 3 by default, HUB262), art Claude draws apart from both (HUB195), and the coordinator's HUB / primarch cards (none on
+// the pools' limits are the user's, set in the Hub tab (HUB171, hubLimits(): streams 5, drawn 2, coord 2 by default):
+// game development streams across all game projects, art Claude draws apart from them (HUB195; ComfyUI art is
+// jobs, no stream, no limit: HUB424), and the coordinator's HUB / primarch cards (none on
 // Turbo, HUB196)
 const GANTT_HORIZON_H = 24;               // HUB131: Next up plans this far ahead; Refined cards join only to fill it
 const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; every other project's cards are game streams
@@ -5139,7 +5263,7 @@ function gHeld(c, has){
 // the plan: id -> {c, s, e, src, pool, kind: started|held|waiting|planned|milestone, dashed, overdue, waits}
 function ganttPlan(list, now){
   const byId = new Map(list.map(c => [c.id, c]));
-  const out = new Map(), busy = {stream: [], coord: [], art: [], drawn: []}, limit = {stream: gStreamLimit(), coord: gCoordLimit(), art: hubLimits().art, drawn: hubLimits().drawn};
+  const out = new Map(), busy = {stream: [], coord: [], art: [], drawn: []}, limit = {stream: gStreamLimit(), coord: gCoordLimit(), art: Infinity, drawn: hubLimits().drawn};   // HUB424: ComfyUI art is jobs, no stream: no limit
   const est = c => Number(c.estimate) > 0 ? Number(c.estimate) : 0;
   const deps = c => [...new Set(String(c.blk || "").match(/\b[A-Z]+\d+[a-z]?\b/g) || [])].filter(id => id !== c.id && byId.has(id));
   for(const c of list){   // the started cards and the releases first: they hold their place
@@ -5605,7 +5729,7 @@ function gotoStreams(){ const t = $("#streams"); if(!t || t.hidden) showTab("str
 function ganttStrips(o){
   const {plan, list, now, t0, t1, X, sc, row, inner} = o;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
-  const sNow = nowIn("stream"), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
+  const sNow = o.streamNow != null ? o.streamNow : nowIn("stream"), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
@@ -5697,7 +5821,18 @@ function streamsModel(items, streams, now, own, opts){
   }
   return [...rows.values()].sort((a, b) => (b.bars.length ? 1 : 0) - (a.bars.length ? 1 : 0) || (a.predicted ? 1 : 0) - (b.predicted ? 1 : 0) || a.name.localeCompare(b.name));
 }
+// HUB433: a stream's liveness from its last-seen time (its latest Claude reply or hub command): alive under 10 min, quiet
+// under an hour, stale after; "none" when no live session holds the row (a predicted stream, or a claim with no session)
+const LIVE_FRESH_MIN = 10, LIVE_QUIET_MIN = 60;
+function streamLiveness(r, now){
+  if(!r.live) return {k: "none", label: r.predicted ? "No session yet: not started" : "No live session: the card is claimed but nothing is running"};
+  const t = r.seen ? Date.parse(r.seen) : NaN;
+  if(isNaN(t)) return {k: "unknown", label: "Running; no last-seen time yet"};
+  const m = Math.max(0, Math.round((now - t) / 60000)), ago = m < 1 ? "under a minute" : m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min";
+  return m < LIVE_FRESH_MIN ? {k: "alive", label: "Alive: last seen " + ago + " ago"} : m < LIVE_QUIET_MIN ? {k: "quiet", label: "Quiet: last seen " + ago + " ago"} : {k: "cold", label: "Stale: last seen " + ago + " ago"};
+}
 // <<< streams-rows
+function streamsWorking(rows){ return rows.filter(r => r.bars.some(b => b.role === "now")).length; }
 function streamLive(){   // the live sessions and agents that are streams: by name, or holding a card
   const held = new Set([...cards.values()].map(c => streamOf(c)).filter(Boolean));
   const list = hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions : [];
@@ -5743,14 +5878,16 @@ function drawStreams(host){
   }
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
-  const strips = {plan, list, now, t0, t1, X, sc, row, inner};
+  // HUB434: this tab's Streams count is the stream rows working a card now (the rows below), not every In progress card
+  const strips = {plan, list, now, t0, t1, X, sc, row, inner, streamNow: streamsWorking(rows)};
   ganttStrips(strips);
   for(const r of rows){
     const idle = !r.bars.length, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";
     const tip0 = r.name + (r.predicted ? " (predicted: no stream by this name yet; Exarch starts it for its planned card)" : "")
       + (idle ? "\nIdle" + (ago ? ": last seen " + ago + " ago" : "") : "");
-    const lab = el("div",{class:"glab gstream" + (r.predicted ? " pred" : "") + (idle ? " idle" : ""), title:tip0},
-      el("span",{class:"gid"}, r.name), idle ? el("span",{class:"gt"}, "idle" + (ago ? " " + ago : "")) : null);
+    const lv = streamLiveness(r, now);
+    const lab = el("div",{class:"glab gstream" + (r.predicted ? " pred" : "") + (idle ? " idle" : ""), title:tip0 + "\n" + lv.label},
+      el("span",{class:"gdot " + lv.k, role:"img", "aria-label":lv.label, title:lv.label}), el("span",{class:"gid"}, r.name), idle ? el("span",{class:"gt"}, "idle" + (ago ? " " + ago : "")) : null);
     const cell = r.bars.map(b => {
       const it = b.it, c = it.c, hue = epics.get(c.epic || "")?.hue, w = Math.max(4, X(b.e) - X(b.s));
       const what = b.role === "now" ? "Working now" : b.role === "assigned" ? "Assigned to " + r.name + ", waits for its turn"
@@ -6175,7 +6312,6 @@ function sessEl(doc){
     for(const ch of o.choices || []) row.append(el("button",{type:"button", class:ch.rec?"rec":"", title:ch.rec?"Recommended":"",
       onclick:()=>sessAnswer(doc, o.id, ch.v)}, (ch.t || String(ch.v)) + (ch.rec ? " ★" : "")));
     const other = el("textarea",{class:"other", placeholder:"Something else? Write it here (saved when you leave the field)", "aria-label":"Other answer: "+o.q});
-  if(done.length) host.append(doneManualEl(done));   // HUB435: no title of its own, no rule between it and Snoozed
     other.value = a[o.id+OTHER] || "";
     other.addEventListener("blur", ()=>{ const v = other.value.trim(); if(!v || v === String(a[o.id+OTHER]||"")) return;
       change(doc, "ans." + o.id + OTHER, v); sessAnswer(doc, o.id, "__other"); });
@@ -6815,8 +6951,7 @@ function renderSyncPop(){
     el("div",{class:"row"}, exarchStateIcon(s), exarchStateText(s)),
     el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
-  const usage = figs.length ? figs.map(f => kv(el("span",{class:"row"}, WARN_RANK[f.lvl] ? ico("alert-triangle", WARN_CLASS[f.lvl], f.lvl.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), f.label), f.short || f.value, {title: f.tip}))   // HUB363: a check circle when fine, the warning symbol otherwise
-    : [el("p",{class:"note"}, "No usage reading yet: the plan's limits are recorded on each wake (hub/usage.py).")];
+  const usage = usageBreakdownRows(figs);
   const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
     const pr = leadRow(k, p0, core), st = leadState(pr, now), n = [...cards.values()].filter(c => c.col === "prog" && cardProject(c) === k && cardKind(c) !== "Release").length;
     const streams = n + (n === 1 ? " stream" : " streams");
@@ -7602,7 +7737,7 @@ $("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu 
 for(const t of ["chat", "arch", "dev", "status"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
-// ---------- HUB338: encrypted chats (docs/EXARCH.md section K, mock-ups section 6). This device makes its own
+// ---------- HUB338: encrypted chats (docs/EXARCH.md section L, mock-ups section 6). This device makes its own
 // RSA-OAEP key pair with WebCrypto; the private key is not extractable and stays in this browser's IndexedDB. Each
 // chat has an AES-256-GCM content key, wrapped by the node for itself and every paired device, so the board data holds
 // chat text only as ciphertext. Pairing: this device asks with a change file (card "devices"); the node answers with a
