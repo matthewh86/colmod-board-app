@@ -104,7 +104,8 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .savest.ok{color:var(--p3); font-weight:600; font-size:.78rem; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--p3) 14%, transparent); font-variant-numeric:tabular-nums}   /* HUB265: "✓ Synced" in a chip like the syncing one */
 .note{font-size:.82rem; color:var(--muted); margin:10px 0 0}
 .linkbtn{border:0; background:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; font-size:.82rem; text-decoration:underline}
-.floatbtns{position:absolute; top:6px; right:14px; z-index:4; display:flex; gap:6px; box-shadow:0 2px 8px rgba(0,0,0,.18); border-radius:8px; background:var(--bg)}   /* HUB361: New and Select float over the board's top right */
+.floatbtns{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:1 / -1; grid-row:1 / -1; align-self:start; justify-self:end; margin-right:14px; z-index:4; display:flex; gap:6px}   /* HUB361/HUB408: New and Select float over the board's top right and stay in view when the page scrolls */
+.floatbtns .fbtn{box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .main{position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
 /* HUB216: the projects panel's right border: a visible line in the gap, dragged to resize the panel (kept per viewer) */
 .eresize{position:absolute; top:0; bottom:0; left:calc(var(--ew,200px) + 1px); width:10px; cursor:col-resize; touch-action:none; z-index:4}
@@ -120,7 +121,10 @@ body.panning, body.panning *{cursor:grabbing!important; user-select:none!importa
 body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .col.collapsed{align-self:start}
 .main > .board{align-self:stretch}   /* HUB187: as tall as the epics panel when that is longer: the columns (and the board's sideways scroll bar) reach the page's bottom */
-@media (max-width:720px){ .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+/* HUB408: the sticky buttons overlay the whole grid, so the panel and the board are placed explicitly */
+.main > .epics{grid-column:1; grid-row:1}
+.main > .board{grid-column:2; grid-row:1}
+@media (max-width:720px){ .main > .board{grid-column:1; grid-row:2} .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
 /* HUB302: swimlanes: a band per lane, the columns repeating inside it (docs/mockups/swimlanes.html, option A) */
 .board.lanes{display:block; cursor:auto}
 .lane{background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; min-width:calc(var(--ncol,8) * 270px)}
@@ -562,11 +566,9 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 /* HUB171/HUB173: the settable limits, each with what it caps and the suggested value */
 .limits{display:grid; gap:8px; max-width:860px}
 /* HUB388: the limits beside the pace (two columns where there is room; stacked on a phone) */
-.pacelim{display:grid; grid-template-columns:minmax(300px,560px) minmax(0,1fr); gap:6px 24px; align-items:start}
-.pacelim .palcol{display:grid; gap:6px; min-width:0; align-content:start}
+.pacelim{display:grid; grid-template-columns:minmax(0,560px); gap:6px; align-items:start}   /* HUB395: one column: the pace, its limits and the default model under it */
 .pacelim .limbox h3{margin-top:0}
 .pacelim .limrow{grid-template-columns:1fr auto} .pacelim .limrow .limtext{grid-column:1 / -1}
-@media (max-width:900px){ .pacelim{grid-template-columns:minmax(0,1fr)} }
 .limrow{display:grid; grid-template-columns:minmax(150px,200px) auto 1fr; gap:6px 14px; align-items:start; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px}
 .limrow .limname{font-weight:600; padding-top:5px}
 .limrow .limval{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
@@ -879,6 +881,9 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .seg{display:inline-flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:.78rem; justify-self:start}
 .seg.mdl button{border:0; border-radius:0; background:none; padding:3px 9px; font:inherit; color:var(--ink); cursor:pointer}   /* HUB337 */
 .seg.mdl button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
+.seg.mdl.big{display:grid; grid-template-columns:repeat(4,1fr); width:100%; justify-self:stretch}   /* HUB395: as tall and as large as the Pace buttons */
+.seg.mdl.big button{font-size:.86rem; font-weight:600; padding:8px 6px; min-height:40px; border-left:1px solid var(--line)}
+.seg.mdl.big button:first-child{border-left:0}
 .seg.mdl button:disabled{cursor:default; opacity:.7}
 .aipanel .seg button{border:0; border-radius:0; background:none; padding:3px 9px}
 .aipanel .seg button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent)}
@@ -928,7 +933,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
     <button class="tab" role="tab" id="tab-streams" data-tab="streams" aria-controls="streams" type="button">Streams</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
-    <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Exarch Hub</button>
+    <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Exarch</button>
     <button class="tab" role="tab" id="tab-queues" data-tab="queues" aria-controls="queues" type="button">Queues</button>
     <button class="tab" role="tab" id="tab-releases" data-tab="releases" aria-controls="releases" type="button">Releases</button>
     <button class="tab" role="tab" id="tab-artifacts" data-tab="artifacts" aria-controls="artifacts" type="button">Artifacts</button>
@@ -2004,8 +2009,8 @@ function defaultModel(){   // the Hub's default stream model: the change on its 
   for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "exarch.model") m = ch.value;
   return MODELS.includes(m) ? m : "auto";
 }
-function modelSeg(cur, label, pick, autoText){
-  return el("span",{class:"seg mdl", role:"group", "aria-label":label}, ...MODELS.map(m => el("button",{type:"button", "aria-pressed":String(m === cur),
+function modelSeg(cur, label, pick, autoText, big){
+  return el("span",{class:"seg mdl" + (big ? " big" : ""), role:"group", "aria-label":label}, ...MODELS.map(m => el("button",{type:"button", "aria-pressed":String(m === cur),
     disabled:readOnly ? true : null, onclick:ev => { ev.stopPropagation(); if(m !== cur) pick(m); }}, m === "auto" && autoText ? autoText : modelName(m))));
 }
 function modelRow(c){   // the card view: the model Exarch AI builds this card with
@@ -2017,7 +2022,7 @@ function modelRow(c){   // the card view: the model Exarch AI builds this card w
     said ? el("span",{class:"small mu"}, said) : null);
 }
 function defaultModelSec(){   // the Hub tab, under the pace
-  return [el("h3",{}, "Default stream model"), el("div",{class:"row"}, modelSeg(defaultModel(), "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); })),
+  return [el("h3",{}, "Default stream model"), el("div",{}, modelSeg(defaultModel(), "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); }, null, true)),
     el("p",{class:"note"}, "Auto: Sonnet for docs and cards of 1 h or less; Opus for other builds; Fable for spikes, cards over a day and a retry after an Opus bounce (on API credits, the retry only). A card's own model wins.")];
 }
 let lastFocus = null;
@@ -4350,21 +4355,6 @@ function creditLine(c){   // "API credits 2026-11: $12.30 spent, $25.00 held by 
   return "API credits " + c.month + ": $" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by running runs until they end, $"
     + c.left.toFixed(2) + " free of $" + c.cap.toFixed(0) + (c.on ? "" : " (overflow off: no key file)");
 }
-function creditsTable(u){
-  const c = usageCredits(u);
-  if(!c) return [el("p",{class:"note"}, "API credits: no reading yet (hub/overflow.py).")];
-  const pct = c.cap ? Math.round(100 * c.spent / c.cap) : 0;   // HUB240: spent only; held is not spent
-  const state = !c.on ? "Overflow off: no key file on the hub's machine."
-    : u.plan_used_up ? (c.left >= 1 ? "The plan is used up: overflow streams on the paid API may run while the cap has room." : "The plan is used up and the cap has no room: no overflow runs until next month.")
-    : "Overflow streams start only once a plan limit is used up.";
-  return [el("h3",{}, "API credits (overflow streams)"),
-    el("div",{class:"tblwrap"}, el("table",{class:"st"},
-      el("thead",{}, el("tr",{}, el("th",{}, "Month"), el("th",{}, "Spent"), el("th",{}, "Held by running runs"), el("th",{}, "Free for new runs"), el("th",{}, "Cap"))),
-      el("tbody",{}, el("tr",{}, el("td",{}, c.month), el("td",{}, "$" + c.spent.toFixed(2)),
-        el("td",{}, "$" + c.held.toFixed(2) + (c.running ? " (" + c.running + " run" + (c.running === 1 ? "" : "s") + ")" : "")),
-        el("td",{}, "$" + c.left.toFixed(2)), el("td",{}, "$" + c.cap.toFixed(0) + " (" + pct + " % spent)"))))),
-    el("p",{class:"note"}, state + " " + c.runs + " run" + (c.runs === 1 ? "" : "s") + " this month.")];
-}
 function addKids(host, ...kids){ host.append(...kids.flat().filter(k => k != null && k !== false)); }   // HUB387: Node.append turns a null into the text "null"
 // >>> hub-tab (tests/test_app.py runs this block)
 // HUB387: the Exarch line of the Hub tab (was the Coordinator line): on or off, the core's last tick, the runs on the plan
@@ -4377,48 +4367,45 @@ function exarchLine(s, now){
   const runs = plan.length + (plan.length === 1 ? " run" : " runs") + " on the plan" + (running ? " (" + running + " running)" : "");
   return {value: word + "; " + tick + "; " + runs, state: s.state, t};
 }
-// HUB387: "Now" and "Runs out", one row each: the value, what it means and when it changes
-function nowRunoutRows(u, rw, when){
+// HUB387/HUB395: the value table, one short line per cell: the pace's allowance, the runway, each plan limit and the API credits
+function nowRunoutRows(u, rw, when, wins, c){
   const rows = [];
   if(u && u.allowance) rows.push({k: "Now", value: String(u.allowance),
-    means: "How many development streams the pace chosen above lets start at this moment, from the plan's usage reading.",
-    changes: "When the pace is changed, a stream starts or ends, or the next usage reading is recorded" + (u.recorded ? " (the last one was " + when(u.recorded) + ")" : "") + "."});
+    means: "Streams the pace lets start now",
+    changes: "Pace change, a stream starting or ending, a new reading"});
   if(rw && rw.why){
-    const v = rw.out ? when(rw.out) : rw.plan ? "the plan " + when(rw.plan) + "; the API credits last" : "lasts";
-    rows.push({k: "Runs out", value: v,
-      means: "When the plan, then the API credits, would be used up at the present rate: " + rw.why + ".",
-      changes: "With each usage reading, and as the API credits are spent" + (rw.refresh ? "; the plan refreshes " + when(rw.refresh) : "") + "."});
+    const v = rw.out ? when(rw.out) : rw.plan ? "plan " + when(rw.plan) + ", then credits" : "lasts";
+    rows.push({k: "Runs out", value: v, means: "Plan, then API credits, at this rate",
+      changes: "Each reading, each credit spent" + (rw.refresh ? "; plan refreshes " + when(rw.refresh) : "")});
   }
+  for(const w of wins || []) rows.push({k: w.label, value: Math.round(Number(w.pct) || 0) + " % used",
+    means: "Refreshes " + (w.resets_at ? when(w.resets_at) : "-") + "; " + (w.runs_out_at ? "runs out " + when(w.runs_out_at) : "lasts to it"),
+    changes: "Each usage reading"});
+  if(c) rows.push({k: "API credits", value: "$" + c.left.toFixed(2) + " free of $" + c.cap.toFixed(0),
+    means: !c.on ? "Overflow off: no key file" : "$" + c.spent.toFixed(2) + " spent, $" + c.held.toFixed(2) + " held by " + c.running + " run" + (c.running === 1 ? "" : "s") + "; used once a plan limit is",
+    changes: "An overflow run starts or ends; the month turns (" + c.month + ")"});
   return rows;
 }
 // <<< hub-tab
-function nowRunoutTable(u, rw){
-  const rows = nowRunoutRows(u, rw, fmtTime);
+function nowRunoutTable(u, rw, wins, c){
+  const rows = nowRunoutRows(u, rw, fmtTime, wins, c);
   return rows.length ? el("div",{class:"tblwrap"}, el("table",{class:"st nowrun"},
     el("thead",{}, el("tr",{}, el("th",{}, ""), el("th",{}, "Value"), el("th",{}, "What it means"), el("th",{}, "When it changes"))),
     el("tbody",{}, rows.map(r => el("tr",{}, el("th",{scope:"row"}, r.k), el("td",{}, r.value), el("td",{}, r.means), el("td",{}, r.changes)))))) : null;
 }
 function usageSection(host){
   const {u, pace, wins} = usageNow();
-  const rw = usageRunway(u);
-  const cr = usageCredits(u);   // HUB267: the top-up (API) credits left, up top beside the pace
-  addKids(host, el("h2",{}, "Tokens and pace"),
-    cr ? el("p",{class:"note credleft", title:creditLine(cr)}, "API top-up credits: ", el("b",{}, "$" + cr.left.toFixed(2) + " left"), " of $" + cr.cap.toFixed(0) + " this month (" + cr.month + ").") : null,
-    usageExtra(u) ? el("p",{class:"note credleft", title:extraLine(usageExtra(u))}, "Usage credits (extra usage past the plan, for handovers only): ",
-      usageExtra(u).left != null ? el("b",{}, "$" + usageExtra(u).left.toFixed(2) + " left") : el("b",{}, "$" + usageExtra(u).spent.toFixed(2) + " used"),
-      usageExtra(u).left != null ? " of $" + usageExtra(u).limit.toFixed(0) + " ($" + usageExtra(u).spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
+  const rw = usageRunway(u), cr = usageCredits(u), ex = usageExtra(u);
+  addKids(host, el("h2",{}, "Pace"),
+    el("div",{class:"pacelim"}, paceSelector(pace, "hub"), paceAutoHint(u, pace), limitsSection(), ...defaultModelSec()),   // HUB395: the limits and the default model under the pace
+    el("h2",{}, "Usage"),
+    ex ? el("p",{class:"note credleft", title:extraLine(ex)}, "Usage credits (extra usage past the plan, for handovers only): ",
+      ex.left != null ? el("b",{}, "$" + ex.left.toFixed(2) + " left") : el("b",{}, "$" + ex.spent.toFixed(2) + " used"),
+      ex.left != null ? " of $" + ex.limit.toFixed(0) + " ($" + ex.spent.toFixed(2) + " used). " : " (the desktop app reports no limit: set the budget to see what is left). ",
       extraBudgetInput(u)) : null,
-    el("div",{class:"pacelim"}, el("div",{class:"palcol"}, paceSelector(pace, "hub"), paceAutoHint(u, pace)), limitsSection()),   // HUB388: the limits beside the pace
-    nowRunoutTable(u, rw),
-    ...defaultModelSec(),
-    el("h3",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's, beside the Pace
-  if(!wins.length){ host.append(el("p",{class:"note"}, "No usage reading yet: Exarch records the plan's limits on each wake."), ...creditsTable(u)); return; }
-  host.append(el("h3",{}, "Plan limits"), el("div",{class:"tblwrap"}, el("table",{class:"st"},
-    el("thead",{}, el("tr",{}, el("th",{}, "Limit"), el("th",{}, "Used"), el("th",{}, "Refreshes"), el("th",{}, "Runs out (at the present rate)"))),
-    el("tbody",{}, wins.map(w => el("tr",{}, el("td",{}, w.label), el("td",{}, Math.round(Number(w.pct) || 0) + " %"),
-      el("td",{}, w.resets_at ? fmtTime(w.resets_at) : "-"),
-      el("td",{}, w.runs_out_at ? fmtTime(w.runs_out_at) + (w.before_reset_h != null ? " (" + w.before_reset_h + " h before its refresh)" : "") : "lasts to the refresh")))))),
-    el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + "."), ...creditsTable(u));
+    nowRunoutTable(u, rw, wins, cr) || el("p",{class:"note"}, "No usage reading yet: Exarch records the plan's limits on each wake."),
+    wins.length && u.recorded ? el("p",{class:"note"}, "Recorded " + fmtTime(u.recorded) + ".") : null,
+    el("h2",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's
 }
 // HUB210: the hub dropped the pace to Conservative by itself when the API credits started being used; said under the
 // pace until one is picked again (the export's pace_auto is then gone)
@@ -5414,16 +5401,26 @@ function drawGantt(host){
 // for it done; a stream working a card of another pool is not given this one; an idle stream takes any), the one free
 // longest first, then by name; with no stream free in time it gets a new stream named for its card,
 // "<card>-stream" in lower case, the name Exarch's core starts it under, drawn as a predicted stream.
+// HUB402: a card goes only to a stream that can take its project's work: a stream holding a card of that project, or
+// named for one ("<card>-stream"), or one with no project yet (a generic name, nothing held); the stream then has the
+// card's project. A Lead (name ending in -lead, a Lead's role, primarch-core) is never a stream, and a stream that
+// has stopped or finished is not live. opts: {project: card => key, cardOf: id => card | null} (no opts: any project).
 // items: [{c, s, e, kind, pool}] (the Gantt's plan, ganttPlan); streams: [{name, seen, started}] the live ones;
 // returns [{name, live, predicted, pool, free, bars: [{it, role: "now" | "assigned" | "planned", s, e}], idleSince}].
-function streamsModel(items, streams, now, own){
-  const rows = new Map(), mk = (name, live) => { const r = {name, live, predicted: !live, pool: null, free: now, bars: [], idleSince: null, seen: null}; rows.set(name, r); return r; };
-  for(const s of streams) if(s && s.name) mk(s.name, true).seen = s.seen || s.started || null;
+function streamIsLead(name, role){ return /-lead$/i.test(String(name || "")) || name === "primarch-core" || /(^|[-_ ])lead$|^primarch-core$/i.test(String(role || "")); }
+function streamsModel(items, streams, now, own, opts){
+  const projOf = opts && typeof opts.project === "function" ? opts.project : null, cardOf = opts && typeof opts.cardOf === "function" ? opts.cardOf : () => null;
+  const rows = new Map(), mk = (name, live) => { const r = {name, live, predicted: !live, pool: null, free: now, bars: [], idleSince: null, seen: null, proj: null}; rows.set(name, r);
+    const m = /^(.+)-stream$/.exec(name), nc = projOf && m ? cardOf(m[1].toUpperCase()) : null;
+    if(nc) r.proj = projOf(nc) || null;   // named for a card: that card's project
+    return r; };
+  for(const s of streams) if(s && s.name && !streamIsLead(s.name, s.role) && !/^(stopped|finished|done|ended)$/.test(String(s.state || ""))) mk(s.name, true).seen = s.seen || s.started || null;
   const holder = c => typeof c.assigned === "string" ? c.assigned.trim() : "";
   const mine = it => { const c = it.c; return (c.col === "prog" || c.col === "assign") && holder(c) && own(c); };
   const put = (r, it, role) => {   // a queued bar starts when the stream is free, and keeps its length
     const len = Math.max(0, it.e - it.s), s = role === "now" ? it.s : Math.max(it.s, r.free), e = role === "now" ? it.e : s + len;
     r.bars.push({it, role, s, e}); r.free = Math.max(r.free, e);
+    if(projOf && !r.proj) r.proj = projOf(it.c) || null;
     if(role === "now" && it.pool) r.pool = it.pool;
   };
   const byStart = (a, b) => a.s - b.s || String(a.c.id).localeCompare(String(b.c.id));
@@ -5438,10 +5435,12 @@ function streamsModel(items, streams, now, own){
     for(const r of rows.values()){
       if(!r.live || r.free > it.s + 60000) continue;
       if(r.pool && it.pool && r.pool !== it.pool) continue;
+      if(projOf && r.proj && r.proj !== projOf(it.c)) continue;   // a stream of another project's work
       if(!best || r.free < best.free || r.free === best.free && r.name < best.name) best = r;
     }
     const nn = String(it.c.id).toLowerCase() + "-stream";
     if(!best) best = rows.get(nn) || mk(nn, false);
+    if(projOf && !best.proj) best.proj = projOf(it.c) || null;
     put(best, it, "planned");
   }
   for(const r of rows.values()){
@@ -5454,7 +5453,7 @@ function streamsModel(items, streams, now, own){
 function streamLive(){   // the live sessions and agents that are streams: by name, or holding a card
   const held = new Set([...cards.values()].map(c => streamOf(c)).filter(Boolean));
   const list = hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions : [];
-  return list.filter(s => s && s.name && (/-stream$/.test(s.name) || held.has(s.name))).map(s => ({name: s.name, seen: s.seen, started: s.started}));
+  return list.filter(s => s && s.name && !streamIsLead(s.name, s.role) && (/-stream$/.test(s.name) || held.has(s.name))).map(s => ({name: s.name, role: s.role, state: s.state, seen: s.seen, started: s.started}));
 }
 function renderStreams(){   // a fault in this tab must never stop the board from drawing
   const host = document.getElementById("streams");
@@ -5474,7 +5473,7 @@ function drawStreams(host){
   if(!loaded){ host.append(el("p",{class:"note"}, "Loading…")); return; }
   const plan = ganttPlan(list, now);
   const items = [...plan.items.values()].filter(it => it.kind !== "milestone" && inProject(it.c));
-  const rows = streamsModel(items, live, now, c => inProject(c));
+  const rows = streamsModel(items, live, now, c => inProject(c), {project: cardProject, cardOf: id => cards.get(id) || null});
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderStreams(); };
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
     el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
