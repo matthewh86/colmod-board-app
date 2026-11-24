@@ -144,7 +144,7 @@ button.prim.prim.prim.prim,button.prim.prim.prim.prim:hover,button.prim.prim.pri
 .fbtn .bi{width:14px; height:14px; flex:none}
 .fsrch{position:sticky; top:calc(env(safe-area-inset-top,0px) + 47px); grid-column:2; grid-row:1 / -1; align-self:start; justify-self:start; margin-left:8px; z-index:4; width:30px; height:30px; padding:0; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .main.ecol .fsrch{grid-column:2}
-@media (max-width:720px){ .fsrch{grid-column:1} }
+@media (max-width:720px){ .fsrch{grid-column:1; margin-left:100px} }   /* HUB456: clear of the Filters button on the same line */
 .floatbtns .fbtn.fnew,.floatbtns .fbtn.fnew:not(:disabled):hover{background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:600}
 .floatbtns .fbtn.fnew:not(:disabled):hover{filter:brightness(1.1)}
 .floatbtns .fbtn.fsel{font-weight:400}
@@ -163,7 +163,7 @@ button.prim.prim.prim.prim,button.prim.prim.prim.prim:hover,button.prim.prim.pri
 .epics h2 .fpop{left:auto; right:0}
 .epics h2 .fcount{text-transform:none; letter-spacing:0}
 .main.ecol .epics h2 .fwrap, .main.ecol .epics .ffbox{display:none}
-.main{position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); gap:12px; margin-top:12px; align-items:start}
+.main{--tbh:30px; position:relative; display:grid; grid-template-columns:var(--ew,200px) minmax(0,1fr); grid-template-rows:calc(var(--tbh) + 10px) auto; gap:12px; row-gap:0; margin-top:12px; align-items:start}   /* HUB455: row 1 is a blank band for the floating buttons (Filters, Search, New, Select), the panel's filters and the columns start below it; --tbh is the one height of those four buttons (HUB456) */
 /* HUB216: the projects panel's right border: a visible line in the gap, dragged to resize the panel (kept per viewer) */
 .eresize{position:absolute; top:0; bottom:0; left:calc(var(--ew,200px) + 1px); width:10px; cursor:col-resize; touch-action:none; z-index:4}
 .eresize::before{content:""; position:absolute; top:0; bottom:0; left:4px; width:1px; background:var(--line)}
@@ -179,9 +179,12 @@ body.autoscrolling, body.autoscrolling *{cursor:all-scroll !important}
 .col.collapsed{align-self:start}
 .main > .board{align-self:stretch}   /* HUB187: as tall as the epics panel when that is longer: the columns (and the board's sideways scroll bar) reach the page's bottom */
 /* HUB408: the sticky buttons overlay the whole grid, so the panel and the board are placed explicitly */
-.main > .epics{grid-column:1; grid-row:1}
-.main > .board{grid-column:2; grid-row:1}
-@media (max-width:720px){ .main > .board{grid-column:1; grid-row:2} .qfloat{grid-column:1} .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
+.main > .epics{grid-column:1; grid-row:1 / -1}
+.main > .board{grid-column:2; grid-row:2}
+/* HUB456: Filters sits on the same line as Search, New and Select and has their height: the shared --tbh */
+.fsrch,.floatbtns .fbtn,.epics h2 .fbtn,.epics h2 .ecbtn{box-sizing:border-box; height:var(--tbh); min-height:var(--tbh)}
+.epics h2{min-height:var(--tbh)}
+@media (max-width:720px){ .main > .board{grid-column:1; grid-row:2} .main > .epics{grid-row:1} .main{grid-template-rows:auto auto} .qfloat{grid-column:1} .main{grid-template-columns:1fr} .eresize{display:none} .board{grid-template-columns:1fr; overflow:visible; cursor:auto; min-height:0} }
 /* HUB302: swimlanes: a band per lane, the columns repeating inside it (docs/mockups/swimlanes.html, option A) */
 .board.lanes{display:block; cursor:auto}
 .lane{background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; min-width:calc(var(--ncol,8) * 270px)}
@@ -331,11 +334,11 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .chipedit select{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; font:inherit}   /* covers the whole pill */
 .chip::before{content:""; width:6px; height:6px; border-radius:50%; background:hsl(var(--h) 60% 45%); flex:none}
 .epics{display:flex; flex-direction:column; gap:6px; padding-bottom:4px}
-.epics h2{margin:0; padding:8px 2px 2px; font-size:.8rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; align-items:center; gap:6px}
+.epics h2{margin:0; padding:0 2px; font-size:.8rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); display:flex; align-items:center; gap:6px}
 .ecbtn{min-width:26px; min-height:26px; padding:0 4px; line-height:1}
 .ecbtn:hover{color:var(--ink); border-color:var(--accent)}
 .main.ecol{grid-template-columns:30px minmax(0,1fr)}
-.main.ecol .epics h2{flex-direction:column; padding:8px 0 2px}
+.main.ecol .epics h2{flex-direction:column; padding:0}
 .main.ecol .epics h2 span{writing-mode:vertical-rl}
 @media (max-width:720px){ .main.ecol{grid-template-columns:1fr} .main.ecol .epics h2{flex-direction:row} .main.ecol .epics h2 span{writing-mode:horizontal-tb} }
 .epic{flex:none; display:grid; gap:3px; min-width:0; text-align:left; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-top:3px solid hsl(var(--h) 55% 50%); border-radius:6px; padding:6px 9px; cursor:pointer}
@@ -379,7 +382,7 @@ body:not(.ro) .thead > .epic.theme{padding-right:56px}   /* room for the edit ic
 .tgroup.collapsed .tepics{display:none}
 .card .tpath{font-size:.8rem; color:var(--muted); margin-right:4px}
 @media (max-width:720px){   /* the epics column becomes a strip that scrolls sideways inside itself: each theme chip, then its epic chips (after the base rules, so it wins) */
-  .epics{flex-direction:row; align-items:stretch; overflow-x:auto; overflow-y:visible; max-height:none; height:auto} .epics h2{flex:none; align-self:center; padding:0 2px} .projsel{width:auto; max-width:46vw; align-self:center}
+  .epics{position:relative; padding-top:calc(var(--tbh) + 10px); flex-direction:row; align-items:stretch; overflow-x:auto; overflow-y:visible; max-height:none; height:auto} .epics h2{position:absolute; top:0; left:0} .main .epics h2 > span{display:none}   /* HUB455/HUB456: the band above the strip holds Filters beside Search, New and Select */ .epics h2{flex:none; align-self:center; padding:0 2px} .projsel{width:auto; max-width:46vw; align-self:center}
   .epic{min-width:150px} .epic.theme{min-width:170px}
   .tgroup,.tepics{display:flex; flex-direction:row; flex:none; align-items:stretch} .tepics{margin-left:0; padding-left:6px} .thead{flex:none} .tnone{align-self:center; padding:0 30px 0 2px}
 }
