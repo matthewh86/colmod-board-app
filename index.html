@@ -4830,6 +4830,21 @@ function triageAskBtn(kind, key, label){
     if(to) triageAsk(kind, "ask", key, null, {to: to.trim()});
   });
 }
+// HUB440: a held-back line comes sealed like a chat message (hub.exarch.crypto.seal_blob: AES-256-GCM, key wrapped per device);
+// only a paired device opens it, here, with the chats' exUnwrap / exUnseal. Anywhere else the line stays encrypted.
+function triageSealedLines(f){
+  const box = el("div",{class:"small mono mu"}, "The matching lines are encrypted: open them on a paired device.");
+  if(typeof exPaired === "function" && exPaired() && f.enc.keys && f.enc.keys[ex.id]){
+    (async () => {
+      try{
+        const o = await exUnseal(await exUnwrap(f.enc.keys[ex.id]), "triage", f.ctx, "t", f.enc);
+        box.replaceChildren(...(o.lines || []).map(l => el("div",{}, "line " + l.n + ": " + l.text)));
+        box.classList.remove("mu");
+      }catch(e){ box.textContent = "The matching lines are encrypted and this device cannot open them."; }
+    })();
+  }
+  return box;
+}
 function triageSection(host){
   const t = hubStatus && hubStatus.triage;
   if(!t || typeof t !== "object") return;
@@ -4857,7 +4872,7 @@ function triageSection(host){
   const pv = Array.isArray(t.privacy) ? t.privacy : [];
   if(pv.length) box("Files held back by the privacy rule: " + pv.length, "privacy", ...pv.map(f => el("div",{class:"triageitem"},
     el("strong",{}, f.path), el("span",{class:"small mu"}, " rule: " + f.rules.join(", ")),
-    ...f.lines.map(l => el("div",{class:"small mono"}, "line " + l.n + ": " + l.text)),
+    ...(f.enc ? [triageSealedLines(f)] : f.lines.map(l => el("div",{class:"small mono"}, "line " + l.n + ": " + l.text))),
     f.false_positive ? el("div",{class:"small"}, "Marked a false positive: " + f.false_positive.reason + " (the guard still holds the file)") : null,
     el("div",{class:"row"},
       triageBtn("False positive", "Records your reason and tells Exarch; the guard still holds the file", () => {
