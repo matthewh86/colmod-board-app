@@ -2015,6 +2015,7 @@ function cardEl(c, full=false){
     more.append(el("div",{class:"row"}, el("span",{class:"lbl"},"Column"), sel,
       el("span",{class:"place", role:"group", "aria-label":"Place in the column"}, ...placeBtns(c))));   // HUB190: the hover bar's set
     more.append(el("div",{class:"row", id:"assignedrow"}, el("span",{class:"lbl"}, "Assigned to"), el("span",{class:"assignedto", title:"The stream working on this card (read only)"}, streamOf(c) || (typeof c.assigned === "string" && c.assigned.trim()) || "—")));   // HUB412
+    if(typeof c.stream === "string" && c.stream.trim()) more.append(el("div",{class:"row", id:"streamrow"}, el("span",{class:"lbl"}, "Raised on"), el("span",{class:"assignedto", title:"The chat's own stream this card was raised on (read only, HUB396)"}, c.stream.trim())));   // HUB396
     // HUB117: a comment box; each comment becomes a line in the card's activity (the old note is shown if it has one)
     if(c.un) more.append(el("div",{class:"meta"}, el("span",{}, "Your note: " + c.un)));
     // HUB211: the typed text is kept per card (a redraw of the card brings it back). HUB309: it is an unsaved change
@@ -5644,6 +5645,8 @@ function streamsModel(items, streams, now, own, opts){
   for(const it of held.filter(x => x.c.col === "assign")) put(rowOf(holder(it.c)), it, "assigned");
   const planned = items.filter(it => it.kind === "planned" && !holder(it.c) && it.c.col !== "assign" && it.c.col !== "prog").sort(byStart);
   for(const it of planned){
+    const named = typeof it.c.stream === "string" ? it.c.stream.trim() : "";   // HUB396: raised on a chat's own stream: planned onto it
+    if(named){ const r = rows.get(named) || mk(named, false); if(projOf && !r.proj) r.proj = projOf(it.c) || null; put(r, it, "planned"); continue; }
     let best = null;
     for(const r of rows.values()){
       if(!r.live || r.free > it.s + 60000) continue;
@@ -6653,6 +6656,14 @@ function chatHue(c){   // the project's colour (its hue) for the Exarch and Lead
   return "hsl(" + (isNaN(h) ? 210 : h) + " 55% 45%)";
 }
 function chatIcon(c){ return c.kind === "exarch" ? ico("compass") : el("span",{class:"cic", "aria-hidden":"true"}, c.kind === "lead" ? "✪" : "✉︎"); }
+// HUB396 (the user, 2026-11-24, chat_plan = plan_stream): every chat has its own stream; the cards it raises belong to it
+function aiStream(c){
+  const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28);
+  const name = c.kind === "exarch" ? "exarch-chat" : c.kind === "lead" ? (slug(c.project || c.lead) || "lead") + "-chat"
+    : "chat-" + String(c.conv || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+  return /^[a-z0-9][a-z0-9-]{0,39}$/.test(name) ? name : "";
+}
+function aiStreamCards(c){ const s = aiStream(c); return s ? [...cards.values()].filter(x => x.stream === s) : []; }
 function aiNewChat(){
   const c = aiConv();
   if(c && c.kind === "user" && !c.msgs.length){ $("#aiq").focus(); return; }   // the open one is still empty: no second empty chat
@@ -6956,8 +6967,8 @@ function aiDrawChat(c, row, leads){
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
     : c.kind === "lead" ? "Talking to " + c.lead + (leadSnoozed(c) ? " · snoozed: a message ends the snooze" : "") + aiLeadWoken(c) : "";
+  if(c){ const sc = aiStreamCards(c); who.textContent += (who.textContent ? " · " : "") + "stream " + aiStream(c) + ": " + sc.length + (sc.length === 1 ? " card" : " cards"); who.title = sc.map(x => x.id).join(", "); }   // HUB396
   who.hidden = !who.textContent;
-  $("#aiplan").closest("label").hidden = !!c && c.kind === "lead";   // a Lead proposes; it makes no plan to approve
   const box = $("#aimsgs"), foc = document.activeElement && document.activeElement.classList.contains("dedit") ? document.activeElement : null;
   const typing = foc ? [foc.dataset.item, foc.selectionStart, foc.selectionEnd] : null, atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   box.replaceChildren(...[ex.note ? el("div",{class:"sline"}, ico("lock"), ex.note) : null, ...aiItems(c)].filter(Boolean));
@@ -7298,7 +7309,7 @@ async function aiAsk(text){
   const n = ++c.n, at = new Date().toISOString();
   c.msgs.push({role: "user", text, at, n}); c.msgs.push({role: "assistant", text: "", wait: true, n, sent: at, at});
   aiDraw.jump = true; aiDraw();
-  const doc = {conv: c.conv, n, text, history, ts: at, plan: c.kind !== "lead" && $("#aiplan").checked, chat: c.kind};
+  const doc = {conv: c.conv, n, text, history, ts: at, plan: $("#aiplan").checked, chat: c.kind, stream: aiStream(c)};   // HUB396: Plan in every chat; its cards go on its own stream
   if(c.kind === "lead"){ doc.lead = c.lead; doc.project = c.project; }
   if(ai.revise && ai.revise.conv === c.conv){ doc.revise = ai.revise; const pm = c.msgs.find(m => m.plan && m.n === ai.revise.n); if(pm) pm.plan.done = "revise"; ai.revise = null; }
   try{
