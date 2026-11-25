@@ -2059,7 +2059,7 @@ function cardEl(c, full=false){
   // activity log = [{ts, t, img?: ["media/..png", ...]}] appended as work goes on (newest shown first, like Jira).
   // The export carries the latest entries and log_n, how many there are in all.
   let acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
-  const fl = full ? FULL.get(c.id) : null;   // HUB462: the whole log, read from the card's note when the card is opened
+  const fl = full ? FULL.get(c.id) : null;   // HUB462/HUB464: the whole log, export/logs/<id>.json, read when the card is opened
   if(fl && fl.state === "ok"){
     const have = fl.log.filter(a => a && (a.t || a.img)), sq = s => String(s || "").replace(/\s+/g, " ").trim();
     acts = have.concat(acts.filter(a => a.pend && !have.some(h => sq(h.t).endsWith(": " + sq(a.t)))));
@@ -2327,23 +2327,10 @@ function epicViewEl(k){
   view.append(kids.length ? ul : el("p",{class:"hint"}, "No cards in this epic yet."));
   return view;
 }
-// HUB462: the export carries a card's latest few activity entries and log_n; the whole log is read from the card's note
-// (vault/Cards/<id>.md, or Cards/Archive/ once it is done) when the card is opened, and again when log_n has grown.
-const FULL = new Map();   // card id -> {state: "loading" | "ok" | "failed", n: the log_n it was read for, log}
-const LOG_IMG_RX = /!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
-function parseLog(text){   // [{ts, t, img?}] oldest first, as hub/pm/vault.py log_entries
-  const m = /^## Activity[ \t]*\n/m.exec(text);
-  if(!m) return [];
-  let sec = text.slice(m.index + m[0].length);
-  const nx = /^## /m.exec(sec); if(nx) sec = sec.slice(0, nx.index);
-  sec = sec.replace(/<!-- pm:(begin|end) activity[^>]*-->/g, "");
-  const out = [];
-  for(const e of sec.matchAll(/^### (\S+)[^\n]*\n([\s\S]*?)(?=^### |(?![\s\S]))/gm)){
-    const imgs = [...e[2].matchAll(LOG_IMG_RX)].map(x => x[1]);
-    out.push({ts: e[1], t: e[2].replace(LOG_IMG_RX, "").trim(), ...(imgs.length ? {img: imgs} : {})});
-  }
-  return out.reverse();
-}
+// HUB462/HUB464: the export carries a card's latest few activity entries and log_n; the whole log is export/logs/<id>.json
+// (written by the node, privacy-redacted like the card), read when the card is opened, and again when log_n has grown.
+// The page never reads a vault note: it holds text the export redacts. No such file (an export from before it) = the tail.
+const FULL = new Map();   // card id -> {state: "loading" | "ok" | "tail" | "failed", n: the log_n it was read for, log}
 function wantFull(id){
   const base = raw.get(id) || REL_DOCS.get(id);
   if(!base || !conn) return;
@@ -2352,15 +2339,13 @@ function wantFull(id){
   const have = FULL.get(id);
   if(have && have.n >= n) return;   // loading, loaded, or failed for this much: a failure is retried by its button
   FULL.set(id, {state: "loading", n});
-  readFull(id).then(log => FULL.set(id, {state: "ok", n, log}), () => FULL.set(id, {state: "failed", n})).then(() => { if(openId === id) renderModal(); });
+  readFull(id).then(log => FULL.set(id, log ? {state: "ok", n, log} : {state: "tail", n}), () => FULL.set(id, {state: "failed", n})).then(() => { if(openId === id) renderModal(); });
 }
 async function readFull(id){
-  const name = encodeURIComponent(id);
-  for(const dir of ["Cards", "Cards/Archive"]){
-    try { return parseLog(await (await gh(`contents/vault/${dir}/${name}.md?ref=${branch()}`, {raw: true})).text()); }
-    catch(e){ if(!e || e.status !== 404) throw e; }
-  }
-  throw new Error("note not found");
+  try {
+    const d = await (await gh(`contents/export/logs/${encodeURIComponent(id)}.json?ref=${branch()}`, {raw: true})).json();
+    return d && Array.isArray(d.log) ? d.log : null;
+  } catch(e){ if(e && e.status === 404) return null; throw e; }   // 404: the node has not written it (yet): the exported tail
 }
 function closeCard(){ edGuard(() => { edReset(); openId = null; openEpic = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }); }
 function renderModal(){
