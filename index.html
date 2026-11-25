@@ -722,7 +722,7 @@ svg.burn{display:block; width:100%; height:auto} .ubreak{max-width:560px; displa
 @media (prefers-reduced-motion: reduce){ .cspin::before{animation:none} }
 .gbar.planned{background:color-mix(in srgb, var(--gc) 45%, transparent)}
 /* HUB144: hatched from the gate pass (--gsplit) to the merge (--gend), solid before and after */
-/* HUB146: Merged, in testing: solid only while it was worked on, hatched while it waited for the merge, then pale
+/* HUB146: Testing: solid only while it was worked on, hatched while it waited for the merge, then pale
    with a dotted edge while it is in testing: no agent works on it */
 .gbar.testing{border-style:dotted; background:linear-gradient(90deg, var(--gc) 0 var(--gsplit,0px), transparent var(--gsplit,0px)), repeating-linear-gradient(135deg, var(--gc) 0 4px, transparent 4px 8px) 0 0 / var(--gend,0px) 100% no-repeat, color-mix(in srgb, var(--gc) 20%, transparent)}
 .gbar.waiting{background:linear-gradient(90deg, var(--gc) 0 var(--gsplit,0px), transparent var(--gsplit,0px) var(--gend,100%), var(--gc) var(--gend,100%)), repeating-linear-gradient(135deg, var(--gc) 0 4px, transparent 4px 8px)}
@@ -1145,13 +1145,13 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
 const COLS = [
   {k:"park", name:"Parked", cc:"--c-park", hint:"Want, Later and deferred items."},
   {k:"back", name:"Backlog", cc:"--c-back", hint:"Must items not yet scheduled."},
-  {k:"refining", name:"In refinement", alt:"Refinement", cc:"--c-refining", hint:"Being refined with you: art previews or design questions in progress."},
+  {k:"refining", name:"Refinement", alt:"In refinement", cc:"--c-refining", hint:"Being refined with you: art previews or design questions in progress."},
   {k:"refined", name:"Refined", cc:"--c-refined", hint:"Refined by you: decisions made, ready to schedule."},
   {k:"next", name:"Next up", cc:"--c-next", hint:"Claude works top to bottom."},
-  {k:"assign", name:"Assigned", cc:"--c-assign", hint:"Claimed by a stream that has not started on it yet; it moves to In progress with the stream's first step."},
-  {k:"prog", name:"In progress", alt:"Development", cc:"--c-prog", hint:""},
-  {k:"built", name:"Ready to merge", alt:"Developed", cc:"--c-built", hint:"Built on its branch; its own tests pass; waiting for the next batch merge."},
-  {k:"test", name:"Merged, in testing", alt:"Testing", cc:"--c-test", hint:"In master; the full suite and promotion are pending or failing."},
+  {k:"assign", name:"Assigned", cc:"--c-assign", hint:"Claimed by a stream that has not started on it yet; it moves to Development with the stream's first step."},
+  {k:"prog", name:"Development", alt:"In progress", cc:"--c-prog", hint:""},
+  {k:"built", name:"Developed", alt:"Ready to merge", cc:"--c-built", hint:"Built on its branch; its own tests pass; waiting for the next batch merge."},
+  {k:"test", name:"Testing", alt:"Merged, in testing", cc:"--c-test", hint:"In master; the full suite and promotion are pending or failing."},
   {k:"done", name:"Done", cc:"--c-done", hint:"Committed and tested."},
   {k:"rej", name:"Rejected", cc:"--c-rej", hint:"Decided against; kept for the record."},
 ];
@@ -1536,7 +1536,7 @@ function saveState(){
   s.title = ok ? "Synced: every change is on the board" : "";
   const pop = $("#syncpop"); if(pop && !pop.hidden) renderSyncPop();   // HUB394: the popup's Board block says the same
 }
-// how many questions would be open in column `col` (the desktop's move rule: none on Ready to merge / Merged / Done)
+// how many questions would be open in column `col` (the desktop's move rule: none on Developed / Merged / Done)
 function openCount(c, col){
   const a = c.ans || {}, qs = qList(c), opts = Array.isArray(c.opts) ? c.opts : [];
   let n = opts.filter(o=>o && o.id && !a[o.id]).length;
@@ -1618,7 +1618,7 @@ function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q)
 // that the privacy rule keeps the card's newest version there (that version never reaches this page)
 // HUB68: a card with a problem to look at: a blocker, a sync issue, a change the board refused, idle
 // HUB320: the card's open hand-back to its Lead ({by, why, at}), drawn as the hourglass
-// HUB379: the stream (agent or session) that holds an Assigned or In progress card, from its `assigned` field
+// HUB379: the stream (agent or session) that holds an Assigned or Development card, from its `assigned` field
 function streamOf(c){ return (c.col === "assign" || c.col === "prog") && typeof c.assigned === "string" ? c.assigned.trim() : ""; }
 function handback(c){ const h = c.handback; return h && typeof h === "object" && h.at ? h : null; }
 function cardIssue(c){ return !!(c.blk || syncIssue(c) || refusedNote(c.id) || idleMin(c)); }
@@ -1657,7 +1657,7 @@ function idleMin(c){
   let last = 0;
   const seen = t => { const v = Date.parse(t || ""); if(v > last) last = v; };
   for(const j of (hubStatus && hubStatus.jobs) || []){
-    // a release's merge or gate covers every Ready to merge card of the batch, not only the card it was posted on
+    // a release's merge or gate covers every Developed card of the batch, not only the card it was posted on
     if(j && c.col === "built" && ["integrate", "gate"].includes(j.kind) && JOB_BUSY.includes(j.state)) return 0;
     if(!j || j.card !== c.id) continue;
     if(JOB_BUSY.includes(j.state)) return 0;
@@ -2508,7 +2508,7 @@ function selMove(how){   // per column: the selected cards are gathered into one
 }
 // >>> select-rules (tests/test_app.py runs this block)
 // HUB223: why card c may not move to column k: the board's move rules (hub/pm/rules.py move_problem), "" when it may.
-// A card In refinement leaves it here only for Backlog, Parked or Rejected: the App does not hold its refinement
+// A card in Refinement leaves it here only for Backlog, Parked or Rejected: the App does not hold its refinement
 // record, and the board itself moves one with nothing uncertain left to Refined.
 function moveProblem(c, k){
   if(c.col === k) return "";
@@ -2991,7 +2991,7 @@ document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && openId && !(d
 document.addEventListener("keydown", ev=>{ if(ev.key==="Escape" && selMode && !openId && $("#rankm").hidden && $("#newm").hidden && $("#fpop").hidden){ ev.preventDefault(); setSelMode(false); } });
 $("#selbtn").addEventListener("click", ()=>setSelMode(!selMode));
 
-// Ranking game (Backlog, Parked, In refinement, Refined): binary insertion of the cards (in their current order), one
+// Ranking game (Backlog, Parked, in Refinement, Refined): binary insertion of the cards (in their current order), one
 // "which is higher?" at a time. The answers are replayed from the start on every step, so Undo is exact; saving early
 // keeps the cards ranked so far on top and the rest below them in their current order. The result is one `order`
 // change: the column's card ids, top first.
@@ -3129,7 +3129,7 @@ function createProblem(v, ctx){
     if(txt("t").length > 200) return "The title is at most 200 characters.";
     if(!ctx.kinds.includes(v.type)) return "Choose the card's type.";
     if(![1, 2, 3, 4].includes(v.pri)) return "Choose a priority.";
-    if(!CREATE_COLS.includes(v.col)) return "A new card starts in Parked, Backlog, In refinement, Refined or Next up.";
+    if(!CREATE_COLS.includes(v.col)) return "A new card starts in Parked, Backlog, in Refinement, Refined or Next up.";
     if(v.project && !ctx.projects.has(v.project)) return "Choose the card's project: every card has one.";   // HUB350
     if(v.epic){
       if(!ctx.epics.has(v.epic)) return "That epic is not on the board.";
@@ -5628,7 +5628,7 @@ function renderQueues(){
 }
 
 // ---------- Gantt (HUB105): the live cards on a time line, planned against the hub's resource limits.
-// A started card (In progress, Ready to merge, Merged in testing) runs from `started` (else column_since) to its `eta`
+// A started card (Development, Developed, Testing) runs from `started` (else column_since) to its `eta`
 // (else start + `estimate`); Next up cards are planned forward from now in their column's order, and Refined cards only
 // to fill the next 24 hours (HUB131); Artwork cards have their own art slots (HUB125),
 // as slots free up: the game projects share the stream slots, the coordinator's projects have their own, and a card
@@ -5641,7 +5641,7 @@ const GANTT_HORIZON_H = 24;               // HUB131: Next up plans this far ahea
 const GANTT_COORD_PROJECTS = ["primarch"];   // the coordinator's projects; every other project's cards are game streams
 const REL_GAP_PX = 60;                     // HUB282: release lines closer than this share one line and one label
 const GANTT_DEFAULT_MIN = 240;            // the length of a card with no estimate (and, started, no eta): dashed
-const GANTT_OVERDUE_MIN = 60;             // an In progress card past its eta is taken to need this much more from now
+const GANTT_OVERDUE_MIN = 60;             // an in Development card past its eta is taken to need this much more from now
 const GANTT_COLS = ["prog", "test", "built", "assign", "next", "refined"];   // the rows' order: started first, then the plan
 // ahead: the chart reaches at least this many days past now (HUB219: the Week view draws three weeks, not only to the plan's end)
 const GANTT_SCALES = {day: {pxh: 22, slice: 1, tick: 3, label: "Day", ahead: 1}, week: {pxh: 2, slice: 6, tick: 24, label: "Week", ahead: 21}};
@@ -5742,7 +5742,7 @@ function gPastSpan(c, from, T){
   return {s, e, done: w};
 }
 // HUB168: when a card was worked on, for the past part of the Streams / Coordinator strips: from its start to its
-// gate pass (else its move on: Ready to merge, Merged in testing, Done); In progress to now. null: never started
+// gate pass (else its move on: Developed, Testing, Done); Development to now. null: never started
 function gWorked(c, now, T){
   const s = T(c.started); if(isNaN(s)) return null;
   const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {}, gate = T(mw.from);
@@ -5797,13 +5797,13 @@ function ganttPlan(list, now){
     }
     let e = gTime(c.eta), src = "eta", dashed = false, overdue = false;
     if(isNaN(e) || e <= s){ const m = est(c); e = s + (m || GANTT_DEFAULT_MIN) * G_MIN; src = m ? "start + estimate (" + fmtDur(m * G_MIN) + ")" : "start + default length (no estimate, no eta)"; dashed = !m; }
-    const pool = c.col === "prog" ? gPool(c) : null;   // Ready to merge and Merged in testing wait on the merge, not on a stream
+    const pool = c.col === "prog" ? gPool(c) : null;   // Developed and Testing wait on the merge, not on a stream
     if(pool && e < now){ overdue = true; e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: overdue, " + fmtDur(GANTT_OVERDUE_MIN * G_MIN) + " more assumed"; }
     // HUB144: the board's merge_wait: the card's gate passed (from), the merge done (to; empty while it waits)
     const mw = c.merge_wait && typeof c.merge_wait === "object" ? c.merge_wait : {};
-    const gated = c.col === "prog" && !isNaN(gTime(mw.from)) && !mw.to;   // In progress, gate passed: it waits for the merge
+    const gated = c.col === "prog" && !isNaN(gTime(mw.from)) && !mw.to;   // Development, gate passed: it waits for the merge
     let kind = pool && !gated ? "started" : c.col === "built" || gated ? "waiting" : "testing", done = null, merged = null;
-    if(kind === "waiting"){   // HUB133: the work ended when it went to Ready to merge; from then on it waits for the merge
+    if(kind === "waiting"){   // HUB133: the work ended when it went to Developed; from then on it waits for the merge
       done = gTime(mw.from); if(isNaN(done)) done = gTime(c.colSince); if(isNaN(done) || done < s) done = s;
       if(e < now){ e = now + GANTT_OVERDUE_MIN * G_MIN; src += " passed: still waiting for the merge"; }
     }
@@ -6206,7 +6206,7 @@ function drawGantt(host){
       const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
       const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "") + (c.col === "prog" && streamOf(c) ? " live" : "");   // HUB383: a stream works on it now
       const w = Math.max(4, X(it.e) - X(it.s));
-      // HUB133: work done (solid) up to when it went to Ready to merge, then hatched while it waits for the merge
+      // HUB133: work done (solid) up to when it went to Developed, then hatched while it waits for the merge
       const split = hatch || was ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
       const gend = hatch && it.merged != null ? Math.max(split, Math.min(w, X(it.merged) - X(it.s))) : null;
       cell = el("button",{type:"button", class:cls, style:"left:" + X(it.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : "") + (split != null ? "; --gsplit:" + split + "px" : "") + (gend != null ? "; --gend:" + gend + "px" : ""), "aria-label":tip, ...hover,
@@ -6249,14 +6249,14 @@ function ganttStrips(o){
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
   for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
-  // HUB217: each strip's label entry counts its pool In progress now against the limit (the header's pills, before)
+  // HUB217: each strip's label entry counts its pool in Development now against the limit (the header's pills, before)
   const poolHead = {
     stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
-      "Game development streams In progress now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
+      "Game development streams in Development now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
     drawn: [dNow > dLim, "Art: " + dNow + " of " + dLim + " now",   // HUB399: the drawn art is simply Art; ComfyUI art is jobs, no stream, no strip
-      "Art Claude draws (Artwork cards with art_tool drawn) In progress now, apart from the development streams, against its own limit (Hub tab)"],
+      "Art Claude draws (Artwork cards with art_tool drawn) Development now, apart from the development streams, against its own limit (Hub tab)"],
     coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
-      "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") In progress now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
+      "Exarch's cards (" + GANTT_COORD_PROJECTS.join(", ") + ") Development now, against the limit" + (cLim === Infinity ? ": none on Turbo (HUB196)" : "")]};
   for(const [pool, name] of [["stream", "Streams"], ["drawn", "Art"], ["coord", "Exarch"]]){
     const iv = plan.busy[pool], lim = plan.limit[pool], step = sc.slice * G_H, kids = [];
     let peak = isFinite(lim) ? lim : 1;   // Turbo: no stream limit (HUB174), no coordinator limit (HUB196)
@@ -6394,7 +6394,7 @@ function drawStreams(host){
   }
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
-  // HUB434: this tab's Streams count is the stream rows working a card now (the rows below), not every In progress card
+  // HUB434: this tab's Streams count is the stream rows working a card now (the rows below), not every in Development card
   const strips = {plan, list, now, t0, t1, X, sc, row, inner, streamNow: streamsWorking(rows)};
   ganttStrips(strips);
   for(const r of rows){
