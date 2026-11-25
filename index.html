@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex">
 <title>Primarch Project Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Jost:wght@300&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* The old Work Board's page (legacy/work-board/index.html) on the hub's data: the page scrolls as a whole; the filter bar
    sticks to the top, the epic column sits left of the board, columns grow to fit their cards (drag the board to pan
@@ -19,7 +19,6 @@
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-assign:#2f6f8f; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
   --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
   --logo-gold:#a97b1f; --logo-gold2:#d3a846; --logo-por:#4b1d5e; --logo-por-a:.14;   /* HUB454: the header logo's imperial gold and porphyry */
-  --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
 }
@@ -57,7 +56,7 @@ header.top{padding-block:14px 4px; display:grid; gap:8px}
 .budget{display:inline-flex; align-items:center; gap:4px; margin-left:6px; white-space:nowrap}   /* HUB272 */
 .budget .budgetin{width:7em; padding:2px 6px; font:inherit}   /* HUB274: the empty tally row added a gap above the tabs */
 header.top h1{font-family:"Jost",var(--f-body); font-weight:300; letter-spacing:.01em}   /* EXARCH F: the Hub's name in Jost Light */
-h1{font-family:var(--f-display); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
+h1{font-family:var(--f-body); font-weight:400; font-size:2rem; line-height:1.1; margin:0; text-wrap:balance}
 .hrow{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline}
 /* HUB454: the header logo, a pearled gold roundel with the Π Ρ Μ Χ monogram, and the name in Jost Light */
 h1.logo{display:flex; align-items:center; gap:14px; align-self:center; line-height:1}
@@ -351,7 +350,7 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .tgroup{display:grid; gap:6px}
 .thead{position:relative; display:grid}
 .epic.theme{background:hsl(var(--h) var(--chip-s) var(--chip-l)); border-top:1px solid var(--line); border-left:5px solid hsl(var(--h) 55% 50%); padding:7px 30px 7px 10px}
-.theme .tn{font-family:var(--f-display); font-size:1.08rem; line-height:1.15}
+.theme .tn{font:600 1.02rem/1.2 var(--f-body)}   /* HUB480: Public Sans, no display font */
 .theme .eb{height:5px; background:var(--surface)}
 .tnone{font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:6px 30px 0 2px}
 .ttw{position:absolute; top:5px; right:5px; width:22px; height:22px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font:inherit; font-size:.85rem; line-height:22px; cursor:pointer}
@@ -456,7 +455,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .mcol{font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-left:3px solid var(--cc); padding-left:6px}
 .mclose{margin-left:auto}
 .card.full{cursor:auto; border:0; border-left:4px solid var(--pc,var(--line)); padding:2px 0 2px 12px; font-size:15px}
-.card.full .t{font-size:1.1rem; text-wrap:balance}
+.card.full .t{margin:0; font-size:1.1rem; text-wrap:balance}
 .card.full .st,.card.full .d,.card.full .meta{font-size:.9rem}
 .card.full .d{max-width:70ch}
 .card.full .dq .qt{font-size:.9rem}
@@ -467,7 +466,7 @@ body.modal-open{overflow:hidden}
 .rankbtn{padding:1px 9px}
 .morebtn{margin:6px 10px 6px; align-self:flex-start}
 .rk{width:min(820px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:12px}
-.rk h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
+.rk h3{margin:0; font:600 1.05rem/1.3 var(--f-body)}   /* HUB480: the HUB438 heading style */
 .rk .rkq{color:var(--muted); font-size:.9rem}
 .rk .rkbar{height:5px; border-radius:4px; background:var(--sunk); overflow:hidden} .rk .rkbar i{display:block; height:100%; background:var(--accent)}
 .rk .pair{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%,300px),1fr)); gap:12px}
@@ -496,7 +495,7 @@ body.modal-open{overflow:hidden}
 .newwin.min .nwhead{cursor:default}
 .newwin.min .nwhead h3{font-size:1rem}
 .newf{width:min(620px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:10px}
-.newf h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
+.newf h3{margin:0; font:600 1.05rem/1.3 var(--f-body)}   /* HUB480 */
 .newf .kinds{display:flex; flex-wrap:wrap; gap:6px}
 .newf .kinds button{padding:4px 12px; min-height:32px}
 .newf .kinds button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
@@ -527,8 +526,9 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 .status h3{margin:4px 0 0; font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
 .mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0; align-content:start}
+.status h4{margin:4px 0 0; font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}   /* HUB480: a part of a machine card (the old h3 look) */
 .mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.mcard .mn{font:600 1.05rem/1.3 var(--f-body); text-transform:capitalize}   /* HUB478: a machine's title is a section heading (HUB438), not the display font */
+.mcard h3.mn{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:capitalize; letter-spacing:0; color:var(--ink)}   /* HUB480: a real h3 under the tab's h2; a class, so .status h3 does not restyle it */   /* HUB478: a machine's title is a section heading (HUB438), not the display font */
 .mach.rows{grid-template-columns:1fr}
 /* HUB263: the Decisions tab's headings step down in size, weight and colour: the page's title, then each section
    (Manual actions, Past manual actions, Decisions), then its parts (Active, Snoozed, Your steps), then a project's
@@ -602,6 +602,9 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .gscale button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
 /* HUB175: the Hub tab's pace selector, three equal segments; the help below follows the hovered or focused one */
 .pacebox{display:grid; gap:6px; max-width:560px}
+.spause{display:grid; gap:4px; max-width:640px; margin:6px 0; padding:6px 10px; border-left:3px solid var(--accent); background:var(--surface); border-radius:0 6px 6px 0}   /* HUB479 */
+.spause.paused{border-left-color:var(--q)}
+.spause p{margin:0} .spause .pbtn{justify-self:start}
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.85rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
 .pacesel button:first-child{border-left:0}
@@ -967,7 +970,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 /* the Sync popup: under the Sync indicator on a desktop, the full width on a narrow screen */
 .syncpop{position:fixed; z-index:16; top:64px; left:var(--spx,16px); width:min(520px, calc(100vw - 32px)); max-height:calc(100dvh - 80px); overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.22); font-size:.85rem}
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
-.syncpop .phead b{flex:1}
+.syncpop .phead h2{flex:1; margin:0; font:700 1rem/1.3 var(--f-body)}   /* HUB480: the popup's title is a heading */
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
 /* HUB439: the Hub tab's sections are panels side by side on a wide screen; a row stays as wide as it reads */
 #hub{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); align-items:start; gap:14px 32px}
@@ -1310,6 +1313,7 @@ function changeText(ch){
   if(f === "item") return "Exarch AI item dismissed";
   if(f === "lead") return "Lead " + String((v && v.state) || v || "").replace(/_/g, " ");   // HUB331
   if(f === "exarch.on") return "Exarch AI turned " + (v ? "on" : "off");
+  if(f === "streams.paused") return v ? "streams paused" : "streams resumed";   // HUB479
   if(f === "exarch.model") return "default model: " + String(v);
   if(f === "exarch.plan") return "plan " + (v && v.act === "approve" ? "approved" : "discarded");
   if(f === "exarch.triage") return "triage request: " + (v && v.kind) + " " + (v && String(v.act).replace(/_/g, " "));
@@ -1368,7 +1372,7 @@ function changeSettled(id, ch, sent, exp){
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
   // a queue order, a new or edited thing (HUB120, HUB188), an Exarch AI chat item or Lead state (HUB331) and what is set
   // on Exarch AI itself (exarch.on, .model, .plan, .chat) have no doc in the export to compare with: only `applied` settles them
-  const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.");
+  const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.") || f === "streams.paused";
   if(!named && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
@@ -2007,7 +2011,7 @@ function cardEl(c, full=false){
       el("button",{type:"button", class:"rec", title:"Copy the reason", onclick:ev=>{ ev.stopPropagation();
         try{ navigator.clipboard.writeText(why).then(()=>{ ev.target.textContent = "Copied"; }, ()=>{}); }catch(e){} }}, "Copy"))); }
   if(full && stageText(c)) e.append(el("div",{class:"st"}, el("b",{},"Time in each column: "), stageText(c)));
-  e.append(el("div",{class:"t"}, c.t||""));
+  e.append(el(full ? "h2" : "div",{class:"t"}, c.t||""));   // HUB480: the open card's title is the dialog's heading
   if(streamOf(c)) e.append(el("div",{class:"strm"}, el("span",{class:"lab stream", title:(c.col === "assign" ? "Assigned to " : "Worked on by ") + streamOf(c)}, "▸ " + streamOf(c))));   // HUB379
   if(full){ const rl = releaseLinksEl(c); if(rl) e.append(rl); }   // HUB231
   if(full){ const al = cardArtifactsEl(c); if(al) e.append(al); }   // HUB299
@@ -4646,11 +4650,11 @@ function drawMachines(host){
     const over = el("div",{class:"mach ov"});   // HUB288: one machine a row, going down; its graphs across
     // HUB232 / HUB233: the All machines frame holds the machines' tokens per hour (one line a machine, was a card of its own and
     // a graph in each machine's card) and the same per session or agent; the token bars are there when two machines report
-    over.append(el("div",{class:"mcard allm"}, el("div",{class:"mh"}, el("span",{class:"mn"}, "All machines")),
+    over.append(el("div",{class:"mcard allm"}, el("div",{class:"mh"}, el("h3",{class:"mn"}, "All machines")),
       tokMerged() ? el("div",{class:"ubox tbox", "data-machine":TOK_ALL, hidden:true}) : null,
       el("div",{class:"rbox", hidden:true}),
       el("div",{class:"rbox srate", "data-machine":TOK_SESS, hidden:true})));
-    for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine)),
+    for(const m of machines) over.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("h3",{class:"mn"}, m.machine)),
       el("div",{class:"ubox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"ubox tbox", "data-machine":String(m.machine), hidden:true}),
       el("div",{class:"cbox", "data-machine":String(m.machine), hidden:true})));   // HUB234: its sessions' context size
@@ -4690,10 +4694,10 @@ function drawMachines(host){
       if(m.hub_version) add("Hub version", m.hub_version);
       if(m.code) add("Hub code", m.code + (m.update ? " (update " + m.update + (m.update_note ? ": " + m.update_note : "") + ")" : ""));
       const wt = workTable(work.filter(w => w.machine === m.machine));
-      mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("span",{class:"mn"}, m.machine), stateEl(st),
+      mach.append(el("div",{class:"mcard"}, el("div",{class:"mh"}, el("h3",{class:"mn"}, m.machine), stateEl(st),
         st === "online" ? stateEl(local.length || m.running_job ? "working" : "idle") : null), dl,
-        el("h3",{}, "Queue"), machineQueueEl(m, queued),
-        el("h3",{}, "Local work"), wt || el("p",{class:"note"}, "No local work recorded.")));
+        el("h4",{}, "Queue"), machineQueueEl(m, queued),
+        el("h4",{}, "Local work"), wt || el("p",{class:"note"}, "No local work recorded.")));
     });
     host.append(el("h2",{}, "Machines"), mach);
     const lw = workTable(work.filter(w => !names.has(String(w.machine))));
@@ -4723,6 +4727,31 @@ function sessionsSection(){
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
   ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM and the machines' game slots still apply"]];
+// HUB479: streams paused or resumed by the user, apart from the Pace (usage.streams_paused; card "hub", field "streams.paused")
+function streamsPausedNow(){
+  const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
+  let p = !!(u && u.streams_paused === true);
+  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "streams.paused") p = ch.value === true;   // the user's choice, on its way
+  return p;
+}
+function streamsPausedSet(v){
+  if(readOnly){ toast("This view is read-only."); return; }
+  change({id: "hub", upd: null}, "streams.paused", v === true);
+  renderStreams(); renderSyncPop();
+  const b = document.getElementById("streams-pause"); if(b) b.focus({preventScroll:true});
+}
+// the Streams tab's pause control: separate from the Pace, which keeps its limits and everything else as set
+function streamsPauseBox(){
+  const paused = streamsPausedNow(), pace = usageNow().pace, pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
+  return el("div",{class:"spause" + (paused ? " paused" : ""), role:"group", "aria-label":"Pause or resume streams"},
+    el("button",{type:"button", id:"streams-pause", class:"pbtn", disabled:readOnly ? true : null, "aria-pressed":String(paused),
+      onclick:() => streamsPausedSet(!paused)}, paused ? "Resume streams" : "Pause streams"),
+    el("p",{class:"note", role:"status"}, paused
+      ? "Streams are paused: no new stream or card build starts and Leads start none, whatever the Pace allows. Streams already running finish their work. Resume to carry on."
+      : "Streams are running as the Pace allows. Pausing stops new streams and card builds from starting (the ones running finish) and does not change the Pace, its limits or anything else."),
+    el("p",{class:"note"}, "The Pace is " + pname + ": it sets how many streams may run when they are not paused. ",
+      el("a",{href:"#hub", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); showTab("hub"); }}, "Change the Pace in the Hub tab")));
+}
 function usageNow(){
   const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
   let pace = u && u.pace || "moderate";
@@ -6362,7 +6391,7 @@ function renderStreams(){   // a fault in this tab must never stop the board fro
 function drawStreams(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), live = streamLive();
-  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), live,
+  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsPausedNow(), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
     hubStatus && [hubStatus.machines, hubStatus.sessions], sessSort, tokMode, tokHours, [...tokens.entries()].map(([k, d]) => [k, d.end]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -6376,6 +6405,7 @@ function drawStreams(host){
   const setScale = k => { filt.gscale = k; ls("kb.filters", filt); renderStreams(); };
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
     el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
+  host.append(streamsPauseBox());   // HUB479
   if(!live.length && !streamsWorking(rows)) host.append(el("p",{class:"note nostreams", role:"status"}, "No streams active" + (rows.length ? ": the rows below are queued cards, not a running plan." : ".")));   // HUB457
   const sessions = () => { graphWin = graphWindow(); try { return sessionsSection(); } finally { graphWin = null; } };   // HUB177: one window for every rate
   if(!rows.length){ host.append(el("p",{class:"note"}, "No streams active or queued" + (filt.j ? " with this project filter." : "."))); host.append(...sessions()); return; }
@@ -7321,12 +7351,14 @@ function leadRow(k, p, rows){
 }
 // HUB343: the Leads with a tab: a project other than the hub, with a Lead charter (the core's last tick), whose Lead is
 // active or snoozed (a message a snoozed Lead has answered ends its snooze); each Lead once
+// HUB481: the hub's own project has a Lead tab too (the primarch Lead, whose project row names no Lead: `<key>-lead`)
+function leadName(k, p){ return String(p && p.lead || "").trim() || (k ? k + "-lead" : ""); }
 function leadTabs(projects, rows, now){
   const out = [];
   for(const [k, p] of projects){
-    const r = (Array.isArray(rows) ? rows : []).find(x => x && x.key === k), role = String(p && p.lead || "").trim();
-    if(!r || r.charter !== true || isHubProject(k, p) || out.includes(role)) continue;
-    if(["active", "snoozed"].includes(leadState(leadRow(k, p, rows), now))) out.push(role);
+    const r = (Array.isArray(rows) ? rows : []).find(x => x && x.key === k), role = leadName(k, p);
+    if(!r || r.charter !== true || !role || out.includes(role)) continue;
+    if(["active", "snoozed"].includes(leadState(leadRow(k, Object.assign({}, p, {lead: role}), rows), now))) out.push(role);
   }
   return out;
 }
@@ -7379,7 +7411,7 @@ function aiMerge(mine, theirs, base){
 // <<< drawer-rules
 function leadRows(){ const x = exarchNow().x; return x && Array.isArray(x.projects) ? x.projects : []; }
 function chatLeads(){ return leadTabs(projects, leadRows(), Date.now()); }   // HUB343: none before the core's first tick is in the export
-function leadProject(role){ for(const [k, p] of projects) if(String(p.lead) === role) return [k, p]; return ["", null]; }
+function leadProject(role){ for(const [k, p] of projects) if(leadName(k, p) === role) return [k, p]; return ["", null]; }
 function aiEnsure(){   // the Exarch chat always first; one chat per Lead that has a tab
   if(!ai.chats.some(c => c.kind === "exarch")) ai.chats.unshift({conv: aiId(), kind: "exarch", lead: "", project: "", title: "Exarch", n: 0, msgs: [], hidden: false});
   for(const role of chatLeads()) if(!ai.chats.some(c => c.kind === "lead" && c.lead === role)){
@@ -7581,7 +7613,7 @@ function renderSyncPop(){
     el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
-  const kids = [el("div",{class:"phead"}, el("b",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
+  const kids = [el("div",{class:"phead"}, el("h2",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
     popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]))];
   // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
   // the nodes stay as they are unless what they show changed (every handler closes over values that are part of the markup)
@@ -7611,6 +7643,7 @@ function syncPopExtra(){
   const over = pace === "turbo" ? null : streamsOver(live, Number(allowed));
   return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Hub tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
+    kv("Streams", streamsPausedNow() ? el("span",{class:"row wy"}, ico("alert-triangle", "wy", "Streams are paused"), "Paused · ", el("a",{href:"#streams", title:"Resume streams in the Streams tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("streams"); }}, "resume them in the Streams tab")) : "Running as the Pace allows"),
     kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
