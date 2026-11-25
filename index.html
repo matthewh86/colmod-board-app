@@ -7475,7 +7475,7 @@ function usageFigures(){
   if(x){
     const lvl = x.rising ? "tk-red" : x.left != null && x.limit ? extraLevel(100 * x.left / x.limit) : "";
     out.push({k: "extra", label: "Usage credits", lvl, tip: extraLine(x) + (x.rising ? "\nRed: the spend rose in the last 30 minutes (HUB284)." : ""),
-      value: (x.left != null ? "$" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "$" + x.spent.toFixed(2) + " used") + extraAge(x)});
+      rising: !!x.rising, value: (x.left != null ? "$" + x.left.toFixed(2) + " left of $" + x.limit.toFixed(0) : "$" + x.spent.toFixed(2) + " used") + extraAge(x)});
   }
   return out;
 }
@@ -7492,10 +7492,36 @@ function bestWarn(figs){
   return b;
 }
 const WARN_CLASS = {"tk-yellow": "wy", "tk-orange": "wo", "tk-red": "wr"};
+// >>> sync-symbols (tests/test_app.py runs this block)
+// HUB475: the Sync indicator's symbols. Usage: the WORST of the Plan's windows (Weekly, 5-hour), green to red. API credits:
+// a second symbol while they are in use, yellow to red. Usage credits: a third while in use, orange to red.
+// Which checks are "in use" is this one function (the user's answers on HUB475 may change it): the API credits at usage
+// stage 2; the usage credits at stage 4 or while their spend is rising.
+function symInUse(kind, figs, stage){
+  if(kind === "api") return stage === 2;
+  const x = figs.find(f => f.k === "extra");
+  return stage >= 4 || !!(x && x.rising);
+}
+function syncSymbols(figs, stage){
+  const rk = {"tk-yellow": 1, "tk-orange": 2, "tk-red": 3}, cls = ["ok", "wy", "wo", "wr"], out = [];
+  let worst = null;
+  for(const f of figs) if(f.k === "plan" && (!worst || (rk[f.lvl] || 0) > (rk[worst.lvl] || 0))) worst = f;
+  const n = worst ? rk[worst.lvl] || 0 : 0;
+  out.push({k: "usage", cls: cls[n], icon: n ? "alert-triangle" : "circle-check",
+    title: worst ? (n ? "Plan usage: the worst of the Weekly and 5-hour windows is " + worst.label + ": " + worst.value : "Plan usage is fine; the worst window is " + worst.label + ": " + worst.value) : "Plan usage: no reading yet"});
+  const api = figs.find(f => f.k === "api");
+  if(api && symInUse("api", figs, stage))
+    out.push({k: "api", cls: api.lvl === "tk-red" ? "wr" : api.lvl === "tk-orange" ? "wo" : "wy", icon: "alert-triangle", title: "API credits are in use: " + api.value});
+  const x = figs.find(f => f.k === "extra");
+  if(x && symInUse("extra", figs, stage))
+    out.push({k: "extra", cls: x.rising || x.lvl === "tk-red" ? "wr" : "wo", icon: "alert-triangle", title: "Usage credits are in use: " + x.value + (x.rising ? " (spend rising)" : "")});
+  return out;
+}
+// <<< sync-symbols
 // ---- the header: the Sync indicator (circled check, or the worst ⚠; Exarch AI's state beside it) and the compass
 function renderExarchHeader(){
-  const s = exarchNow(), figs = usageFigures(), w = bestWarn(figs), icons = $("#syncicons");   // HUB394: the best state, not the worst
-  if(icons) icons.replaceChildren(w ? ico("alert-triangle", WARN_CLASS[w.lvl], "Every usage check is low; the best is " + w.label + ": " + w.value) : ico("circle-check", "ok", "Usage is fine"), exarchStateIcon(s));
+  const s = exarchNow(), figs = usageFigures(), icons = $("#syncicons");   // HUB475: the worst plan window, plus the credits symbols in use
+  if(icons) icons.replaceChildren(...syncSymbols(figs, Number(usageNow().u && usageNow().u.stage)).map(y => ico(y.icon, y.cls, y.title)), exarchStateIcon(s));
   const b = $("#aibtn"), off = s.state === "off" || s.state === "halting";
   b.classList.toggle("off", off); b.classList.toggle("ison", s.state === "on");   // HUB381: the compass is green while Exarch AI is on
   $("#aibtnstate").textContent = off ? " · " + (s.state === "halting" ? "halting" : "off") : "";
@@ -7529,10 +7555,9 @@ function renderSyncPop(){
   const keep = p.scrollTop, s = exarchNow(), figs = usageFigures();
   // HUB380: a figure shows its short value here; the refresh and runs-out times stay in its hover text
   // HUB394/HUB416: the pill's check (bestWarn) with its reason as text, then Exarch AI's icon and status, then the sync state and the board's time
-  const worst = bestWarn(figs), st = $("#savest").textContent || (changes.size ? "Syncing" : "Synced");
+  const st = $("#savest").textContent || (changes.size ? "Syncing" : "Synced");
   const sync = el("div",{class:"bblock"},
-    el("div",{class:"row"}, worst ? ico("alert-triangle", WARN_CLASS[worst.lvl], "Every usage check is low") : ico("circle-check", "ok", "Usage is fine"),
-      worst ? "Every usage check is low; the best is " + worst.label + ": " + worst.value : "Usage is fine"),   // HUB416: the same bestWarn as the pill, so the two always agree
+    ...syncSymbols(figs, Number(usageNow().u && usageNow().u.stage)).map(y => el("div",{class:"row"}, ico(y.icon, y.cls, y.title), y.title)),   // HUB475: the pill's symbols, each with its reason as text
     el("div",{class:"row"}, exarchStateIcon(s), exarchStateText(s)),
     el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
