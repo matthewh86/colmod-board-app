@@ -1402,35 +1402,35 @@ function changeSettled(id, ch, sent, exp){
   return "";
 }
 // <<< pending-rules
-// >>> driftboard-adapter (tests/test_app.py runs this block; DB3: the Stories page's data in and its changeset out, no DOM)
-// The Driftboard kit's data contract (in) and changeset (out) against the board's epics and cards. `cards` and `epics`
+// >>> cell-planner-adapter (tests/test_app.py runs this block; DB3: the Stories page's data in and its changeset out, no DOM)
+// The Cell planner kit's data contract (in) and changeset (out) against the board's epics and cards. `cards` and `epics`
 // are Maps (or plain objects) of the export: cards {id: {t, epic, pri, cat, assigned, d, upd, col, type, adhoc}},
 // epics {key: {name, hue, order, project, retired}}. One Apply is ONE change: card "project:KEY", field "grouping",
 // value groupingChange(...); the node applies it whole or refuses it whole (hub/pm/grouping.py).
-const DRIFT_PRI = ["Highest", "High", "Medium", "Low"];   // the hub's pri 1-4
-function driftEntries(x){ return x instanceof Map ? [...x.entries()] : Object.entries(x || {}); }
-function driftPriName(n){ return Number.isInteger(n) && n >= 1 && n <= 4 ? DRIFT_PRI[n - 1] : "Medium"; }
-function driftEpics(epics, project){
-  return driftEntries(epics).filter(([, v]) => v && !v.retired && (!v.project || v.project === project))
+const CELL_PLANNER_PRI = ["Highest", "High", "Medium", "Low"];   // the hub's pri 1-4
+function cellPlannerEntries(x){ return x instanceof Map ? [...x.entries()] : Object.entries(x || {}); }
+function cellPlannerPriName(n){ return Number.isInteger(n) && n >= 1 && n <= 4 ? CELL_PLANNER_PRI[n - 1] : "Medium"; }
+function cellPlannerEpics(epics, project){
+  return cellPlannerEntries(epics).filter(([, v]) => v && !v.retired && (!v.project || v.project === project))
     .sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[0]).localeCompare(String(b[0])));
 }
-function driftStories(cards, epicKeys){
-  return driftEntries(cards).filter(([, c]) => c && epicKeys.has(c.epic) && c.col !== "done" && c.col !== "rej" && !c.archived
+function cellPlannerStories(cards, epicKeys){
+  return cellPlannerEntries(cards).filter(([, c]) => c && epicKeys.has(c.epic) && c.col !== "done" && c.col !== "rej" && !c.archived
     && c.adhoc !== true && c.type !== "Release");
 }
 // -> {epics: [{id, name, hue}], stories: [{id, title, epic, pts, pri, area, who, desc}], fields} for board.load / computeChangeset
-function toDriftData(cards, epics, project){
-  const eps = driftEpics(epics, project), keys = new Set(eps.map(([k]) => k));
-  const stories = driftStories(cards, keys).map(([id, c]) => ({id: String(c.id || id), title: String(c.t || ""), epic: c.epic,
-    pts: 3, pri: driftPriName(c.pri), area: String(c.cat || ""), who: String(c.assigned || "Unassigned"),
+function toCellPlannerData(cards, epics, project){
+  const eps = cellPlannerEpics(epics, project), keys = new Set(eps.map(([k]) => k));
+  const stories = cellPlannerStories(cards, keys).map(([id, c]) => ({id: String(c.id || id), title: String(c.t || ""), epic: c.epic,
+    pts: 3, pri: cellPlannerPriName(c.pri), area: String(c.cat || ""), who: String(c.assigned || "Unassigned"),
     desc: String(c.d || "").trim().slice(0, 300)}));
   const uniq = f => [...new Set(stories.map(s => s[f]).filter(Boolean))].sort();
   return {epics: eps.map(([k, v]) => ({id: k, name: String(v.name || k), hue: Number.isInteger(v.hue) ? v.hue : 200})),
-          stories, fields: {pts: [3], pri: DRIFT_PRI.slice(), area: uniq("area"), who: ["Unassigned", ...uniq("who").filter(w => w !== "Unassigned")]}};
+          stories, fields: {pts: [3], pri: CELL_PLANNER_PRI.slice(), area: uniq("area"), who: ["Unassigned", ...uniq("who").filter(w => w !== "Unassigned")]}};
 }
 // Why this changeset cannot be sent, as a list of messages ([] when it can). The node checks the same against the live board.
 function groupingProblems(cs, cards, epics, project){
-  const out = [], data = toDriftData(cards, epics, project);
+  const out = [], data = toCellPlannerData(cards, epics, project);
   const eps = new Map(data.epics.map(e => [e.id, e])), live = new Map(data.stories.map(s => [s.id, s]));
   const E = cs && cs.epics || {}, S = cs && cs.stories || {};
   const made = new Set((E.created || []).map(e => e.id)), dead = new Set((E.deleted || []).map(e => e.id));
@@ -1468,11 +1468,11 @@ function groupingProblems(cs, cards, epics, project){
 // The change's value: {v: 1, changeset (no layout, it is the viewer's own), base: {upd: {card id: its upd}}} for each touched card.
 function groupingChange(cs, cards, epics, project){
   const touched = new Set([...(cs.stories.moved || []), ...(cs.stories.edited || [])].map(s => s.id)), upd = {};
-  for(const [id, c] of driftEntries(cards)) if(touched.has(id) && c && c.upd) upd[id] = String(c.upd);
+  for(const [id, c] of cellPlannerEntries(cards)) if(touched.has(id) && c && c.upd) upd[id] = String(c.upd);
   const {layout, count, isEmpty, ...rest} = cs;
   return {v: 1, changeset: rest, base: {upd}};
 }
-// <<< driftboard-adapter
+// <<< cell-planner-adapter
 function settleChanges(data){
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
