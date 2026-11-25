@@ -1172,6 +1172,8 @@ const themes = new Map();       // key -> {name,hue,order,blurb}: the level abov
 const RELEASES_OUT = [];          // HUB147: [{id, t, at}] Done release cards of the last weeks (export releases_out)
 const RELEASES = [];              // HUB182: every Release card with its cards (export releases): not out yet first, then out, newest first
 const REL_DOCS = new Map();       // HUB199: the archived Release cards themselves (export releases[].doc), opened read-only
+const relFile = new Set();         // HUB462: ids of the REL_DOCS read from export/releases.json (declared here: the tabs draw before the data section runs)
+let relState = "", relBusy = null, curTip = null;   // relState "" | "loading" | "failed"; curTip: the commit the export was read at
 const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
 let readOnly = true, loaded = false, hubStatus = null, meta = {};
@@ -2056,8 +2058,13 @@ function cardEl(c, full=false){
   }
   // activity log = [{ts, t, img?: ["media/..png", ...]}] appended as work goes on (newest shown first, like Jira).
   // The export carries the latest entries and log_n, how many there are in all.
-  const acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
-  const actN = Math.max(acts.length, Number(c.log_n) || 0);
+  let acts = (Array.isArray(c.log) ? c.log : []).filter(a => a && (a.t || a.img));
+  const fl = full ? FULL.get(c.id) : null;   // HUB462: the whole log, read from the card's note when the card is opened
+  if(fl && fl.state === "ok"){
+    const have = fl.log.filter(a => a && (a.t || a.img)), sq = s => String(s || "").replace(/\s+/g, " ").trim();
+    acts = have.concat(acts.filter(a => a.pend && !have.some(h => sq(h.t).endsWith(": " + sq(a.t)))));
+  }
+  const actN = fl && fl.state === "ok" ? acts.length : Math.max(acts.length, Number(c.log_n) || 0);
   let actBox = null;
   if(actN){
     if(!full){   // the state line, the same on the Obsidian board: tasks done, then the number of updates
@@ -2069,6 +2076,9 @@ function cardEl(c, full=false){
     else {
       const box = el("div",{class:"acts", onclick:ev=>ev.stopPropagation()}, el("div",{class:"ah"}, "Activity",
         el("span",{}, actN > acts.length ? "the latest "+acts.length+" of "+actN+" updates" : actN+(actN===1?" update":" updates"))));
+      if(actN > acts.length && (!fl || fl.state === "loading")) box.append(el("p",{class:"note", role:"status"}, "Loading the full activity log…"));
+      else if(actN > acts.length && fl && fl.state === "failed") box.append(el("p",{class:"note", role:"status"}, "The full activity log could not be loaded. ",
+        el("button",{type:"button", class:"pbtn", onclick:ev=>{ ev.stopPropagation(); FULL.delete(c.id); wantFull(c.id); renderModal(); }}, "Try again")));
       for(const a of acts.slice().reverse()){
         const sp = actSplit(a.t);   // HUB312: the source (before "Source: text") stands left of the date and time
         const imgs = (Array.isArray(a.img) ? a.img : a.img ? [a.img] : []).map(mediaImg).filter(Boolean);
@@ -2317,6 +2327,41 @@ function epicViewEl(k){
   view.append(kids.length ? ul : el("p",{class:"hint"}, "No cards in this epic yet."));
   return view;
 }
+// HUB462: the export carries a card's latest few activity entries and log_n; the whole log is read from the card's note
+// (vault/Cards/<id>.md, or Cards/Archive/ once it is done) when the card is opened, and again when log_n has grown.
+const FULL = new Map();   // card id -> {state: "loading" | "ok" | "failed", n: the log_n it was read for, log}
+const LOG_IMG_RX = /!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+function parseLog(text){   // [{ts, t, img?}] oldest first, as hub/pm/vault.py log_entries
+  const m = /^## Activity[ \t]*\n/m.exec(text);
+  if(!m) return [];
+  let sec = text.slice(m.index + m[0].length);
+  const nx = /^## /m.exec(sec); if(nx) sec = sec.slice(0, nx.index);
+  sec = sec.replace(/<!-- pm:(begin|end) activity[^>]*-->/g, "");
+  const out = [];
+  for(const e of sec.matchAll(/^### (\S+)[^\n]*\n([\s\S]*?)(?=^### |(?![\s\S]))/gm)){
+    const imgs = [...e[2].matchAll(LOG_IMG_RX)].map(x => x[1]);
+    out.push({ts: e[1], t: e[2].replace(LOG_IMG_RX, "").trim(), ...(imgs.length ? {img: imgs} : {})});
+  }
+  return out.reverse();
+}
+function wantFull(id){
+  const base = raw.get(id) || REL_DOCS.get(id);
+  if(!base || !conn) return;
+  const n = Number(base.log_n) || 0, shown = (Array.isArray(base.log) ? base.log : []).length;
+  if(n <= shown) return;   // the export already holds the whole log
+  const have = FULL.get(id);
+  if(have && have.n >= n) return;   // loading, loaded, or failed for this much: a failure is retried by its button
+  FULL.set(id, {state: "loading", n});
+  readFull(id).then(log => FULL.set(id, {state: "ok", n, log}), () => FULL.set(id, {state: "failed", n})).then(() => { if(openId === id) renderModal(); });
+}
+async function readFull(id){
+  const name = encodeURIComponent(id);
+  for(const dir of ["Cards", "Cards/Archive"]){
+    try { return parseLog(await (await gh(`contents/vault/${dir}/${name}.md?ref=${branch()}`, {raw: true})).text()); }
+    catch(e){ if(!e || e.status !== 404) throw e; }
+  }
+  throw new Error("note not found");
+}
 function closeCard(){ edGuard(() => { edReset(); openId = null; openEpic = null; PAST_SNAP = null; renderModal(); if(lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }); }
 function renderModal(){
   const box = $("#modal");
@@ -2338,6 +2383,7 @@ function renderModal(){
   box.append(panel);
   box.hidden = false; document.body.classList.add("modal-open");
   if(same){ panel.scrollTop = keepScroll; box.scrollTop = keepBox; }   // a redraw of the open card keeps its place
+  if(!openEpic) wantFull(c.id);
 }
 
 function rankAt(colKey, index, exclude){
@@ -5301,7 +5347,7 @@ function renderHubTab(){
 
 // ---------- Releases: testing and the release line of each project
 function renderReleases(){
-  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].map(c => [c.id, c.col]), ARCH.items.length], host => {   // HUB200: each card's column marks it done or planned
+  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].map(c => [c.id, c.col]), ARCH.items.length, REL_DOCS.size, relState], host => {   // HUB200: each card's column marks it done or planned
     const {fact} = statusFacts();
     const done = Number(fact("Done")), total = Number(fact("Total"));
     const dl = el("dl",{class:"facts"});
@@ -5398,6 +5444,8 @@ function releaseLists(host){
   const mine = RELEASES.filter(r => !filt.j || !r.project || r.project === filt.j);
   const now = mine.filter(r => r.col !== "done"), past = mine.filter(r => r.col === "done");
   if(now.length) host.append(el("h2",{}, "Next releases"), el("div",{class:"rels"}, ...now.map(r => releaseEl(r, true))));   // HUB201
+  if(relState) host.append(el("p",{class:"note", role:"status"}, relState === "loading" ? "Loading the archived release cards…" : "The archived release cards could not be loaded. ",
+    relState === "failed" ? el("button",{type:"button", class:"pbtn", onclick:() => { have.rel = null; loadRelDocs(); renderReleases(); }}, "Try again") : null));
   host.append(el("h2",{}, "Previous releases"), past.length ? el("div",{class:"rels"}, ...past.map((r, i) => releaseEl(r, i === 0 && !now.length)))
     : el("p",{class:"note"}, RELEASES.length ? "None for the project chosen." : "No release out yet, or the board's export does not list them yet."));
 }
@@ -6847,6 +6895,7 @@ function showTab(name, fromHash){
   }
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
+  if(tab === "releases") loadRelDocs();   // HUB462
   renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); renderStreams();
   if(tab === "board" && render.boardDirty) render();   // HUB460: the board was not drawn while another tab was shown
 }
@@ -6912,8 +6961,35 @@ async function check(){
 // changes in one push of five (the HUB444 report), so each tip is first asked for the blob shas of the three export files
 // (two small tree reads; the export tree's sha is remembered so a push that left export/ alone costs one). A file is read
 // again only when its sha is not the one already loaded; if the shas cannot be read, every file is read, as before.
-const have = {board: null, status: null, refused: null}, dl = {board: 0, status: 0, refused: 0, trees: 0};   // dl: downloads, counted for the test
+const have = {board: null, status: null, refused: null, rel: null}, dl = {board: 0, status: 0, refused: 0, trees: 0, rel: 0};   // dl: downloads, counted for the test
 let expTree = null, expShas = null;
+// HUB462: the archived release cards (the Releases tab opens them read-only) are in export/releases.json, read when the tab is
+// opened and again only when its blob sha changed. An export from before it (no such file, or docs inside board.json's releases) works as it did.
+function loadRelDocs(){
+  if(!curTip || !conn) return Promise.resolve();
+  const sh = expShas;
+  if(sh && !sh.rel) return Promise.resolve();            // the export has no such file (yet): board.json's releases carry the cards, if any
+  if(sh && sh.rel === have.rel) return Promise.resolve();   // unchanged since it was read
+  if(relBusy) return relBusy;
+  const tip = curTip, want = sh && sh.rel;
+  relState = "loading";
+  relBusy = (async () => {
+    try {
+      const d = await (await gh(`contents/export/releases.json?ref=${tip}`, {raw: true})).json();
+      dl.rel++;
+      const docs = d && typeof d.docs === "object" && d.docs ? d.docs : {};
+      for (const k of relFile) if (!(k in docs)) REL_DOCS.delete(k);
+      relFile.clear();
+      for (const [id, doc] of Object.entries(docs)) if (doc && typeof doc === "object" && !raw.has(id)){
+        REL_DOCS.set(id, Object.assign({}, doc, {id, col: doc.col || "done", arch: true})); relFile.add(id);
+      }
+      have.rel = want || null; relState = "";
+    } catch(e) { relState = e && e.status === 404 && sh === null ? "" : "failed"; }
+    finally { relBusy = null; }
+    renderReleases();
+  })();
+  return relBusy;
+}
 async function exportShas(sha){
   try {
     dl.trees++;
@@ -6924,7 +7000,7 @@ async function exportShas(sha){
     dl.trees++;
     const t = await (await gh(`git/trees/${e.sha}`)).json();
     const by = {}; for(const f of t.tree || []) if(f.type === "blob") by[f.path] = f.sha;
-    expShas = {board: by["board.json"] || null, status: by["status.json"] || null, refused: by["phone-refused.json"] || null}; expTree = e.sha;
+    expShas = {board: by["board.json"] || null, status: by["status.json"] || null, refused: by["phone-refused.json"] || null, rel: by["releases.json"] || null}; expTree = e.sha;
     return expShas;
   } catch(e) {
     if(e && (e.status === 401 || e.status === 404)) throw e;   // check() shows the setup form
@@ -6934,6 +7010,8 @@ async function exportShas(sha){
 // Returns false when nothing the page shows has changed (the caller then redraws nothing: HUB458's rule).
 async function load(sha){
   const sh = await exportShas(sha);
+  curTip = sha;
+  if (!$("#releases").hidden) loadRelDocs();   // HUB462: the Releases tab is open: its archived cards follow a changed file
   const stale = k => !(sh && sh[k] && sh[k] === have[k]);
   const newBoard = stale("board"), newStatus = stale("status"), newRefused = stale("refused");
   if(!newBoard && !newStatus && !newRefused) return false;
@@ -6956,7 +7034,7 @@ async function load(sha){
     for (const [k, v] of Object.entries(data.epics || {})) if (v) epics.set(k, Object.assign({name: k, hue: 200}, v));
     for (const [k, v] of Object.entries(data.areas || {})) if (v) areas.set(k, Object.assign({name: k, hue: 200}, v));
     RELEASES_OUT.length = 0; for (const r of Array.isArray(data.releases_out) ? data.releases_out : []) if (r && r.id && r.at) RELEASES_OUT.push(r);
-    RELEASES.length = 0; REL_DOCS.clear();
+    RELEASES.length = 0; for (const k of [...REL_DOCS.keys()]) if (!relFile.has(k)) REL_DOCS.delete(k);   // HUB462: the ones read from releases.json stay
     for (const r of Array.isArray(data.releases) ? data.releases : []) if (r && r.id){
       const {doc, ...row} = r;   // HUB199: the archived card is kept apart (and out of the tab's redraw signature)
       if (doc && typeof doc === "object" && !raw.has(String(r.id))) REL_DOCS.set(String(r.id), Object.assign({}, doc, {id: String(r.id), col: doc.col || "done", arch: true}));
@@ -7045,7 +7123,7 @@ document.getElementById("setup").addEventListener("submit", async ev => {
   }
 });
 function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a confirmation
-  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear();
+  saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear(); relFile.clear(); have.rel = null; relState = ""; FULL.clear();
   ex.doc = null; ex.at = 0; ex.was = false; ex.asked = 0; ex.note = ""; ex.missing = 0;
   aiClear();   // HUB338: the chats and their content keys leave this browser with the connection
   tip = refEtag = null; loaded = false; hubStatus = null; have.board = have.status = have.refused = null; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
