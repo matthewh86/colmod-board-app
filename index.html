@@ -514,7 +514,7 @@ body.modal-open{overflow:hidden}
 .toast{z-index:1100; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:6px; font-size:.85rem; max-width:calc(100% - 32px)}
 /* the connect form */
 .setup{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; display:grid; gap:10px; max-width:520px; margin:14px 0 16px}
-.setup h2{margin:0; font:400 1.3rem var(--f-display)}
+.setup h2{margin:0; font:600 1.05rem/1.3 var(--f-body)}   /* HUB478: the heading style of HUB438 */
 .setup label{display:grid; gap:4px; font-size:.85rem; color:var(--muted)}
 .setup input{font:inherit; color:var(--ink); padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--sunk); min-width:0}
 .setup p{margin:0; font-size:.85rem; color:var(--muted)}
@@ -528,7 +528,7 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 .mach{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px}
 .mcard{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px; display:grid; gap:8px; min-width:0; align-content:start}
 .mcard .mh{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.mcard .mn{font:400 1.25rem var(--f-display); text-transform:capitalize}
+.mcard .mn{font:600 1.05rem/1.3 var(--f-body); text-transform:capitalize}   /* HUB478: a machine's title is a section heading (HUB438), not the display font */
 .mach.rows{grid-template-columns:1fr}
 /* HUB263: the Decisions tab's headings step down in size, weight and colour: the page's title, then each section
    (Manual actions, Past manual actions, Decisions), then its parts (Active, Snoozed, Your steps), then a project's
@@ -7460,10 +7460,12 @@ const WARN_RANK = {"tk-yellow": 1, "tk-orange": 2, "tk-red": 3};
 function usageFigures(){
   const {u, wins} = usageNow(), out = [];
   if(!u) return out;
-  for(const w of wins){
-    const left = Math.max(0, 100 - Math.round(Number(w.pct) || 0));
-    out.push({k: "plan", label: "Plan, " + w.label, lvl: tokLevel(left), short: left + " % left", value: left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-")
-      + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : ""), tip: usageLine(w) + "\nRecorded " + fmtTime(u.recorded)});
+  let lim = null, limLeft = 101;   // HUB476: only the limiting window (the least left), one line, no prose about the others
+  for(const w of wins){ const left = Math.max(0, 100 - Math.round(Number(w.pct) || 0)); if(left < limLeft){ lim = w; limLeft = left; } }
+  if(lim){
+    const w = lim, left = limLeft, v = left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-");
+    out.push({k: "plan", label: w.label, lvl: tokLevel(left), short: v, value: v + (w.runs_out_at ? " · runs out " + fmtTime(w.runs_out_at) : ""),
+      tip: wins.map(usageLine).join("\n") + "\nRecorded " + fmtTime(u.recorded)});
   }
   const c = usageCredits(u);
   if(c){   // HUB281: what is really left under the cap (spent only) and the budget still free (less what running runs hold)
@@ -7563,7 +7565,7 @@ function renderSyncPop(){
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
   const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
-    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = [...cards.values()].filter(c => c.col === "prog" && cardProject(c) === k && cardKind(c) !== "Release").length;
+    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = Number(((usageNow().u || {}).streams_by_project || {})[k]) || 0;   // HUB476: live streams, the same count as "Streams in use"
     const streams = n + (n === 1 ? " stream" : " streams");
     const txt = isHubProject(k, pr) ? (s.state === "halting" ? "Halting · " : "Active · ") + streams
       : st === "none" ? "No Lead yet" : st === "not_needed" ? "Lead not needed yet"
