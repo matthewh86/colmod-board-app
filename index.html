@@ -1145,17 +1145,18 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
 const COLS = [
   {k:"park", name:"Parked", cc:"--c-park", hint:"Want, Later and deferred items."},
   {k:"back", name:"Backlog", cc:"--c-back", hint:"Must items not yet scheduled."},
-  {k:"refining", name:"In refinement", cc:"--c-refining", hint:"Being refined with you: art previews or design questions in progress."},
+  {k:"refining", name:"In refinement", alt:"Refinement", cc:"--c-refining", hint:"Being refined with you: art previews or design questions in progress."},
   {k:"refined", name:"Refined", cc:"--c-refined", hint:"Refined by you: decisions made, ready to schedule."},
   {k:"next", name:"Next up", cc:"--c-next", hint:"Claude works top to bottom."},
   {k:"assign", name:"Assigned", cc:"--c-assign", hint:"Claimed by a stream that has not started on it yet; it moves to In progress with the stream's first step."},
-  {k:"prog", name:"In progress", cc:"--c-prog", hint:""},
-  {k:"built", name:"Ready to merge", cc:"--c-built", hint:"Built on its branch; its own tests pass; waiting for the next batch merge."},
-  {k:"test", name:"Merged, in testing", cc:"--c-test", hint:"In master; the full suite and promotion are pending or failing."},
+  {k:"prog", name:"In progress", alt:"Development", cc:"--c-prog", hint:""},
+  {k:"built", name:"Ready to merge", alt:"Developed", cc:"--c-built", hint:"Built on its branch; its own tests pass; waiting for the next batch merge."},
+  {k:"test", name:"Merged, in testing", alt:"Testing", cc:"--c-test", hint:"In master; the full suite and promotion are pending or failing."},
   {k:"done", name:"Done", cc:"--c-done", hint:"Committed and tested."},
   {k:"rej", name:"Rejected", cc:"--c-rej", hint:"Decided against; kept for the record."},
 ];
-const COL_BY_NAME = Object.fromEntries(COLS.map(c => [c.name, c.k]));
+// HUB473: a column's other name (alt) is read too: an export or a pending change may carry either spelling
+const COL_BY_NAME = Object.fromEntries(COLS.flatMap(c => [[c.name, c.k], ...(c.alt ? [[c.alt, c.k]] : [])]));
 const COL_NAME = Object.fromEntries(COLS.map(c => [c.k, c.name]));
 const NEEDS_ANSWERS = ["built", "test", "done"];   // no move there while a question is open (the desktop refuses it too)
 const PRI = {1:"P1",2:"P2",3:"P3",4:"P4"};
@@ -1367,7 +1368,7 @@ function changeSettled(id, ch, sent, exp){
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
   // a queue order, a new or edited thing (HUB120, HUB188), an Exarch AI chat item or Lead state (HUB331) and what is set
   // on Exarch AI itself (exarch.on, .model, .plan, .chat) have no doc in the export to compare with: only `applied` settles them
-  const named = ["queue", "create", "edit", "item", "lead"].includes(f) || f.startsWith("exarch.");
+  const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.");
   if(!named && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
@@ -1401,6 +1402,77 @@ function changeSettled(id, ch, sent, exp){
   return "";
 }
 // <<< pending-rules
+// >>> driftboard-adapter (tests/test_app.py runs this block; DB3: the Stories page's data in and its changeset out, no DOM)
+// The Driftboard kit's data contract (in) and changeset (out) against the board's epics and cards. `cards` and `epics`
+// are Maps (or plain objects) of the export: cards {id: {t, epic, pri, cat, assigned, d, upd, col, type, adhoc}},
+// epics {key: {name, hue, order, project, retired}}. One Apply is ONE change: card "project:KEY", field "grouping",
+// value groupingChange(...); the node applies it whole or refuses it whole (hub/pm/grouping.py).
+const DRIFT_PRI = ["Highest", "High", "Medium", "Low"];   // the hub's pri 1-4
+function driftEntries(x){ return x instanceof Map ? [...x.entries()] : Object.entries(x || {}); }
+function driftPriName(n){ return Number.isInteger(n) && n >= 1 && n <= 4 ? DRIFT_PRI[n - 1] : "Medium"; }
+function driftEpics(epics, project){
+  return driftEntries(epics).filter(([, v]) => v && !v.retired && (!v.project || v.project === project))
+    .sort((a, b) => (a[1].order ?? 99) - (b[1].order ?? 99) || String(a[0]).localeCompare(String(b[0])));
+}
+function driftStories(cards, epicKeys){
+  return driftEntries(cards).filter(([, c]) => c && epicKeys.has(c.epic) && c.col !== "done" && c.col !== "rej" && !c.archived
+    && c.adhoc !== true && c.type !== "Release");
+}
+// -> {epics: [{id, name, hue}], stories: [{id, title, epic, pts, pri, area, who, desc}], fields} for board.load / computeChangeset
+function toDriftData(cards, epics, project){
+  const eps = driftEpics(epics, project), keys = new Set(eps.map(([k]) => k));
+  const stories = driftStories(cards, keys).map(([id, c]) => ({id: String(c.id || id), title: String(c.t || ""), epic: c.epic,
+    pts: 3, pri: driftPriName(c.pri), area: String(c.cat || ""), who: String(c.assigned || "Unassigned"),
+    desc: String(c.d || "").trim().slice(0, 300)}));
+  const uniq = f => [...new Set(stories.map(s => s[f]).filter(Boolean))].sort();
+  return {epics: eps.map(([k, v]) => ({id: k, name: String(v.name || k), hue: Number.isInteger(v.hue) ? v.hue : 200})),
+          stories, fields: {pts: [3], pri: DRIFT_PRI.slice(), area: uniq("area"), who: ["Unassigned", ...uniq("who").filter(w => w !== "Unassigned")]}};
+}
+// Why this changeset cannot be sent, as a list of messages ([] when it can). The node checks the same against the live board.
+function groupingProblems(cs, cards, epics, project){
+  const out = [], data = toDriftData(cards, epics, project);
+  const eps = new Map(data.epics.map(e => [e.id, e])), live = new Map(data.stories.map(s => [s.id, s]));
+  const E = cs && cs.epics || {}, S = cs && cs.stories || {};
+  const made = new Set((E.created || []).map(e => e.id)), dead = new Set((E.deleted || []).map(e => e.id));
+  if((S.deleted || []).length) out.push("Stories cannot be deleted here (" + S.deleted.map(s => s.id).join(", ") + "): reject the card on the card itself");
+  for(const s of S.edited || []) for(const f of Object.keys(s.changes || {})) if(f !== "pri")
+    out.push(s.id + ": " + f + " is edited on the card, not on the Stories page");
+  const where = new Map([...live].map(([k, s]) => [k, s.epic])), ok = k => (eps.has(k) && !dead.has(k)) || made.has(k);
+  let loose = 0;
+  for(const m of S.moved || []){
+    const s = live.get(m.id);
+    if(!s) out.push(m.id + ": the card is no longer on the Stories page");
+    else if(s.epic !== (m.from ?? "")) out.push(m.id + ": epic is now " + s.epic + ", the page had " + (m.from ?? "none"));
+    if(s){ if(!m.to || !ok(m.to)) loose++; where.set(m.id, m.to); }
+  }
+  for(const s of S.created || []) if(!s.epic || !ok(s.epic)) loose++;
+  for(const e of E.updated || []){
+    const cur = eps.get(e.id);
+    if(!cur){ out.push(e.id + ": the epic is no longer live"); continue; }
+    for(const [f, c] of Object.entries(e.changes || {})) if(c.from !== cur[f]) out.push(e.id + ": epic " + f + " is now " + cur[f] + ", the page had " + c.from);
+  }
+  for(const id of dead){
+    if(!eps.has(id)){ out.push(id + ": the epic is no longer live"); continue; }
+    const left = [...where].filter(([, e]) => e === id).map(([k]) => k);
+    if(left.length) out.push(id + ": the epic still holds " + left.length + " story(ies); move them first");
+  }
+  for(const e of E.updated || []) if(e.changes && e.changes.name && String(e.changes.name.to).length > 24) out.push(e.id + ": an epic name is at most 24 characters");
+  for(const e of E.created || []) if(String(e.name || "").length > 24) out.push(e.name + ": an epic name is at most 24 characters");
+  for(const s of S.edited || []){
+    const p = s.changes && s.changes.pri, c = live.get(s.id);
+    if(p && c && p.from !== c.pri) out.push(s.id + ": priority is now " + c.pri + ", the page had " + p.from);
+  }
+  if(loose) out.push("Put every story in an epic before Apply (" + loose + " loose)");
+  return [...new Set(out)];
+}
+// The change's value: {v: 1, changeset (no layout, it is the viewer's own), base: {upd: {card id: its upd}}} for each touched card.
+function groupingChange(cs, cards, epics, project){
+  const touched = new Set([...(cs.stories.moved || []), ...(cs.stories.edited || [])].map(s => s.id)), upd = {};
+  for(const [id, c] of driftEntries(cards)) if(touched.has(id) && c && c.upd) upd[id] = String(c.upd);
+  const {layout, count, isEmpty, ...rest} = cs;
+  return {v: 1, changeset: rest, base: {upd}};
+}
+// <<< driftboard-adapter
 function settleChanges(data){
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
@@ -3757,6 +3829,24 @@ document.addEventListener("focusout", ev=>{ if(ev.target.tagName==="TEXTAREA") s
 // ---------- processor and memory use over time (status/load-<machine>.json, one per machine, written by its node)
 const usage = new Map(), usageEls = new Map();   // machine -> its history / {sig, node}: nothing is redrawn without a change
 let usageAt = 0, usageWidth = 0;
+// HUB466: machine status is on refs of its own (hubstatus/<machine>, hubstatus/export), not in the branch's history; a
+// board whose nodes have not moved yet still has the files in the branch, which is the fallback.
+function ghStatus(file, name){
+  return gh(`contents/${file}?ref=${encodeURIComponent("hubstatus/" + name)}`, {raw: true});
+}
+let stEtag = null, stSha = null, stRef = false;
+async function checkStatusRef(){   // true when export/status.json changed on its ref
+  try {
+    const r = await gh("git/ref/heads/hubstatus/export", {etag: stEtag});
+    if(r.status === 304) return false;
+    const etag = r.headers.get("ETag"), sha = (await r.json()).object.sha;
+    stRef = true;
+    if(sha === stSha){ stEtag = etag; return false; }
+    hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); dl.status++;
+    stSha = sha; stEtag = etag;
+    return true;
+  } catch(e) { if(e && e.status === 404) stRef = false; return false; }   // no such ref yet: the branch's file is read
+}
 async function loadUsage(sha){
   if(filt.tab !== "status" || !sha || !hubStatus || Date.now() - usageAt < 300000) return false;   // the files change every 10 minutes
   usageAt = Date.now();
@@ -3764,11 +3854,11 @@ async function loadUsage(sha){
     const name = String(m.machine || "");
     if(!/^[a-z0-9-]{1,40}$/.test(name)) continue;
     try {
-      const d = await (await gh(`contents/status/load-${name}.json?ref=${sha}`, {raw: true})).json();
+      const d = await (await ghStatus(`status/load-${name}.json`, name).catch(() => gh(`contents/status/load-${name}.json?ref=${sha}`, {raw: true}))).json();
       if(d && Array.isArray(d.cpu) && Array.isArray(d.mem)) usage.set(name, d);
     } catch { /* no history from this machine yet */ }
     try {
-      const d = await (await gh(`contents/status/tokens-${name}.json?ref=${sha}`, {raw: true})).json();
+      const d = await (await ghStatus(`status/tokens-${name}.json`, name).catch(() => gh(`contents/status/tokens-${name}.json?ref=${sha}`, {raw: true}))).json();
       if(d && Array.isArray(d.series)) tokens.set(name, d);
     } catch { /* no Claude session ran on this machine, or its node does not count tokens yet */ }
   }
@@ -6926,6 +7016,8 @@ async function check(){
     const r = await gh(`git/ref/heads/${branch()}`, {etag: refEtag});      // a 304 costs no API quota
     lastCheck = new Date().toISOString();
     let fresh = false;
+    const stFresh = await checkStatusRef();   // HUB466: the status export has a ref of its own (a 304 costs no quota)
+    if (stFresh) fresh = true;
     if (r.status !== 304){
       const etag = r.headers.get("ETag");
       const sha = (await r.json()).object.sha;
@@ -6998,7 +7090,7 @@ async function load(sha){
   if (!$("#releases").hidden) loadRelDocs();   // HUB462: the Releases tab is open: its archived cards follow a changed file
   const stale = k => !(sh && sh[k] && sh[k] === have[k]);
   const newBoard = stale("board"), newStatus = stale("status"), newRefused = stale("refused");
-  if(!newBoard && !newStatus && !newRefused) return false;
+  if(!newBoard && !(newStatus && !stRef) && !newRefused) return false;
   let data = null;
   if(newBoard){
     data = await (await gh(`contents/export/board.json?ref=${sha}`, {raw: true})).json();
@@ -7032,7 +7124,7 @@ async function load(sha){
     if (filt.e && filt.e !== NO_EPIC && epics.size && !epics.has(filt.e)){ filt.e = ""; ls("kb.filters", filt); }
     have.board = sh && sh.board;
   }
-  if(newStatus){
+  if(newStatus && !stRef){
     try { hubStatus = await (await gh(`contents/export/status.json?ref=${sha}`, {raw: true})).json(); dl.status++; have.status = sh && sh.status; } catch { hubStatus = null; have.status = null; }
   }
   try { await loadUsage(sha); } catch { /* the graphs are an extra: the board still loads */ }
@@ -7110,7 +7202,7 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear(); relFile.clear(); have.rel = null; relState = ""; FULL.clear();
   ex.doc = null; ex.at = 0; ex.was = false; ex.asked = 0; ex.note = ""; ex.missing = 0;
   aiClear();   // HUB338: the chats and their content keys leave this browser with the connection
-  tip = refEtag = null; loaded = false; hubStatus = null; have.board = have.status = have.refused = null; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
+  tip = refEtag = null; loaded = false; hubStatus = null; have.board = have.status = have.refused = null; stEtag = stSha = null; stRef = false; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
