@@ -113,8 +113,8 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none; displa
 .qclr{position:absolute; right:4px; top:50%; transform:translateY(-50%); width:20px; height:20px; padding:0; border:0; border-radius:50%; background:var(--sunk); color:var(--muted); font:600 14px/20px var(--f-body); text-align:center; cursor:pointer}
 .qclr:hover{background:var(--accent-soft); color:var(--accent)}
 /* HUB352: ONE shared button look for every bordered button in the Hub; each rule below keeps only its layout (size, spacing, display) */
-.fbtn,.qnav,.selbar button,.dq button,.ecbtn,.row button,.mclose,.rankbtn,.rk .acts button,.newwin .nwhead button,.newf .kinds button,.newf .acts button,.pbtn,.qmove button,.gfilt > summary,.grel,.gfoldall,.gfpop .gfclr,.artbtn,.usage .tmode,.ohead .tmode,.syncind,.aibtn,.aipanel button,.expair button,.exdev button{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer}
-.fbtn:not(:disabled):hover,.qnav:not(:disabled):hover,.selbar button:not(:disabled):hover,.dq button:not(:disabled):hover,.ecbtn:not(:disabled):hover,.row button:not(:disabled):hover,.mclose:not(:disabled):hover,.rankbtn:not(:disabled):hover,.rk .acts button:not(:disabled):hover,.newwin .nwhead button:not(:disabled):hover,.newf .kinds button:not(:disabled):hover,.newf .acts button:not(:disabled):hover,.pbtn:not(:disabled):hover,.qmove button:not(:disabled):hover,.gfilt > summary:not(:disabled):hover,.grel:not(:disabled):hover,.gfoldall:not(:disabled):hover,.gfpop .gfclr:not(:disabled):hover,.artbtn:not(:disabled):hover,.usage .tmode:not(:disabled):hover,.ohead .tmode:not(:disabled):hover,.syncind:not(:disabled):hover,.aibtn:not(:disabled):hover,.aipanel button:not(:disabled):hover,.expair button:not(:disabled):hover,.exdev button:not(:disabled):hover,.fbtn[aria-expanded="true"],.syncind[aria-expanded="true"]{border-color:var(--accent); color:var(--accent)}
+.fbtn,.qnav,.selbar button,.dq button,.ecbtn,.row button,.mclose,.rankbtn,.morebtn,.rk .acts button,.newwin .nwhead button,.newf .kinds button,.newf .acts button,.pbtn,.qmove button,.gfilt > summary,.grel,.gfoldall,.gfpop .gfclr,.artbtn,.usage .tmode,.ohead .tmode,.syncind,.aibtn,.aipanel button,.expair button,.exdev button{font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer}
+.fbtn:not(:disabled):hover,.qnav:not(:disabled):hover,.selbar button:not(:disabled):hover,.dq button:not(:disabled):hover,.ecbtn:not(:disabled):hover,.row button:not(:disabled):hover,.mclose:not(:disabled):hover,.rankbtn:not(:disabled):hover,.morebtn:not(:disabled):hover,.rk .acts button:not(:disabled):hover,.newwin .nwhead button:not(:disabled):hover,.newf .kinds button:not(:disabled):hover,.newf .acts button:not(:disabled):hover,.pbtn:not(:disabled):hover,.qmove button:not(:disabled):hover,.gfilt > summary:not(:disabled):hover,.grel:not(:disabled):hover,.gfoldall:not(:disabled):hover,.gfpop .gfclr:not(:disabled):hover,.artbtn:not(:disabled):hover,.usage .tmode:not(:disabled):hover,.ohead .tmode:not(:disabled):hover,.syncind:not(:disabled):hover,.aibtn:not(:disabled):hover,.aipanel button:not(:disabled):hover,.expair button:not(:disabled):hover,.exdev button:not(:disabled):hover,.fbtn[aria-expanded="true"],.syncind[aria-expanded="true"]{border-color:var(--accent); color:var(--accent)}
 .fbtn:disabled,.row button:disabled,.pbtn:disabled,.aipanel button:disabled{opacity:.5; cursor:default}
 .fbtn{display:inline-flex; align-items:center; gap:5px}
 /* HUB421: primary (accent) button: its own class, not "pri" (the card priority chip) */
@@ -465,6 +465,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .card.full textarea.other{min-height:2.4em; font-size:.85rem}
 body.modal-open{overflow:hidden}
 .rankbtn{padding:1px 9px}
+.morebtn{margin:6px 10px 6px; align-self:flex-start}
 .rk{width:min(820px,100%); background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:14px 16px 16px; display:grid; gap:12px}
 .rk h3{margin:0; font-family:var(--f-display); font-weight:400; font-size:1.4rem}
 .rk .rkq{color:var(--muted); font-size:.9rem}
@@ -2592,12 +2593,17 @@ function reconcileKids(parent, want){
   }
   while(cur){ const nx = cur.nextElementSibling; cur.remove(); cur = nx; }
 }
+const PAGE_N = 30, PAGED_COLS = ["done", "back"];
+const colShow = (() => { const v = ls("kb.colshow"); return v && typeof v === "object" ? v : {}; })();
+function pageLimit(k, lanes){ return !lanes && !filt.q && PAGED_COLS.includes(k) ? Math.max(PAGE_N, Number(colShow[k]) || PAGE_N) : 0; }   // 0: all (lanes and a search show every card)
 // ctx (optional, HUB447): {nodes: the board's card nodes by id from the last draw, out: Map filled with this draw's, secs: the kept columns by key}
-function buildCol(col, host, inCol, list, lane, ctx){
+function buildCol(col, host, inCol, listAll, lane, ctx){
   const total = inCol.length, lanes = host.classList.contains("lcols");
+  // HUB460: Done and Backlog show the latest PAGE_N cards and a Show more control; the count is kept across refreshes (and reloads)
+  const lim = pageLimit(col.k, lanes), list = lim && listAll.length > lim ? listAll.slice(0, lim) : listAll, hidN = listAll.length - list.length;
   const isC = collapsed.has(col.k);
   const na0 = ARCH.items.filter(c=>c.col===col.k).length;
-  const hsig = [col.name, isC ? 1 : 0, list.length, total, lanes ? 1 : 0, readOnly ? 1 : 0, col.hint || "", na0].join("");
+  const hsig = [col.name, isC ? 1 : 0, list.length, listAll.length, total, lanes ? 1 : 0, readOnly ? 1 : 0, col.hint || "", na0].join("");
   const kept = ctx && ctx.secs.get(col.k);
   const cardNodes = () => list.map(c => {
     if(!ctx) return cardEl(c);
@@ -2615,7 +2621,7 @@ function buildCol(col, host, inCol, list, lane, ctx){
     : (col.k === "next" && !readOnly && total > 1)   // the user, 2026-11-17: Next up sorted by priority in one click
     ? el("button",{type:"button", class:"rankbtn", title:"Sort "+col.name+" by priority (P1 first; cards of the same priority keep their order)",
         onclick:ev=>{ ev.stopPropagation(); sortByPriority(col.k); }, onkeydown:ev=>ev.stopPropagation()}, "\u2193 Priority") : null;
-  const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, list.length===total?String(total):list.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"\u25B8":"\u25BE"));
+  const h = el("h2",{tabindex:"0", "aria-expanded":String(!isC)}, col.name, el("span",{class:"n"}, listAll.length===total?String(total):listAll.length+"/"+total), rankBtn, el("span",{class:"tw"}, isC?"\u25B8":"\u25BE"));
   const tog = ()=>{ isC?collapsed.delete(col.k):collapsed.add(col.k); ls("kb.collapsed",[...collapsed]); render(); };
   h.addEventListener("click", tog); h.addEventListener("keydown", ev=>{ if(ev.target===h && (ev.key==="Enter"||ev.key===" ")){ ev.preventDefault(); tog(); } });
   sec.append(h);
@@ -2624,6 +2630,10 @@ function buildCol(col, host, inCol, list, lane, ctx){
   if(kept) ul.classList.remove("over");
   if(ctx) reconcileKids(ul, cardNodes()); else for(const c of list) ul.append(cardEl(c));
   sec.append(ul);
+  if(hidN > 0 && !isC) sec.append(el("button",{type:"button", class:"morebtn", title:"Show "+Math.min(PAGE_N, hidN)+" more of the "+hidN+" "+col.name+" cards not shown",
+    onclick:ev=>{ ev.stopPropagation(); colShow[col.k] = (colShow[col.k] || PAGE_N) + PAGE_N; ls("kb.colshow", colShow); render();
+      const nb = document.querySelector('#board .col[data-col="'+col.k+'"] .morebtn') || document.querySelector('#board .col[data-col="'+col.k+'"] h2'); if(nb) nb.focus(); }},
+    "Show more ("+hidN+" not shown)"));
   const na = na0;
   if(na && !isC && !lanes) sec.append(el("p",{class:"archn"}, na+(na===1?" older card is":" older cards are")+" in the archive (Cards/Archive in the vault)"
     + (col.k === "done" ? "; the latest 60 of the last 7 days are shown here." : ".")));   // HUB230 (hub/phone.py DONE_MAX)
@@ -2643,12 +2653,29 @@ function render(){
   renderSync(); saveState(); renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); ffcount(); renderStreams();
   const board = $("#board");
   const px = window.scrollX, py = window.scrollY;
-  const sc = {}; board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
-  const hold = board.offsetHeight; if(hold) board.style.minHeight = hold + "px";   // the page keeps its height while the board is rebuilt
+  const onBoard = filt.tab === "board";   // HUB460: another tab shown: the board and the filters panel wait (drawn when the Board tab is shown)
+  const sc = {}; if(onBoard) board.querySelectorAll(".list").forEach(l=>sc[l.dataset.col]=l.scrollTop); const sl = board.scrollLeft;
+  const hold = onBoard ? board.offsetHeight : 0; if(hold) board.style.minHeight = hold + "px";   // the page keeps its height while the board is rebuilt
   const all = [...cards.values()].filter(inProject);   // the project switcher: one project's cards, or all
   const allA = [...all, ...ARCH.items.filter(inProject)];   // stats count archived Done / Rejected cards too
   $("#empty").hidden = all.length>0;
   if(!all.length) $("#empty").textContent = loaded ? "The board has no live cards." : "Loading…";
+  if(onBoard){ render.boardDirty = false; drawBoard(board, all, allA, sc, sl); } else render.boardDirty = true;
+  // tally
+  const t = $("#tally"); t.textContent = "";
+  if(loaded){
+    const qs = all.filter(c => openQ(c) && c.col !== "park").length;   // Parked cards' questions are not counted (HUB112)
+    tabBadge("tab-board", "Board", qs);   // the cards with open questions: a red circle on the Board tab (the user, 2026-11-17)
+  }
+  markSyncTabs(); renderSyncOnly();   // HUB68: the count itself is the sync pill beside the checked time
+  if(onBoard && focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
+  renderSelBar();
+  renderModal();
+  board.style.minHeight = "";
+  if(window.scrollX !== px || window.scrollY !== py) window.scrollTo(px, py);
+}
+// the Board tab's drawing (HUB460: only while the Board tab is shown; showTab draws it when it comes back)
+function drawBoard(board, all, allA, sc, sl){
   const shown = COLS.filter(col => !(filt.hide && filt.hide[col.k]));
   board.style.setProperty("--ncol", Math.max(1, shown.length));
   const lf = LANE_FIELDS.includes(filt.l) ? filt.l : "";
@@ -2687,18 +2714,6 @@ function render(){
   }
   board.scrollLeft = sl;
   renderEpics(allA);
-  // tally
-  const t = $("#tally"); t.textContent = "";
-  if(loaded){
-    const qs = all.filter(c => openQ(c) && c.col !== "park").length;   // Parked cards' questions are not counted (HUB112)
-    tabBadge("tab-board", "Board", qs);   // the cards with open questions: a red circle on the Board tab (the user, 2026-11-17)
-  }
-  markSyncTabs(); renderSyncOnly();   // HUB68: the count itself is the sync pill beside the checked time
-  if(focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
-  renderSelBar();
-  renderModal();
-  board.style.minHeight = "";
-  if(window.scrollX !== px || window.scrollY !== py) window.scrollTo(px, py);
 }
 
 function sortedEpics(){ return [...epics.entries()].filter(([k, v])=>epicInProject(k) && !v.retired).sort((a,b)=>(a[1].order??99)-(b[1].order??99) || a[1].name.localeCompare(b[1].name)); }
@@ -2709,6 +2724,21 @@ function cardStats(all, keep){   // done / all (Rejected left out); open = not D
   const mine = all.filter(c=>keep(c) && c.col!=="rej"), open = mine.filter(c=>c.col!=="done" && c.col!=="park").length;
   const done = mine.filter(c=>c.col==="done").length;
   return {n:mine.length, done, open, pct: mine.length ? Math.round(100*done/mine.length) : 0};
+}
+// HUB460: the epic, theme and no-epic counts of all the cards in one pass (it was one pass over every card per epic and per theme)
+function epicTallies(all){
+  const blank = () => ({n:0, done:0, open:0, pct:0}), ep = new Map(), th = new Map(), noep = new Map();
+  const add = (m, k, c) => { let t = m.get(k); if(!t){ t = blank(); m.set(k, t); } t.n++; if(c.col === "done") t.done++; else if(c.col !== "park") t.open++; };
+  for(const c of all){
+    if(c.col === "rej") continue;
+    const tk = cardTheme(c);
+    if(!c.epic && inProject(c)) noep.set(tk, (noep.get(tk) || 0) + 1);
+    if(!countsForEpic(c)) continue;
+    if(c.epic) add(ep, c.epic, c); add(th, tk, c);
+  }
+  const fin = m => { for(const t of m.values()) t.pct = t.n ? Math.round(100 * t.done / t.n) : 0; return m; };
+  fin(ep); fin(th);
+  return {ep, th, noep, get: (m, k) => m.get(k) || blank()};
 }
 function statKids(st){ return [el("span",{class:"ec"}, st.done+"/"+st.n+" done · "+st.open+" open"), el("span",{class:"eb"}, el("i",{style:"width:"+st.pct+"%"}))]; }
 // HUB297: a card with no epic (ad hoc, Release, others) belongs to the first theme (in panel order) of its project
@@ -2728,6 +2758,7 @@ const FF_BOX = $("#ffpop"), FF_COUNT = $("#ffcount"), FF_SETTINGS = $("#fcols").
 function FILTER_ICON(){ const n = document.createElementNS("http://www.w3.org/2000/svg", "svg"); n.setAttribute("viewBox","0 0 16 16"); n.setAttribute("width","15"); n.setAttribute("height","15"); n.setAttribute("aria-hidden","true");
   const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d","M1.5 2.5h13l-5 6v4.5l-3 1.5v-6z"); p.setAttribute("fill","none"); p.setAttribute("stroke","currentColor"); p.setAttribute("stroke-width","1.5"); p.setAttribute("stroke-linejoin","round"); n.append(p); return n; }
 function renderEpics(all){
+  const tally = epicTallies(all);
   const box = $("#epics"); const x = box.scrollTop, xl = box.scrollLeft; box.textContent = "";
   box.hidden = !epics.size && projects.size < 2;
   const folded = !!filt.ecol;
@@ -2743,17 +2774,16 @@ function renderEpics(all){
       "aria-label":"Edit the " + kind + " " + (v.name || k), onclick:ev=>{ ev.stopPropagation(); openMetaEdit(kind, k); }}, "✎");
   const epicBtn = (k,v) => el("div",{class:"ewrap"}, el("button",{type:"button", class:"epic", style:"--h:"+v.hue, "aria-pressed":String(filt.e===k), title:((v.blurb||"")+" Click to filter.").trim(),
       onclick:()=>setEpic(filt.e===k ? "" : k)},
-      el("span",{class:"en"}, v.name), ...statKids(cardStats(all, c=>c.epic===k && countsForEpic(c)))), editBtn("epic", k, v));
+      el("span",{class:"en"}, v.name), ...statKids(tally.get(tally.ep, k))), editBtn("epic", k, v));
   const noEpicBtn = g => {   // HUB297: the theme's cards with no epic, last in its list; only when there are some
-    const n = g.v ? noEpicN(g.k) : 0; if(!n) return null;
+    const n = g.v ? (tally.noep.get(g.k) || 0) : 0; if(!n) return null;
     return el("div",{class:"ewrap"}, el("button",{type:"button", class:"epic noepic", style:"--h:"+(g.v.hue||210), "aria-pressed":String(filt.e===NO_EPIC && filt.t===g.k),
       title:"Cards of this theme's project with no epic (ad hoc, release and others). Click to filter.", onclick:()=>setNoEpic(g.k)},
       el("span",{class:"en"}, "No Epic"), el("span",{class:"ec"}, n+" card"+(n===1?"":"s"))));
   };
   // epics grouped under their theme; epics with no or an unknown theme last, under "(no theme)"
-  const noEpicN = k => all.filter(c => !c.epic && c.col!=="rej" && inProject(c) && cardTheme(c)===k).length;   // HUB297
   const groups = sortedThemes().map(([k,v])=>({k, v, eps: sortedEpics().filter(([ek])=>epicTheme(ek)===k)}))
-    .filter(g => !filt.j || g.eps.length || noEpicN(g.k));   // with one project chosen: only the themes that hold its epics
+    .filter(g => !filt.j || g.eps.length || tally.noep.get(g.k));   // with one project chosen: only the themes that hold its epics
   const loose = sortedEpics().filter(([ek])=>!epicTheme(ek));
   if(loose.length && themes.size) groups.push({k:"", v:null, eps:loose});
   for(const g of groups){
@@ -2763,7 +2793,7 @@ function renderEpics(all){
     const head = g.v
       ? el("button",{type:"button", class:"epic theme", style:"--h:"+hue, "aria-pressed":String(filt.t===g.k), title:((g.v.blurb||"")+" Click to filter by this theme.").trim(),
           onclick:()=>setTheme(filt.t===g.k ? "" : g.k)},
-          el("span",{class:"tn"}, g.v.name), ...statKids(cardStats(all, c=>cardTheme(c)===g.k && countsForEpic(c))))
+          el("span",{class:"tn"}, g.v.name), ...statKids(tally.get(tally.th, g.k)))
       : el("div",{class:"tnone"}, nm);
     const tkids = [...g.eps.map(([k,v])=>epicBtn(k,v)), noEpicBtn(g)].filter(Boolean);
     box.append(el("div",{class:"tgroup"+(isC?" collapsed":""), style:"--h:"+hue, role:"group", "aria-label":g.v ? "Theme "+nm : "Epics with no theme"},
@@ -6818,6 +6848,7 @@ function showTab(name, fromHash){
   if(!fromHash && location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   if(tab === "status") usageSoon();
   renderStatus(); renderDecisions(); renderArtifacts(); renderManual(); renderGantt(); renderStreams();
+  if(tab === "board" && render.boardDirty) render();   // HUB460: the board was not drawn while another tab was shown
 }
 for(const b of document.querySelectorAll("nav.tabs .tab")){
   b.addEventListener("click", () => showTab(b.dataset.tab));
