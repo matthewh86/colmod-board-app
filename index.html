@@ -633,6 +633,8 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 /* HUB388: the limits beside the pace (two columns where there is room; stacked on a narrow screen) */
 .pacelim{display:grid; grid-template-columns:minmax(0,560px); gap:6px; align-items:start}   /* HUB395: one column: the pace, its limits and the default model under it */
 .pacelim .limbox h3{margin-top:0}
+.limhead{display:flex; align-items:center; gap:8px; margin-bottom:8px} .limhead h3{margin:0}   /* HUB484: Limits and its info button */
+.liminfopop{margin:0; width:min(520px, 80vw); max-width:min(520px, 80vw); font-size:.85rem; line-height:1.4; color:var(--ink)}
 .pacelim .limrow{grid-template-columns:1fr auto} .pacelim .limrow .limtext{grid-column:1 / -1}
 .limrow{display:grid; grid-template-columns:minmax(150px,200px) auto 1fr; gap:6px 14px; align-items:start; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px}
 .limrow .limname{font-weight:600; padding-top:5px}
@@ -691,6 +693,9 @@ svg.burn{display:block; width:100%; height:auto} .ubreak{max-width:560px; displa
 .glab{box-shadow:0 1px 0 var(--line)}
 .gproj .glab, .gres .glab{background-color:var(--sunk); cursor:default; font-weight:600; color:var(--muted)}
 .gres .glab.over{color:var(--blk-ink); background-color:var(--blk-bg)}   /* HUB217: the pool is over its limit now */
+.gres .glab .gresh{overflow:hidden; text-overflow:ellipsis}
+.gres .glab .ggoto{margin-left:auto; flex:none; font:inherit; font-weight:700; line-height:1; padding:2px 7px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer}   /* HUB483: the Streams cell's goto button, on its right */
+.gres .glab .ggoto:hover, .gres .glab .ggoto:focus-visible{border-color:var(--accent); color:var(--accent)}
 .gproj .glab{color:var(--ink); text-transform:uppercase; letter-spacing:.05em; font-size:.7rem}
 .glab .gid{font-family:var(--f-mono); font-weight:600; color:var(--tc,var(--muted))}
 .glab .gk{font-size:.75rem; line-height:1}
@@ -972,8 +977,8 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .syncpop .phead{display:flex; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line)}
 .syncpop .phead h2{flex:1; margin:0; font:700 1rem/1.3 var(--f-body)}   /* HUB480: the popup's title is a heading */
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
-/* HUB439: the Hub tab's sections are panels side by side on a wide screen; a row stays as wide as it reads */
-#hub{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); align-items:start; gap:14px 32px}
+/* HUB439: the Exarch (hub) tab's sections are panels; HUB484: one column, never side by side; a row stays as wide as it reads */
+#hub{grid-template-columns:minmax(0,1fr); align-items:start; gap:14px 32px}
 .hsec{display:grid; gap:10px; align-content:start; min-width:0; max-width:760px}
 .hsec.wide{grid-column:1 / -1; max-width:none}
 .hsec.wide .tblwrap{max-width:1200px}
@@ -5295,6 +5300,7 @@ function paceSelector(pace, where){   // HUB332: where = "hub" (the Hub tab) or 
   return el("div",{class:"pacebox"}, group, flame, help);
 }
 // HUB171/HUB173: the limits, settable here, each with what it caps and the suggested value
+var limInfoOpen = false;   // HUB484: the Limits info stays open across the tab's redraws
 function limitsSection(){   // HUB388: the chosen pace's own limits, drawn beside the pace selector
   const {pace} = usageNow(), lim = hubLimits(pace), u = hubStatus && hubStatus.usage;
   const pname = (PACES.find(x => x[0] === pace) || [pace, pace])[1];
@@ -5309,9 +5315,12 @@ function limitsSection(){   // HUB388: the chosen pace's own limits, drawn besid
       el("div",{class:"limval"}, sel, lifted ? el("span",{class:"state"}, "lifted on Turbo") : null),
       el("div",{class:"limtext", id:id + "-what"}, el("div",{}, L.what), el("div",{class:"limhint"}, L.hint)));
   });
-  return el("div",{class:"limbox", "data-pace":pace}, el("h3",{}, "Limits"), el("div",{class:"limits"}, ...rows),
-    el("p",{class:"note"}, "Each pace has its own limits and defaults; these are " + pname + "'s. Choosing a pace sets its limits to its suggested values (" + PACE_LIMIT_SUMMARY + "); a limit changed here then stands until that pace is chosen again. A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
+  // HUB484: the explanation sits behind an info button beside the heading (the current pace's name and the last-set date kept in it)
+  const info = el("details",{class:"gkey liminfo", open:limInfoOpen, ontoggle:ev => { limInfoOpen = ev.target.open; }},
+    el("summary",{title:"About " + pname + "'s limits", "aria-label":"About " + pname + "'s limits"}, "ⓘ"),
+    el("p",{class:"gkeypop liminfopop", role:"note"}, "Each pace has its own limits and defaults; these are " + pname + "'s. Choosing a pace sets its limits to its suggested values (" + PACE_LIMIT_SUMMARY + "); a limit changed here then stands until that pace is chosen again. A change reaches the hub within about a minute; the leads read it on their next wake (hub/usage.py allowance)."
       + (u && u.limits_set ? " Last set " + fmtTime(u.limits_set) + "." : "")));
+  return el("div",{class:"limbox", "data-pace":pace}, el("div",{class:"limhead"}, el("h3",{}, "Limits"), info), el("div",{class:"limits"}, ...rows));
 }
 // ---------- HUB429-HUB432: triage of the hub's own findings (hub/exarch/triage.py, docs/EXARCH.md section L). The page only posts
 // an `exarch.triage` change; the node carries it out in its next cycle and the outcome comes back in status.json `triage.results`.
@@ -5688,6 +5697,13 @@ function gStreamLimit(){   // the pace's allowance (hub/usage.py: Conservative, 
   if(usageNow().pace === "turbo") return Infinity;
   const cap = hubLimits().streams, a = Number(hubStatus?.usage?.allowed_streams);
   return a > 0 ? Math.min(cap, a) : cap;
+}
+// HUB482: the "of M" beside streamsNow() wherever it is shown: the Pace's allowance now (0 while it starts none),
+// never above the hub's limit; Infinity on Turbo
+function streamsAllowed(){
+  if(usageNow().pace === "turbo") return Infinity;
+  const cap = hubLimits().streams, a = hubStatus && hubStatus.usage ? hubStatus.usage.allowed_streams : null;
+  return a != null && Number(a) >= 0 ? Math.min(cap, Number(a)) : cap;
 }
 function gOrder(a, b){
   // HUB131: the Next up column's own order is the plan (its rank, top first); elsewhere priority, then rank
@@ -6089,7 +6105,7 @@ function drawGantt(host){
   gSelReady();   // HUB197: a HUB159 selection becomes the tree's before anything is filtered
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), past = ganttPast(now);
-  const sig = JSON.stringify([loaded, filt.j, [...gSel], !!gSelOld, gRel, [...gFold], readOnly, scaleKey, hubStatus && hubStatus.usage, Math.floor(now / (5 * G_MIN)), [...projects.keys()],
+  const sig = JSON.stringify([loaded, filt.j, [...gSel], !!gSelOld, gRel, [...gFold], readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), Math.floor(now / (5 * G_MIN)), [...projects.keys()],   // HUB482: a stream starting or ending redraws the Streams count
     [...epics].map(([k, v]) => [k, v.name, v.order, v.theme, v.hue]), [...themes].map(([k, v]) => [k, v.name, v.order, v.hue]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.epic, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, cardProject(c)]),
     past.map(it => [it.c.id, it.c.t, it.c.epic, it.s, it.e, it.done])]);
@@ -6135,10 +6151,10 @@ function drawGantt(host){
   // HUB286: the Day / Week selector sits in the top-left header cell
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
-  // HUB158: the fold-all button sits right above where the projects start listing (the label column, kept in view)
+  ganttStrips({plan, list, now, t0, t1, X, sc, row, inner, goto: true});   // HUB413: the Streams, Art and Exarch strips, the same function the Streams tab draws; HUB483: its goto button
+  // HUB158, HUB483: the fold-all button sits immediately above the themes and epics (under the strips; the label column, kept in view)
   if(epicKeys.length) inner.append(row("gtools", el("div",{class:"glab"},
     el("button",{type:"button", class:"gfoldall", "aria-pressed":String(allFolded), title:allFolded ? "Show every epic's cards" : "Fold every epic: one row each", onclick:foldAll}, allFolded ? "Expand epics" : "Collapse epics")), null));
-  ganttStrips({plan, list, now, t0, t1, X, sc, row, inner});   // HUB413: the Streams, Art and Exarch strips, the same function the Streams tab draws
   // the rows (HUB122, HUB123): project, then each theme (its epics folded with +/-), each epic (its cards folded
   // with +/-), in the registry's order; a theme's and an epic's row shows the span of what it holds
   const projOrder = k => { const p = projects.get(k); return p && p.order != null ? p.order : 99; };
@@ -6269,19 +6285,19 @@ function drawGantt(host){
 
 // HUB398, HUB413: the resource strips (Streams, Art, Exarch: the most cards running at once against the limit; what
 // ran before now, paler) drawn on the Gantt tab and the Streams tab, both from here. o: {plan, list, now, t0, t1, X, sc, row, inner}.
-function gotoStreams(){ const t = $("#streams"); if(!t || t.hidden) showTab("streams"); }   // HUB399: a Stream, Art or Exarch header opens the Streams tab (it is already there on that tab)
+function gotoStreams(){ const t = $("#streams"); if(!t || t.hidden) showTab("streams"); }   // HUB399, HUB483: the Gantt's Streams goto button opens the Streams tab
 function ganttStrips(o){
   const {plan, list, now, t0, t1, X, sc, row, inner} = o;
   const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
-  const sNow = o.streamNow != null ? o.streamNow : nowIn("stream"), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
+  const sNow = streamsNow().n, sAll = streamsAllowed(), sPace = Number(usageNow().u && usageNow().u.streams_live), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
   const ran = {stream: [], coord: [], art: [], drawn: []};
   for(const c of cards.values()){ if(cardKind(c) === "Release" || !inProject(c)) continue; const w = gWorked(c, now, gTime); if(w && w[1] > t0) ran[gPool(c)].push(w); }
   // HUB217: each strip's label entry counts its pool in Development now against the limit (the header's pills, before)
   const poolHead = {
-    stream: [sNow > sLim, "Streams: " + sNow + (sLim === Infinity ? " now, no limit" : " of " + sLim + " now"),
-      "Game development streams in Development now, all projects, against the limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
+    stream: [isFinite(sAll) && sPace > sAll, "Streams: " + sNow + (sAll === Infinity ? " now, no limit" : " of " + sAll + " now"),   // HUB482: the Sync popup's figures; over: the Pace's own count, as there
+      "Streams now: live sessions and agents holding a card in Development, all projects (hub cards too), the same count as the Sync popup's Streams in use, against the development stream limit" + (sLim === Infinity ? ": none on Turbo (HUB174)" : sLim < hubLimits().streams ? " the pace allows (the hub's own is " + hubLimits().streams + ")" : "")],
     drawn: [dNow > dLim, "Art: " + dNow + " of " + dLim + " now",   // HUB399: the drawn art is simply Art; ComfyUI art is jobs, no stream, no strip
       "Art Claude draws (Artwork cards with art_tool drawn) Development now, apart from the development streams, against its own limit (Hub tab)"],
     coord: [cNow > cLim, "Exarch: " + cNow + (cLim === Infinity ? " now, no limit" : " of " + cLim + " now"),
@@ -6303,7 +6319,9 @@ function ganttStrips(o){
     }
     if(isFinite(lim)) kids.push(el("span",{class:"glimit", style:"top:" + (top + hpx - Math.round(hpx * lim / peak)) + "px"}));
     const [over, head, why] = poolHead[pool];
-    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), onclick:gotoStreams, title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, head), kids));
+    // HUB483: the Gantt tab's Streams cell has a goto button on its right that opens the Streams tab (no click on the labels)
+    const go = o.goto && pool === "stream" ? el("button",{type:"button", class:"ggoto", title:"Go to the Streams tab", "aria-label":"Go to the Streams tab", onclick:ev => { ev.stopPropagation(); gotoStreams(); }}, "→") : null;
+    inner.append(row("gres", el("div",{class:"glab" + (over ? " over" : ""), title:why + "\n" + name + ": " + (isFinite(lim) ? "at most " + lim + " at once" : "no limit (Turbo, " + limTxt + ")")}, el("span",{class:"gresh"}, head), go), kids));
   }
 }
 // ---------- Streams tab (HUB385): one row per stream like the Gantt's, time along the bottom. A row shows the card the
@@ -6377,6 +6395,28 @@ function streamLiveness(r, now){
 }
 // <<< streams-rows
 function streamsWorking(rows){ return rows.filter(r => r.bars.some(b => b.role === "now")).length; }
+// HUB482: THE stream count, the one every surface shows (Sync popup "Streams in use" and its Projects rows, the Streams
+// tab, the Gantt tab's "Streams: N of M now"): a live registered session or agent, not a Lead, holding a card in
+// Development, any pool or project, counted once under its card's project. One source: the status export's `streams`
+// (hub/usage.py streams_now); a node from before it: the same rule over the export's live sessions and their claims.
+// Returns {n, by: {project: n}, list: [{name, card, project}]}.
+function streamsNow(){
+  const x = hubStatus && hubStatus.streams;
+  if(x && typeof x === "object" && Array.isArray(x.list)){
+    const list = x.list.filter(s => s && s.name), by = {};
+    for(const s of list) by[s.project || ""] = (by[s.project || ""] || 0) + 1;
+    return {n: list.length, by, list};
+  }
+  const list = [], by = {};
+  for(const s of hubStatus && Array.isArray(hubStatus.sessions) ? [...hubStatus.sessions].sort((a, b) => String(a && a.name).localeCompare(String(b && b.name))) : []){
+    if(!s || !s.name || s.idle || streamIsLead(s.name, s.role)) continue;
+    const c = (Array.isArray(s.cards) ? [...s.cards].sort() : []).map(id => cards.get(id)).find(c => c && c.col === "prog");
+    if(!c) continue;
+    const project = cardProject(c) || "";
+    list.push({name: s.name, card: c.id, project}); by[project] = (by[project] || 0) + 1;
+  }
+  return {n: list.length, by, list};
+}
 function streamLive(){   // the live sessions and agents that are streams: by name, or holding a card
   const held = new Set([...cards.values()].map(c => streamOf(c)).filter(Boolean));
   const list = hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions : [];
@@ -6391,7 +6431,7 @@ function renderStreams(){   // a fault in this tab must never stop the board fro
 function drawStreams(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), live = streamLive();
-  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsPausedNow(), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
+  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), streamsPausedNow(), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
     hubStatus && [hubStatus.machines, hubStatus.sessions], sessSort, tokMode, tokHours, [...tokens.entries()].map(([k, d]) => [k, d.end]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -6406,7 +6446,7 @@ function drawStreams(host){
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"),
     el("span",{class:"note"}, "Solid: the card a stream works now or has assigned. Dashed outline: planned for the stream named, until it claims the card.")));
   host.append(streamsPauseBox());   // HUB479
-  if(!live.length && !streamsWorking(rows)) host.append(el("p",{class:"note nostreams", role:"status"}, "No streams active" + (rows.length ? ": the rows below are queued cards, not a running plan." : ".")));   // HUB457
+  if(!streamsNow().n) host.append(el("p",{class:"note nostreams", role:"status"}, "No streams active" + (rows.length ? ": the rows below are queued cards, not a running plan." : ".")));   // HUB457
   const sessions = () => { graphWin = graphWindow(); try { return sessionsSection(); } finally { graphWin = null; } };   // HUB177: one window for every rate
   if(!rows.length){ host.append(el("p",{class:"note"}, "No streams active or queued" + (filt.j ? " with this project filter." : "."))); host.append(...sessions()); return; }
   const hour = t => Math.floor(t / G_H) * G_H;
@@ -6424,8 +6464,8 @@ function drawStreams(host){
   }
   inner.append(row("gaxis", el("div",{class:"glab", style:"cursor:default"}, el("span",{class:"gscale", role:"group", "aria-label":"Scale"},
     ...Object.entries(GANTT_SCALES).map(([k, v]) => el("button",{type:"button", "aria-pressed":String(k === scaleKey), onclick:()=>setScale(k)}, v.label)))), ticks));
-  // HUB434: this tab's Streams count is the stream rows working a card now (the rows below), not every in Development card
-  const strips = {plan, list, now, t0, t1, X, sc, row, inner, streamNow: streamsWorking(rows)};
+  // HUB482: the Streams count is streamsNow(), the same as the Gantt tab's and the Sync popup's
+  const strips = {plan, list, now, t0, t1, X, sc, row, inner};
   ganttStrips(strips);
   for(const r of rows){
     const idle = !r.bars.length, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";
@@ -7596,12 +7636,13 @@ function renderSyncPop(){
     el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
-  const now = Date.now(), core = leadRows(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
-    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = Number(((usageNow().u || {}).streams_by_project || {})[k]) || 0;   // HUB476: live streams, the same count as "Streams in use"
+  const now = Date.now(), core = leadRows(), sn = streamsNow(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
+    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = Number(sn.by[k]) || 0;   // HUB482: streamsNow(), the same count as "Streams in use"
     const streams = n + (n === 1 ? " stream" : " streams");
+    const also = n ? " · " + streams : "";   // HUB482: a project's live streams show whatever its Lead's state, so the rows add up to Streams in use
     const txt = isHubProject(k, pr) ? (s.state === "halting" ? "Halting · " : "Active · ") + streams
-      : st === "none" ? "No Lead yet" : st === "not_needed" ? "Lead not needed yet"
-      : st === "snoozed" ? "Snoozed" + (pr.snooze_until ? " until " + (isNaN(Date.parse(pr.snooze_until)) ? String(pr.snooze_until) : fmtTime(pr.snooze_until)) : "")
+      : st === "none" ? "No Lead yet" + also : st === "not_needed" ? "Lead not needed yet" + also
+      : st === "snoozed" ? "Snoozed" + (pr.snooze_until ? " until " + (isNaN(Date.parse(pr.snooze_until)) ? String(pr.snooze_until) : fmtTime(pr.snooze_until)) : "") + also
       : (s.state === "halting" ? "Halting · " : "Active · ") + streams;
     return kv(String(pr.name || k), el("span",{class:st === "active" || isHubProject(k, pr) ? "" : "mu"}, txt));
   });
@@ -7635,16 +7676,17 @@ function streamsOver(live, allowed){
 }
 function syncPopExtra(){
   const {u, pace} = usageNow(), st = Number(u && u.stage), live = Number(u && u.streams_live);
-  const a = u && u.allowed_streams, cap = hubLimits().streams;
-  const allowed = pace === "turbo" ? "no limit (Turbo)" : String(a != null && Number(a) >= 0 ? Math.min(cap, Number(a)) : cap);
-  const inUse = u && u.streams_live != null && live >= 0 ? live + " of " + allowed : "-";   // "-" alone while there is no reading
+  const sa = streamsAllowed(), allowed = sa === Infinity ? "no limit (Turbo)" : String(sa);   // HUB482: the same "of M" as the Gantt and Streams tabs
+  // HUB482: the number shown is streamsNow(), the one count every surface shows; the over-the-Pace colour stays the
+  // Pace's own count (usage.streams_live: development streams only, hub cards and art have limits of their own)
+  const inUse = hubStatus ? streamsNow().n + " of " + allowed : "-";   // "-" alone while there is no export yet
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
   const pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
-  const over = pace === "turbo" ? null : streamsOver(live, Number(allowed));
+  const over = pace === "turbo" || !(u && u.streams_live != null) ? null : streamsOver(live, Number(allowed));
   return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Hub tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
     kv("Streams", streamsPausedNow() ? el("span",{class:"row wy"}, ico("alert-triangle", "wy", "Streams are paused"), "Paused · ", el("a",{href:"#streams", title:"Resume streams in the Streams tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("streams"); }}, "resume them in the Streams tab")) : "Running as the Pace allows"),
-    kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: u && u.allowance ? "Now: " + u.allowance : null}),
+    kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: [streamsNow().list.map(s => s.name + " (" + s.card + ")").join(", "), u && u.allowance ? "Now: " + u.allowance : ""].filter(Boolean).join("\n") || null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
 // >>> runs-rows (tests/test_app.py runs this block)
