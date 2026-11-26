@@ -84,9 +84,9 @@ h1.logo{display:flex; align-items:center; gap:14px; align-self:center; line-heig
 .syncpill{position:relative; overflow:hidden; font:inherit; font-size:.8rem; border:0; border-radius:999px; padding:2px 10px; margin-left:8px;
   background:var(--pend-bg); color:var(--pend-fg); cursor:pointer; font-variant-numeric:tabular-nums}
 .syncpill b{font-weight:600}
-.syncpill::before, .tab.syncing::after{content:""; position:absolute; pointer-events:none;
+.syncpill::before, .syncind.syncing::before, .tab.syncing::after{content:""; position:absolute; pointer-events:none;
   background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%); transform:translateX(-100%); animation:sheen 1s infinite}
-.syncpill::before{inset:0}
+.syncpill::before, .syncind.syncing::before{inset:0}
 .bblock{display:grid; gap:4px; min-width:0}
 .bblock .row button.syncpill{border:0; margin-left:0; padding:2px 10px}
 .tab.syncing{position:relative; overflow:hidden; color:var(--pend-fg)}
@@ -909,7 +909,10 @@ table.arts td:last-child{white-space:nowrap; text-align:right}
 .ico{display:inline-flex; align-items:center; flex:none} .ico svg.i, svg.i{width:16px; height:16px; flex:none}
 .ok{color:var(--ok)} .wy{color:var(--warn-y)} .wo{color:var(--warn-o)} .wr{color:var(--warn-r)} .mu{color:var(--muted)} .err{color:var(--warn-r)}
 .small{font-size:.8rem} .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.syncind{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; align-self:center}
+.syncind{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; align-self:center; position:relative; overflow:hidden}
+/* HUB498: while a change is on its way the pill carries the sheen and a spinner; synced is a green circled check */
+.sspin{display:inline-block; width:13px; height:13px; flex:none; border-radius:50%; border:2px solid var(--pend-bg); border-top-color:var(--pend-fg); animation:cspin .8s linear infinite; box-sizing:border-box}
+.syncmark{display:inline-flex; align-items:center}
 .syncind:hover,.syncind[aria-expanded="true"]{border-color:var(--accent)}
 .syncind .savest.ok{background:none; padding:0; color:var(--ink); font-weight:500}
 .aibtn{padding:3px 12px 3px 8px; margin-left:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; position:relative}   /* HUB254: top right */
@@ -1070,7 +1073,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
       </g>
     </symbol></defs></svg>
   <header class="top">
-    <div class="hrow"><h1 class="logo" aria-label="Primarch Project Manager"><svg class="lmark" aria-hidden="true"><use href="#lmark"/></svg><span class="lword" aria-hidden="true"><span class="lname">Primarch</span><span class="lsub"><i></i>Project Manager<i></i></span></span></h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
+    <div class="hrow"><h1 class="logo" aria-label="Primarch Project Manager"><svg class="lmark" aria-hidden="true"><use href="#lmark"/></svg><span class="lword" aria-hidden="true"><span class="lname">Primarch</span><span class="lsub"><i></i>Project Manager<i></i></span></span></h1><button type="button" class="syncind" id="syncind" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncpop" title="Sync, usage and Exarch AI"><span class="row" id="syncicons"></span><span class="syncmark" id="syncmark"></span><span class="savest" id="savest" role="status"></span></button><div class="sync" id="sync">Connecting to the board data…</div><button type="button" class="aibtn" id="aibtn" aria-expanded="false" aria-controls="aipanel" title="Open the Exarch AI drawer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg>Exarch AI<span id="aibtnstate"></span><span class="dot" id="aidot" hidden></span></button></div>
     <div class="tally" id="tally"></div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -1593,6 +1596,11 @@ async function send(id){
   toast(`The change to ${doc.card} is not sent yet. It is kept and sent again.`);    // the next check tries again
 }
 function b64(text){ const bytes = new TextEncoder().encode(text); let bin = ""; for(const b of bytes) bin += String.fromCharCode(b); return btoa(bin); }
+function syncMark(){   // HUB498: the spinner while a change is on its way, the green circled check once synced, nothing otherwise
+  if(readOnly) return null;
+  if(changes.size) return el("span",{class:"sspin", role:"img", "aria-label":"Syncing", title:"Syncing: a change is on its way to the board"});
+  return loaded ? ico("circle-check", "ok", "Synced: every change is on the board") : null;
+}
 function saveState(){
   const n = changes.size, unsent = [...changes.keys()].filter(k => !sentAt.has(k)).length, s = $("#savest");
   // HUB394: changes on their way are said inside the pill: "3 changes syncing"
@@ -1600,6 +1608,9 @@ function saveState(){
   const ok = s.textContent === "Synced";   // HUB255/HUB265: everything is on the board: "Synced" in one chip
   s.classList.toggle("ok", ok);   // HUB322: the circled check beside it is the Sync indicator's icon
   s.title = ok ? "Synced: every change is on the board" : "";
+  const pill = $("#syncind"), mk = $("#syncmark");   // HUB498: the sheen on the pill and the spinner / green check in it
+  pill.classList.toggle("syncing", n > 0 && !readOnly);
+  if(mk) mk.replaceChildren(...[syncMark()].filter(Boolean));
   const pop = $("#syncpop"); if(pop && !pop.hidden) renderSyncPop();   // HUB394: the popup's Board block says the same
 }
 // how many questions would be open in column `col` (the desktop's move rule: none on Developed / Merged / Done)
@@ -7777,7 +7788,7 @@ function syncSymbols(figs, stage){
   for(const f of figs) if(f.k === "plan" && (!worst || (rk[f.lvl] || 0) > (rk[worst.lvl] || 0))) worst = f;
   const n = worst ? rk[worst.lvl] || 0 : 0;
   out.push({k: "usage", cls: cls[n], icon: n ? "alert-triangle" : "circle-check",
-    title: worst ? (n ? "Plan usage: the worst of the Weekly and 5-hour windows is " + worst.label + ": " + worst.value : "Plan usage is fine; the worst window is " + worst.label + ": " + worst.value) : "Plan usage: no reading yet"});
+    title: worst ? (n ? "Plan usage: " + worst.label + ": " + worst.value : "Plan usage is fine: " + worst.label + ": " + worst.value) : "Plan usage: no reading yet"});
   const api = figs.find(f => f.k === "api");
   if(api && symInUse("api", figs, stage))
     out.push({k: "api", cls: api.lvl === "tk-red" ? "wr" : api.lvl === "tk-orange" ? "wo" : "wy", icon: "alert-triangle", title: "API credits are in use: " + api.value});
@@ -7828,7 +7839,7 @@ function renderSyncPop(){
   const sync = el("div",{class:"bblock"},
     ...syncSymbols(figs, Number(usageNow().u && usageNow().u.stage)).map(y => el("div",{class:"row"}, ico(y.icon, y.cls, y.title), y.title)),   // HUB475: the pill's symbols, each with its reason as text
     el("div",{class:"row"}, exarchStateIcon(s), exarchStateText(s)),
-    el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
+    el("div",{class:"row"}, syncMark(), changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
   // HUB495: one frame and table as the Streams tab's Pause projects: state dot (its hover is the reason; a click opens the Streams tab), project, streams
@@ -7847,7 +7858,7 @@ function renderSyncPop(){
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
   const kids = [el("div",{class:"phead"}, el("h2",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
-    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), ...syncPopExtra(), popSec("Projects", ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]))];
+    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]), el("p",{class:"note spstreams"}, el("a",{href:"#streams", id:"streamslink", title:"Pause or resume projects in the Streams tab", onclick:ev => { ev.preventDefault(); go(); }}, "Open the Streams tab")))];
   // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
   // the nodes stay as they are unless what they show changed (every handler closes over values that are part of the markup)
   const sig = kids.map(k => k.outerHTML).join("");
@@ -7875,11 +7886,10 @@ function syncPopExtra(){
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
   const pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
   const over = pace === "turbo" || !(u && u.streams_live != null) ? null : streamsOver(live, Number(allowed));
-  return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Exarch tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Exarch tab"))),
+  return [kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Exarch tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Exarch tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
-    kv("Streams", streamsPausedList().length ? el("span",{class:"row wy"}, ico("alert-triangle", "wy", "Streams are paused"), (streamsPausedNow() ? "Paused for every project" : "Paused for " + streamsPausedList().map(k => String((projects.get(k) || {}).name || k)).join(", ")) + " · ", el("a",{href:"#streams", title:"Resume streams in the Streams tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("streams"); }}, "resume them in the Streams tab")) : "Running as the Pace allows"),
     kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: [streamsNow().list.map(s => s.name + " (" + s.card + ")").join(", "), u && u.allowance ? "Now: " + u.allowance : ""].filter(Boolean).join("\n") || null}),
-    held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
+    held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null];
 }
 // >>> runs-rows (tests/test_app.py runs this block)
 // one run as the two lines of EXARCH F: [start time, "kind · card or Lead", time taken or "running 6m" or "failed"],
