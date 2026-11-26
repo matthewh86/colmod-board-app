@@ -328,6 +328,9 @@ a.tlink{color:var(--c-prog); text-decoration:underline; overflow-wrap:anywhere}
 .dq button{text-align:left; max-width:100%}
 .dq button.rec{border-style:dashed; border-color:var(--q)}
 .dq button[aria-pressed="true"]{background:var(--q); border-color:var(--q); color:var(--surface); border-style:solid}
+/* HUB502: the hover rule above turned the chosen (yellow) button's text blue on amber; hover and a text selection keep the contrasting --surface text */
+.dq button[aria-pressed="true"]:not(:disabled):hover,.dq button[aria-pressed="true"]:focus-visible{background:var(--q); border-color:var(--ink); color:var(--surface)}
+.dq button[aria-pressed="true"]::selection,.dq button[aria-pressed="true"] *::selection{background:var(--surface); color:var(--q)}
 .dq .hint{font-size:.7rem; color:var(--muted)}
 .chip{display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:500; padding:1px 7px; border-radius:999px; background:hsl(var(--h) var(--chip-s) var(--chip-l)); color:var(--chip-ink); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 .eedit.epicedit{position:static; display:inline-block; opacity:.7; vertical-align:middle}   /* HUB311: beside the card's epic */
@@ -976,6 +979,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .crow .grip{color:var(--muted); cursor:grab; letter-spacing:-2px; width:12px; touch-action:none; user-select:none}
 .crow .lock{width:12px}
 .aiwho{padding:6px 12px 0; font-size:.8rem; color:var(--muted)}
+.aichat #aifilt{flex:none; margin:6px 12px 2px; align-self:flex-start}   /* HUB502: the Messages / Status / Both toggle */
 .offpanel{margin:10px 12px 0; border:1px solid var(--line); border-radius:10px; padding:10px; display:grid; gap:6px; background:var(--sunk)}
 .nbanner{margin:10px 12px 0; border:1px solid var(--accent); border-radius:10px; padding:8px 10px; display:grid; gap:6px; font-size:.85rem; background:color-mix(in srgb, var(--accent) 7%, var(--surface))}
 .aimsgs{flex:1; overflow:auto; padding:10px 12px; display:grid; gap:8px; align-content:start}
@@ -1171,7 +1175,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
 <aside class="aipanel" id="aipanel" role="complementary" aria-label="Exarch AI" hidden>
   <div class="airesize" id="airesize" role="separator" aria-orientation="vertical" aria-label="Width of the Exarch AI drawer" tabindex="0" title="Drag to resize (arrow keys too; double-click resets it)"></div>
   <div class="aihead"><h2><span class="ico" id="aihico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg></span>Exarch AI</h2><button type="button" id="aiclose" aria-label="Close the drawer">✕</button></div>
-  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button><button type="button" role="tab" id="aitab-status">Status</button></div>
+  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-leads">Leads</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button></div>
   <div class="offpanel" id="aioff" role="status" hidden></div>
   <div class="nbanner" id="ainotify" hidden></div>
   <div class="nbanner" id="aiwhy" role="status" hidden></div>
@@ -1180,13 +1184,13 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
     <div class="ctabs"><div class="strip" id="aitabs" role="tablist" aria-label="Chats"></div><span class="tools"><button type="button" id="aichats" aria-haspopup="true" aria-expanded="false" title="Chats: show, hide and reorder"><svg class="i" aria-hidden="true"><use href="#i-tabs"/></svg><span class="cnt" id="aicnt">0</span></button><button type="button" id="ainew" title="New chat" aria-label="New chat">+</button></span></div>
     <div class="chatspop" id="aichatspop" hidden></div>
     <div class="aiwho" id="aiwho" hidden></div>
+    <div class="seg" id="aifilt" role="group" aria-label="Show" hidden></div>
     <div class="aiframe"><button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
       <div class="tmenu" id="aimenu" hidden></div>
       <div class="aimsgs" id="aimsgs" aria-live="polite"></div></div>
     <form class="aiform" id="aiform"><div class="aigrip" id="aigrip" role="separator" aria-orientation="horizontal" aria-label="Height of the message box" tabindex="0" title="Drag up to make the box taller (arrow keys too; double-click resets it)"></div><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
   </div>
   <div class="aipane" id="aidev" hidden></div>
-  <div class="aipane" id="aistatus" hidden></div>
   <div class="aipane" id="aiarch" hidden></div>
 </aside>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -7488,7 +7492,7 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
 const AI_KEY = "hub.exarch", AI_OLD = "hub.assistant", AI_MSGS = 60, AI_ARCH_DAYS = 90, AI_CONV = /^[a-z0-9]{6,32}$/;
 const AI_WAIT_MS = 6 * 60 * 1000, AI_POLL_UNTIL_MS = 60 * 60 * 1000;   // "No answer yet" after 6 min; a late answer still lands for an hour
 const DW_KEY = "hub.drawer.w", DW_MIN = 320, DW_DEF = 420, DW_MAX = .7;   // the drawer's width on a desktop, kept per device
-const ai = {chats: [], arch: [], cur: "", tab: "chat", hfilt: "all", menu: false, confirm: "", pop: false, rect: null, seen: {}, polling: new Set(), notes: [], gone: [],
+const ai = {chats: [], arch: [], cur: "", tab: "chat", hfilt: "all", mfilt: "both", last: {}, menu: false, confirm: "", pop: false, rect: null, seen: {}, polling: new Set(), notes: [], gone: [],
             gen: 0, stored: null, last: "", lastCur: ""};   // gen: raised when the chats are cleared; stored: the text this tab last read or wrote; last: its content
 const aiId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 function ico(name, cls, title){   // a Tabler-style icon from the sprite at the top of the page
@@ -7561,12 +7565,14 @@ function leadState(p, now){   // "active" | "snoozed" | "not_needed" | "none" (n
 }
 // the order of the tab row: the Exarch chat first whatever was stored, then the rest in the user's order; hidden chats
 // and the tabs of Leads that are not active are left out of the row (the Chats popup lists every one)
-function chatRow(chats, activeLeads){
+// HUB502: `group` "desk" is the Chat tab (the Exarch chat and the user's own chats), "lead" the Leads tab; none: both
+function chatGroup(c, group){ return !group || (group === "lead") === (c.kind === "lead"); }
+function chatRow(chats, activeLeads, group){
   const live = c => c.kind !== "lead" || activeLeads.includes(c.lead);
-  const ex = chats.filter(c => c.kind === "exarch").slice(0, 1);
-  return ex.concat(chats.filter(c => c.kind !== "exarch" && live(c) && !c.hidden));
+  const ex = chats.filter(c => c.kind === "exarch" && chatGroup(c, group)).slice(0, 1);
+  return ex.concat(chats.filter(c => c.kind !== "exarch" && live(c) && !c.hidden && chatGroup(c, group)));
 }
-function hiddenCount(chats, activeLeads){ return chats.filter(c => c.kind !== "exarch" && c.hidden && (c.kind !== "lead" || activeLeads.includes(c.lead))).length; }
+function hiddenCount(chats, activeLeads, group){ return chats.filter(c => c.kind !== "exarch" && c.hidden && chatGroup(c, group) && (c.kind !== "lead" || activeLeads.includes(c.lead))).length; }
 // a drag in the Chats popup or the row: `from` moves to `to`; the Exarch chat stays first
 function chatMove(chats, from, to){
   const out = chats.slice(), i = out.findIndex(c => c.conv === from), j = out.findIndex(c => c.conv === to);
@@ -7576,7 +7582,7 @@ function chatMove(chats, from, to){
   if(ex > 0) out.unshift(out.splice(ex, 1)[0]);
   return out;
 }
-// the Status tab's filter (hub/exarch/history.py tags): all, waiting on the user ("user"), failures ("fail")
+// the status filter (hub/exarch/history.py tags; HUB502: the Status tab is part of the Chat tab now): all, waiting on the user ("user"), failures ("fail")
 function histShown(lines, f){ return (Array.isArray(lines) ? lines : []).filter(x => x && (f === "user" ? x.tag === "user" : f === "fail" ? x.tag === "fail" : true)); }
 // HUB327: the board's project with the Lead state Exarch AI works with (export/status.json exarch.projects, the core's
 // last tick): a project with no Lead charter installed is not needed, whatever the board says
@@ -7656,9 +7662,15 @@ function aiEnsure(){   // the Exarch chat always first; one chat per Lead that h
     ai.chats.push({conv: aiId(), kind: "lead", lead: role, project: k, title: k || role, n: 0, msgs: [], hidden: false});
   }
   const ex = ai.chats.findIndex(c => c.kind === "exarch"); if(ex > 0) ai.chats.unshift(ai.chats.splice(ex, 1)[0]);
-  const row = chatRow(ai.chats, chatLeads());
-  if(!row.some(c => c.conv === ai.cur)) ai.cur = (row.find(c => c.kind === "user") || row[0]).conv;
+  const g = aiGroup(), row = chatRow(ai.chats, chatLeads(), g);   // HUB502: the open tab's chats only; each tab keeps its own last chat
+  if(!row.some(c => c.conv === ai.cur)){
+    const back = row.find(c => c.conv === ai.last[g]);
+    ai.cur = back ? back.conv : row.length ? (g === "lead" ? row[0] : row.find(c => c.kind === "user") || row[0]).conv : "";
+  }
+  if(ai.cur) ai.last[g] = ai.cur;
 }
+function aiGroup(){ return ai.tab === "leads" ? "lead" : "desk"; }
+function aiTabOf(c){ return c && c.kind === "lead" ? "leads" : "chat"; }
 function aiConv(){ return ai.chats.find(c => c.conv === ai.cur) || null; }
 function chatName(c){
   if(c.kind === "exarch") return "exarch";   // HUB381: lowercase, like the Lead tabs
@@ -7927,7 +7939,7 @@ function notify(title, body, conv){
   if(!notifyOn() || (!document.hidden && !$("#aipanel").hidden)) return;
   try{
     const n = new Notification(title, {body: String(body || "").slice(0, 180), tag: "exarch-" + (conv || "status")});
-    n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = "chat"; } else ai.tab = "status"; aiOpen(true); n.close(); };
+    n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = aiTabOf(ai.chats.find(c => c.conv === conv)); } else { ai.tab = "chat"; ai.cur = ""; ai.mfilt = "both"; } aiOpen(true); n.close(); };
   }catch(e){ /* a browser that shows notifications only from a service worker: the compass count still says it */ }
 }
 function aiWaitingParts(){   // HUB417: what the compass count is made of
@@ -7939,7 +7951,7 @@ function aiWaitingParts(){   // HUB417: what the compass count is made of
 }
 function aiWaitingText(o){   // "2 plans to approve, 1 Lead reply, 1 failure needing the user"
   const n = (v, one, many) => v ? v + " " + (v === 1 ? one : many) : "";
-  return [n(o.plan, "plan to approve", "plans to approve"), n(o.lead, "Lead reply", "Lead replies"), n(o.esc, "failure needing the user (Status tab)", "failures needing the user (Status tab)")].filter(Boolean).join(", ");
+  return [n(o.plan, "plan to approve", "plans to approve"), n(o.lead, "Lead reply", "Lead replies"), n(o.esc, "failure needing the user (Chat tab)", "failures needing the user (Chat tab)")].filter(Boolean).join(", ");
 }
 function aiWaiting(){   // the compass count: plans to approve, Leads' replies, and escalations since the drawer was last open
   const o = aiWaitingParts(); return o.plan + o.lead + o.esc;
@@ -7973,13 +7985,14 @@ function devicesSec(){
 // ---- the drawer
 function aiDraw(){
   aiSync(); aiEnsure();
-  const s = exarchNow(), c = aiConv(), leads = chatLeads(), row = chatRow(ai.chats, leads);
+  const s = exarchNow(), c = aiConv(), leads = chatLeads(), row = chatRow(ai.chats, leads, aiGroup());
   $("#aihico").classList.toggle("mu", s.state === "off" || s.state === "halting");
   $("#aihico").classList.toggle("ok", s.state === "on");   // HUB381: green while Exarch AI is on
-  for(const t of ["chat", "arch", "dev", "status"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
-  const fails = s.history.filter(h => h.tag === "fail" && String(h.at || "") > (ai.seen.status || "")).length;
-  $("#aitab-status").replaceChildren("Status", fails ? el("span",{class:"err small"}, " " + fails) : "");
-  $("#aichat").hidden = ai.tab !== "chat"; $("#aistatus").hidden = ai.tab !== "status"; $("#aiarch").hidden = ai.tab !== "arch"; $("#aidev").hidden = ai.tab !== "dev";
+  for(const t of ["chat", "leads", "arch", "dev"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
+  const fails = s.history.filter(h => h.tag === "fail" && String(h.at || "") > (ai.seen.status || "")).length;   // HUB502: Status is part of the Chat tab now
+  $("#aitab-chat").replaceChildren("Chat", fails ? el("span",{class:"err small"}, " " + fails) : "");
+  $("#aichat").hidden = ai.tab !== "chat" && ai.tab !== "leads"; $("#aiarch").hidden = ai.tab !== "arch"; $("#aidev").hidden = ai.tab !== "dev";
+  $("#ainew").hidden = ai.tab === "leads";
   // off: the panel with Turn on (the chats stay readable below it)
   const offp = $("#aioff"); offp.hidden = !(s.state === "off" || s.state === "halting");
   if(!offp.hidden) offp.replaceChildren(el("b",{class:"row"}, ico("zzz", "mu"), s.state === "halting" ? "Exarch AI is halting" : "Exarch AI is off"),
@@ -7997,8 +8010,10 @@ function aiDraw(){
   if(!nb.hidden) nb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Notify this device?")),
     el("span",{class:"small"}, "Exarch AI can tell this device when a plan needs approving, a Lead replies, or something fails and needs the user. Nothing else."),
     el("span",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:notifyAsk}, "Turn on"), el("button",{type:"button", onclick:() => { ls(NOTE_KEY, "off"); aiDraw(); }}, "Not now")));
-  if(ai.tab === "chat") aiDrawChat(c, row, leads);
-  else if(ai.tab === "status"){ aiDrawStatus(s); ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status; }
+  if(ai.tab === "chat" || ai.tab === "leads"){
+    aiDrawChat(c, row, leads);
+    if(ai.tab === "chat" && c && c.kind === "exarch" && ai.mfilt !== "messages" && !$("#aipanel").hidden) ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status;   // the failures were shown
+  }
   else if(ai.tab === "dev") $("#aidev").replaceChildren(devicesSec());   // HUB381: moved here from the Sync popup (HUB380)
   else aiDrawArch();
   aiSave(); renderExarchHeader();
@@ -8018,11 +8033,11 @@ function aiDrawChat(c, row, leads){
   }));
   const cur = strip.querySelector(".ct.on"); if(cur) cur.scrollIntoView({block:"nearest", inline:"nearest"});
   aiFade();
-  const hid = hiddenCount(ai.chats, leads), cnt = $("#aicnt");
+  const hid = hiddenCount(ai.chats, leads, aiGroup()), cnt = $("#aicnt");
   cnt.textContent = String(hid); $("#aichats").title = "Chats: show, hide and reorder (" + hid + " hidden)";
   $("#aichats").setAttribute("aria-expanded", String(ai.pop));
   const mb = $("#aimenubtn"); mb.hidden = !c; mb.classList.toggle("open", !!ai.menu); mb.setAttribute("aria-expanded", String(!!ai.menu));
-  aiDrawMenu(c); aiDrawChatsPop(leads);
+  aiDrawMenu(c); aiDrawChatsPop(leads); aiDrawFilt(c);
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
     : c.kind === "lead" ? "Talking to " + c.lead + (leadSnoozed(c) ? " · snoozed: a message ends the snooze" : "") + aiLeadWoken(c) : "";
@@ -8030,7 +8045,7 @@ function aiDrawChat(c, row, leads){
   who.hidden = !who.textContent;
   const box = $("#aimsgs"), foc = document.activeElement && document.activeElement.classList.contains("dedit") ? document.activeElement : null;
   const typing = foc ? [foc.dataset.item, foc.selectionStart, foc.selectionEnd] : null, atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  box.replaceChildren(...[ex.note ? el("div",{class:"sline"}, ico("lock"), ex.note) : null, ...aiItems(c)].filter(Boolean));
+  box.replaceChildren(...[ex.note ? el("div",{class:"sline"}, ico("lock"), ex.note) : null, ...aiItems(c), !c && ai.tab === "leads" ? el("p",{class:"note"}, "No Leads yet: a project with an active Lead shows here.") : null].filter(Boolean));
   if(typing){   // a redraw while a draft's title is typed: the typing, the focus and the caret stay
     const f = [...box.querySelectorAll(".dedit")].find(x => x.dataset.item === typing[0]);
     if(f){ f.focus({preventScroll: true}); try{ f.setSelectionRange(typing[1], typing[2]); }catch(e){} }
@@ -8080,11 +8095,11 @@ function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archi
 function aiDrawChatsPop(leads){
   const p = $("#aichatspop"); p.hidden = !ai.pop;
   if(p.hidden) return;
-  const all = ai.chats.filter(c => c.kind !== "lead" || leads.includes(c.lead));
+  const all = ai.chats.filter(c => (c.kind !== "lead" || leads.includes(c.lead)) && chatGroup(c, aiGroup()));
   setKids(p, ...all.map(c => {
     const hue = chatHue(c);
     const r = el("div",{class:"crow", "data-conv":c.conv, style:hue ? "--pc:" + hue : null,
-      onclick:ev => { if(ev.target.closest("button,.grip")) return; c.hidden = false; ai.cur = c.conv; ai.pop = false; ai.menu = false; ai.confirm = ""; aiDraw(); }},   // HUB369: a click on a row opens that chat and closes the list
+      onclick:ev => { if(ev.target.closest("button,.grip")) return; c.hidden = false; ai.cur = c.conv; ai.tab = aiTabOf(c); ai.pop = false; ai.menu = false; ai.confirm = ""; aiDraw(); }},   // HUB369: a click on a row opens that chat and closes the list
       c.kind === "exarch" ? el("span",{class:"lock", title:"Always first"}, "🔒︎") : el("span",{class:"grip", title:"Drag to reorder"}, "⋮⋮"),
       chatIcon(c), el("span",{class:"nm" + (c.hidden ? " mu" : "")}, chatName(c)),
       c.kind === "exarch" ? el("span",{class:"small mu"}, "always first")
@@ -8120,19 +8135,23 @@ function dragRow(handle, list, sel, done, item){
   handle.addEventListener("click", ev => { if(Date.now() - (aiDrag.at || 0) < 300){ ev.stopPropagation(); ev.preventDefault(); } }, true);
 }
 const aiDrag = {at: 0};
-function aiItems(c){   // the open chat: messages, and for a Lead its Status lines between them (status only: never sent)
+function aiItems(c){   // the open chat: messages, and for the Exarch chat and a Lead its Status lines between them (status only: never sent); always oldest first (HUB502)
   if(!c) return [];
-  const items = c.msgs.map((m, i) => ({at: m.at || "", i, m}));
-  if(c.kind === "lead"){
+  const f = c.kind === "user" ? "messages" : ai.mfilt, out = [];
+  let last = "";
+  const items = f === "status" ? [] : c.msgs.map((m, i) => { last = m.at || last; return {at: last, i, m}; });   // a message with no time stays behind the one before it
+  if(f !== "messages" && c.kind !== "user"){
     const first = items.length ? items[0].at : "";
-    for(const h of exarchNow().history) if((h.project && h.project === c.project) || String(h.text || "").includes(c.lead))
-      if(!first || String(h.at || "") >= first) items.push({at: String(h.at || ""), i: -1, h});
+    for(const h of exarchNow().history){
+      const mine = c.kind === "exarch" || (h.project && h.project === c.project) || String(h.text || "").includes(c.lead);
+      if(mine && (c.kind === "exarch" || f === "status" || !first || String(h.at || "") >= first)) items.push({at: String(h.at || ""), i: 1e9, h});
+    }
   }
   items.sort((a, b) => a.at && b.at && a.at !== b.at ? a.at.localeCompare(b.at) : (a.i - b.i));
-  const out = [];
-  if(!c.msgs.length) out.push(el("div",{class:"aihint"}, c.kind === "exarch" ? "Ask about the Hub and Exarch AI themselves, or ask for a change to them."
+  if(f !== "status" && !c.msgs.length) out.push(el("div",{class:"aihint"}, c.kind === "exarch" ? "Ask about the Hub and Exarch AI themselves, or ask for a change to them."
     : c.kind === "lead" ? "Message " + c.lead + ". Each message is a fresh headless run of the Lead with its charter and notes, and the last few messages here."
     : "Ask about the board (what is blocked, what changed) or list new work for any project. With Plan on, a request comes back as a plan to approve."));
+  if(f === "status" && !items.length) out.push(el("p",{class:"note"}, exarchNow().x ? "Nothing to show here." : "No Exarch AI status in the export yet."));
   for(const it of items){
     if(it.h){ out.push(el("div",{class:"hl" + (it.h.tag === "fail" ? " err" : ""), title:"Status, for reference: not sent to the Lead"},   // HUB418: the same look as the Status tab's lines
       el("span",{class:"t", title:it.h.at ? new Date(it.h.at).toLocaleString() : null}, it.h.at ? new Date(it.h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""),
@@ -8140,6 +8159,13 @@ function aiItems(c){   // the open chat: messages, and for a Lead its Status lin
     out.push(aiMsg(c, it.m));
   }
   return out;
+}
+// HUB502: the Messages / Status / Both toggle above the chat (the Exarch chat and the Leads: the only chats with status lines)
+function aiDrawFilt(c){
+  const b = $("#aifilt"); b.hidden = !c || c.kind === "user";
+  if(b.hidden) return;
+  b.replaceChildren(...[["messages", "Messages"], ["status", "Status"], ["both", "Both"]].map(([k, name]) =>
+    el("button",{type:"button", "aria-pressed":String(ai.mfilt === k), onclick:() => { ai.mfilt = k; aiDraw.jump = true; aiDraw(); }}, name)));
 }
 // HUB381: a message's or status line's own time, local, with the full date on hover
 function aiTime(at){
@@ -8500,14 +8526,6 @@ async function aiPlans(){   // HUB330: the plans Exarch AI drafted for cards in 
     }
   } finally { ai.plansBusy = false; }
 }
-function aiDrawStatus(s){
-  const f = ai.hfilt, seg = el("div",{class:"seg", role:"group", "aria-label":"Show"}, ...[["all", "All"], ["user", "Waiting on the user"], ["fail", "Failures"]].map(([k, name]) =>
-    el("button",{type:"button", "aria-pressed":String(f === k), onclick:() => { ai.hfilt = k; aiDraw(); }}, name)));
-  const lines = histShown(s.history, f);
-  $("#aistatus").replaceChildren(seg, ...(lines.length ? lines.map(h => el("div",{class:"hl" + (h.tag === "fail" ? " err" : "")},
-    el("span",{class:"t", title:h.at ? new Date(h.at).toLocaleString() : null}, h.at ? new Date(h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""), aiCardText(el("span",{}), h.text || "", h.card ? [h.card] : []))) :
-    [el("p",{class:"note"}, s.x ? "Nothing to show here." : "No Exarch AI status in the export yet.")]));
-}
 function aiDrawArch(){
   const box = $("#aiarch"), list = ai.arch;
   const one = c => el("div",{class:"arow"}, el("span",{style:"flex:1"}, el("b",{}, chatIcon(c), " ", c.kind === "lead" ? c.lead : chatName(c)), el("br"),
@@ -8515,7 +8533,7 @@ function aiDrawArch(){
     el("button",{type:"button", class:"small", onclick:() => { ai.arch.splice(ai.arch.indexOf(c), 1);
       if(c.kind === "user"){ ai.chats.push(Object.assign({}, c, {archived: "", hidden: false})); ai.cur = c.conv; }
       else { const live = ai.chats.find(x => x.kind === c.kind && x.lead === c.lead); if(live){ live.msgs = c.msgs.concat(live.msgs); ai.cur = live.conv; } }
-      ai.tab = "chat"; aiDraw(); }}, "Restore"),
+      ai.tab = aiTabOf(c); aiDraw(); }}, "Restore"),
     el("button",{type:"button", class:"small", onclick:() => { ai.confirm = "a:" + c.conv; aiDraw(); }}, "Clear"));
   const conf = ai.confirm && ai.confirm.startsWith("a:") ? ai.confirm.slice(2) : "";
   const ask = (text, yes, go) => el("div",{class:"confirm"}, el("span",{}, text), el("button",{type:"button", class:"pbtn", onclick:go}, yes), el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel"));
@@ -8620,7 +8638,7 @@ $("#aiclose").addEventListener("click", () => aiOpen(false));
 $("#ainew").addEventListener("click", aiNewChat);
 $("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
 $("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); });
-for(const t of ["chat", "arch", "dev", "status"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
+for(const t of ["chat", "leads", "arch", "dev"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
 // ---------- HUB338: encrypted chats (docs/EXARCH.md section L, mock-ups section 6). This device makes its own
