@@ -157,6 +157,10 @@ button.prim.prim.prim.prim,button.prim.prim.prim.prim:hover,button.prim.prim.pri
 .ffbox{display:grid; gap:6px; padding:6px 0}
 .ffbox select{width:100%; font:inherit; font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:5px 8px}
 .ffbox label{display:flex; gap:8px; align-items:center; line-height:1.2; font-size:.85rem; cursor:pointer}
+.ffbox .frow{display:flex; align-items:center; justify-content:space-between; gap:6px}   /* HUB494: a filter, its count, then the arrows that cycle to its cards */
+.ffbox .farr{display:inline-flex; gap:2px; flex:none}
+.ffbox .fstep{font:inherit; font-size:.7rem; line-height:1; min-height:0; min-width:24px; padding:4px 6px; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:6px; cursor:pointer}
+.ffbox .fstep:hover{border-color:var(--accent)}
 .ffbox input[type=checkbox]{margin:0; flex:none; width:15px; height:15px; accent-color:var(--accent)}
 .epics h2 .fwrap{margin-left:auto; text-transform:none; letter-spacing:0}
 .epics h2 .fpop{left:auto; right:0}
@@ -1081,8 +1085,9 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
         <div id="ffpop" class="ffbox" role="group" aria-label="Filters">
           <select id="fp" aria-label="Priority filter"><option value="">All priorities</option><option value="1">P1 Critical</option><option value="2">P2 High</option><option value="3">P3 Normal</option><option value="4">P4 Low</option><option value="0">No priority</option></select>
           <select id="fy" aria-label="Issue type filter"><option value="">All types</option></select>
-          <label><input type="checkbox" id="fq"> Open questions</label>
-          <label title="Cards that are blocked, not synced, refused by the board, or idle"><input type="checkbox" id="fx"> Blocked or issue</label>
+          <div class="frow"><label><input type="checkbox" id="fq"> Open questions <b id="fqcount" class="fcount"></b></label><span class="farr"><button type="button" class="fstep" data-fstep="fq" data-d="-1" aria-label="Previous card with an open question" title="Previous card with an open question">&#9664;</button><button type="button" class="fstep" data-fstep="fq" data-d="1" aria-label="Next card with an open question" title="Next card with an open question">&#9654;</button></span></div>
+          <div class="frow"><label title="Cards with a blocker"><input type="checkbox" id="fbl"> Blocked <b id="fblcount" class="fcount"></b></label><span class="farr"><button type="button" class="fstep" data-fstep="fbl" data-d="-1" aria-label="Previous blocked card" title="Previous blocked card">&#9664;</button><button type="button" class="fstep" data-fstep="fbl" data-d="1" aria-label="Next blocked card" title="Next blocked card">&#9654;</button></span></div>
+          <div class="frow"><label title="Cards not synced, refused by the board, or idle"><input type="checkbox" id="fx"> Issue <b id="fxcount" class="fcount"></b></label><span class="farr"><button type="button" class="fstep" data-fstep="fx" data-d="-1" aria-label="Previous card with an issue" title="Previous card with an issue">&#9664;</button><button type="button" class="fstep" data-fstep="fx" data-d="1" aria-label="Next card with an issue" title="Next card with an issue">&#9654;</button></span></div>
           <label title="Cards with no estimate: the Gantt draws them dashed"><input type="checkbox" id="fne"> No estimate <b id="fnecount" class="fcount"></b></label>
         </div>
       <span class="fwrap">
@@ -1657,7 +1662,8 @@ function matches(c){
   if(filt.y && cardKind(c)!==(filt.y==="-" ? "" : filt.y)) return false;   // the issue type ("-": none)
   if(filt.t && cardTheme(c)!==filt.t) return false;
   if(filt.qo && !openQ(c)) return false;
-  if(filt.x && !cardIssue(c)) return false;            // HUB68: blocked, not synced, refused, idle
+  if(filt.bl && !cardBlocked(c)) return false;         // HUB494: the blocker on its own
+  if(filt.x && !cardIssue(c)) return false;            // HUB68: not synced, refused, idle (HUB494: blocked is its own filter)
   if(filt.ne && !cardNoEstimate(c)) return false;      // HUB384: the cards the Gantt draws dashed
   if(filt.q){ const s=filt.q.toLowerCase(); if(![c.id,c.t,c.st,c.q,c.un,c.d,c.cat,areas.get(c.cat)?.name,c.blk,epics.get(c.epic)?.name,themes.get(epicTheme(c.epic))?.name,
     ...(Array.isArray(c.opts)?c.opts:[]).map(o=>o&&o.q), ...qList(c).map(x=>x.q)].some(x=>x&&String(x).toLowerCase().includes(s))) return false; }
@@ -1673,7 +1679,8 @@ function qList(c){ return Array.isArray(c.qs) ? c.qs.filter(x=>x && x.id && x.q)
 // HUB379: the stream (agent or session) that holds an Assigned or Development card, from its `assigned` field
 function streamOf(c){ return (c.col === "assign" || c.col === "prog") && typeof c.assigned === "string" ? c.assigned.trim() : ""; }
 function handback(c){ const h = c.handback; return h && typeof h === "object" && h.at ? h : null; }
-function cardIssue(c){ return !!(c.blk || syncIssue(c) || refusedNote(c.id) || idleMin(c)); }
+function cardBlocked(c){ return !!c.blk; }   // HUB494
+function cardIssue(c){ return !!(syncIssue(c) || refusedNote(c.id) || idleMin(c)); }
 // the board's refusals of changes made here (export/phone-refused.json), kept a day so the card can show it
 const REFUSED_KEY = "cb.refused", REFUSED_KEEP_MS = 24 * 3600 * 1000;
 function refusedRows(){
@@ -2997,6 +3004,7 @@ $("#fl").value = LANE_FIELDS.includes(filt.l) ? filt.l : "";
 $("#fl").addEventListener("change", e=>{ filt.l=e.target.value; ls("kb.filters",filt); render(); });   // HUB302
 $("#fy").addEventListener("change", e=>{ filt.y=e.target.value; ls("kb.filters",filt); render(); });
 $("#fq").addEventListener("change", e=>{ filt.qo=e.target.checked; ls("kb.filters",filt); render(); });
+$("#fbl").checked = !!filt.bl; $("#fbl").addEventListener("change", e=>{ filt.bl=e.target.checked; ls("kb.filters",filt); render(); });
 $("#fx").checked = !!filt.x; $("#fne").checked = !!filt.ne;
 $("#fne").addEventListener("change", e=>{ filt.ne=e.target.checked; ls("kb.filters",filt); render(); });
 $("#fx").addEventListener("change", e=>{ filt.x=e.target.checked; ls("kb.filters",filt); render(); });
@@ -3014,7 +3022,19 @@ function closeFMenus(except){ for(const [b,p] of FMENUS) if(p!==except && !$(p).
 for(const [b,p] of FMENUS) $(b).addEventListener("click", ev=>{ ev.stopPropagation(); closeFMenus(p); $(p).hidden = !$(p).hidden; $(b).setAttribute("aria-expanded", String(!$(p).hidden)); });
 document.addEventListener("click", ev=>{ if(!ev.target.closest(".fwrap")) closeFMenus(); });
 document.addEventListener("keydown", ev=>{ if(ev.key === "Escape") for(const [b,p] of FMENUS) if(!$(p).hidden){ $(p).hidden = true; $(b).setAttribute("aria-expanded","false"); $(b).focus(); } });
-function ffcount(){ const n = (filt.p!=="" && filt.p!=null ? 1 : 0) + (filt.y ? 1 : 0) + (filt.qo ? 1 : 0) + (filt.x ? 1 : 0) + (filt.ne ? 1 : 0); $("#fnecount").textContent = String([...cards.values()].filter(c => inProject(c) && cardNoEstimate(c)).length); const b = $("#ffcount"); b.hidden = !n; b.textContent = n ? String(n) : ""; }
+// HUB494: the filters that count their cards and cycle the view to them: key -> [checkbox id, test]
+const FSTEP = {fq: ["Open questions", openQ], fbl: ["Blocked", cardBlocked], fx: ["Issue", cardIssue]};
+const fstepAt = {fq: -1, fbl: -1, fx: -1};
+function fstepCards(k){ return [...cards.values()].filter(c => inProject(c) && FSTEP[k][1](c)); }
+function fstepGo(k, d){
+  const els = [...document.querySelectorAll("#board .card")].filter(e => { const c = cards.get(e.dataset.id); return c && FSTEP[k][1](c) && !e.classList.contains("full"); });
+  if(!els.length){ toast(fstepCards(k).length ? "No " + FSTEP[k][0].toLowerCase() + " card is on the board with the other filters and hidden columns" : "No " + FSTEP[k][0].toLowerCase() + " cards"); return; }
+  const n = els.length; fstepAt[k] = fstepAt[k] < 0 ? (d > 0 ? 0 : n - 1) : ((fstepAt[k] + d) % n + n) % n;
+  document.querySelectorAll("#board .card.qhit").forEach(x => x.classList.remove("qhit"));
+  const e = els[fstepAt[k]]; e.classList.add("qhit"); e.scrollIntoView({block:"center", inline:"center"}); toast(FSTEP[k][0] + " " + (fstepAt[k] + 1) + " of " + n + ": " + e.dataset.id);
+}
+document.querySelectorAll(".fstep").forEach(b => b.addEventListener("click", () => fstepGo(b.dataset.fstep, Number(b.dataset.d))));
+function ffcount(){ const n = (filt.p!=="" && filt.p!=null ? 1 : 0) + (filt.y ? 1 : 0) + (filt.qo ? 1 : 0) + (filt.bl ? 1 : 0) + (filt.x ? 1 : 0) + (filt.ne ? 1 : 0); for(const k of Object.keys(FSTEP)) $("#" + k + "count").textContent = String(fstepCards(k).length); $("#fnecount").textContent = String([...cards.values()].filter(c => inProject(c) && cardNoEstimate(c)).length); const b = $("#ffcount"); b.hidden = !n; b.textContent = n ? String(n) : ""; }
 $("#ffpop").addEventListener("change", ffcount); ffcount();
 function setProject(j){   // the project switcher; an epic or a theme of another project is dropped
   filt.j = j;
