@@ -605,6 +605,7 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .spause{display:grid; gap:4px; max-width:640px; margin:6px 0; padding:6px 10px; border-left:3px solid var(--accent); background:var(--surface); border-radius:0 6px 6px 0}   /* HUB479 */
 .spause.paused{border-left-color:var(--q)}
 .spause p{margin:0} .spause .pbtn{justify-self:start}
+.spause .spproj{gap:8px; align-items:center} .spause .spproj .spname{min-width:9em} .spause .spproj .pbtn{margin-left:auto}   /* HUB488: one row per project */
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.85rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
 .pacesel button:first-child{border-left:0}
@@ -775,6 +776,7 @@ svg.burn{display:block; width:100%; height:auto} .ubreak{max-width:560px; displa
 .gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
 .gbar.held{border-right:3px dotted var(--p1); border-top-right-radius:0; border-bottom-right-radius:0}   /* HUB213: blocked outside the plan: no planned end */
+.gbar.idle{opacity:.45; background-image:repeating-linear-gradient(135deg, transparent 0 6px, rgba(127,127,127,.35) 6px 8px)}   /* HUB487: in Development, no live stream */
 .gbar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .gms{position:absolute; top:calc(var(--grow) / 2 - 7px); width:14px; height:14px; margin-left:-7px; transform:rotate(45deg); background:var(--t-rel); border:1px solid var(--surface); padding:0; cursor:pointer}
 .gmsi{position:absolute; top:3px; margin-left:10px; font-size:.8rem; pointer-events:none}
@@ -1319,6 +1321,7 @@ function changeText(ch){
   if(f === "lead") return "Lead " + String((v && v.state) || v || "").replace(/_/g, " ");   // HUB331
   if(f === "exarch.on") return "Exarch AI turned " + (v ? "on" : "off");
   if(f === "streams.paused") return v ? "streams paused" : "streams resumed";   // HUB479
+  if(f.startsWith("streams.paused.")) return f.slice(15) + " streams " + (v ? "paused" : "resumed");   // HUB488
   if(f === "exarch.model") return "default model: " + String(v);
   if(f === "exarch.plan") return "plan " + (v && v.act === "approve" ? "approved" : "discarded");
   if(f === "exarch.triage") return "triage request: " + (v && v.kind) + " " + (v && String(v.act).replace(/_/g, " "));
@@ -1377,7 +1380,7 @@ function changeSettled(id, ch, sent, exp){
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
   // a queue order, a new or edited thing (HUB120, HUB188), an Exarch AI chat item or Lead state (HUB331) and what is set
   // on Exarch AI itself (exarch.on, .model, .plan, .chat) have no doc in the export to compare with: only `applied` settles them
-  const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.") || f === "streams.paused";
+  const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.") || f === "streams.paused" || f.startsWith("streams.paused.");
   if(!named && at > String(ch.ts || "")){   // an export made after the click that shows the same thing
     if(!doc) return "gone";
     if(f.startsWith("ans.")){
@@ -4733,27 +4736,58 @@ const PACES = [["conservative", "Conservative", "Streams are rationed to try to 
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
   ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM and the machines' game slots still apply"]];
 // HUB479: streams paused or resumed by the user, apart from the Pace (usage.streams_paused; card "hub", field "streams.paused")
-function streamsPausedNow(){
-  const u = hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null;
-  let p = !!(u && u.streams_paused === true);
-  for(const ch of changes.values()) if(ch.card === "hub" && ch.field === "streams.paused") p = ch.value === true;   // the user's choice, on its way
-  return p;
+// HUB488: per project. The export's usage.streams_paused_projects {project: true|false} (card "hub", field
+// "streams.paused.<project>") over the all-projects flag usage.streams_paused_all (field "streams.paused", which also
+// drops every project's own setting). An export from before HUB488 has only streams_paused: every project paused.
+// >>> streams-pause (tests/test_app.py runs this block)
+function streamsPauseState(u, pending){
+  const own = {};
+  let all = !!(u && (typeof u.streams_paused_all === "boolean" ? u.streams_paused_all : u.streams_paused === true));
+  const o = u && u.streams_paused_projects && typeof u.streams_paused_projects === "object" ? u.streams_paused_projects : {};
+  for(const [k, v] of Object.entries(o)) if(typeof v === "boolean") own[k] = v;
+  for(const ch of pending || []){   // the user's choices on their way, oldest first
+    if(!ch || ch.card !== "hub") continue;
+    if(ch.field === "streams.paused"){ all = ch.value === true; for(const k of Object.keys(own)) delete own[k]; }
+    else if(String(ch.field).startsWith("streams.paused.")) own[String(ch.field).slice(15)] = ch.value === true;
+  }
+  return {all, own, of: k => typeof own[k] === "boolean" ? own[k] : all};
 }
-function streamsPausedSet(v){
+// the project keys paused, of `keys`; every: all of them paused (none given: the all-projects flag with no project resumed)
+function streamsPausedOf(st, keys){
+  const list = keys.filter(k => st.of(k));
+  return {list, every: keys.length ? list.length === keys.length : st.all && !Object.values(st.own).some(v => v === false)};
+}
+// <<< streams-pause
+function streamsPauseNow(){ return streamsPauseState(hubStatus && hubStatus.usage && typeof hubStatus.usage === "object" ? hubStatus.usage : null, [...changes.values()]); }
+function streamsPauseKeys(){ return [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k]) => k); }
+function streamsPausedFor(k){ return streamsPauseNow().of(k); }
+function streamsPausedList(){ return streamsPausedOf(streamsPauseNow(), streamsPauseKeys()).list; }
+function streamsPausedNow(){ return streamsPausedOf(streamsPauseNow(), streamsPauseKeys()).every; }   // every project paused
+function streamsPausedSet(v, k){
   if(readOnly){ toast("This view is read-only."); return; }
-  change({id: "hub", upd: null}, "streams.paused", v === true);
+  change({id: "hub", upd: null}, k ? "streams.paused." + k : "streams.paused", v === true);
   renderStreams(); renderSyncPop();
-  const b = document.getElementById("streams-pause"); if(b) b.focus({preventScroll:true});
+  const b = document.getElementById(k ? "streams-pause-" + k : "streams-pause"); if(b) b.focus({preventScroll:true});
 }
-// the Streams tab's pause control: separate from the Pace, which keeps its limits and everything else as set
+// the Streams tab's pause controls, one per project and one for every project: separate from the Pace, which keeps
+// its limits and everything else as set
 function streamsPauseBox(){
-  const paused = streamsPausedNow(), pace = usageNow().pace, pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
-  return el("div",{class:"spause" + (paused ? " paused" : ""), role:"group", "aria-label":"Pause or resume streams"},
-    el("button",{type:"button", id:"streams-pause", class:"pbtn", disabled:readOnly ? true : null, "aria-pressed":String(paused),
-      onclick:() => streamsPausedSet(!paused)}, paused ? "Resume streams" : "Pause streams"),
-    el("p",{class:"note", role:"status"}, paused
-      ? "Streams are paused: no new stream or card build starts and Leads start none, whatever the Pace allows. Streams already running finish their work. Resume to carry on."
-      : "Streams are running as the Pace allows. Pausing stops new streams and card builds from starting (the ones running finish) and does not change the Pace, its limits or anything else."),
+  const keys = streamsPauseKeys(), st = streamsPauseNow(), sp = streamsPausedOf(st, keys), every = sp.every, some = sp.list.length > 0;
+  const pace = usageNow().pace, pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
+  const pname2 = k => String((projects.get(k) || {}).name || k);
+  const rows = keys.map(k => { const p = st.of(k);
+    return el("div",{class:"row spproj" + (p ? " paused" : ""), "data-project":k},
+      el("span",{class:"spname"}, pname2(k)), el("span",{class:p ? "wy" : "mu"}, p ? "Paused" : "Running"),
+      el("button",{type:"button", id:"streams-pause-" + k, class:"pbtn small", disabled:readOnly ? true : null, "aria-pressed":String(p),
+        "aria-label":(p ? "Resume " : "Pause ") + pname2(k) + " streams", onclick:() => streamsPausedSet(!p, k)}, p ? "Resume" : "Pause")); });
+  return el("div",{class:"spause" + (some ? " paused" : ""), role:"group", "aria-label":"Pause or resume streams, per project"},
+    el("button",{type:"button", id:"streams-pause", class:"pbtn", disabled:readOnly ? true : null, "aria-pressed":String(every),
+      onclick:() => streamsPausedSet(!every)}, every ? "Resume all projects" : "Pause all projects"),
+    el("p",{class:"note", role:"status"}, every
+      ? "Streams are paused for every project: no new stream or card build starts and Leads start none, whatever the Pace allows. Streams already running finish their work. Resume to carry on."
+      : some ? "Streams are paused for " + sp.list.map(pname2).join(", ") + ": none of their cards starts a stream or card build and their Leads start none; the other projects run as the Pace allows. Streams already running finish their work."
+      : "Streams are running as the Pace allows. Pausing a project stops new streams and card builds of its cards from starting (the ones running finish) and does not change the Pace, its limits or anything else."),
+    ...rows,
     el("p",{class:"note"}, "The Pace is " + pname + ": it sets how many streams may run when they are not paused. ",
       el("a",{href:"#hub", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); showTab("hub"); }}, "Change the Pace in the Hub tab")));
 }
@@ -5819,13 +5853,26 @@ function gHeld(c, has){
   if(!blk) return false;
   return !(blk.match(/\b[A-Z]+\d+[a-z]?\b/g) || []).some(id => id !== c.id && has(id));
 }
+// HUB487: a card in Development that no live stream works on is idle (stale), not a working stream: drawn as idle,
+// it takes no stream slot and counts nowhere as a stream. live: the Set of card ids live streams hold (gLiveCards,
+// the same sessions as streamsNow()), or null while that is not known (no export yet): then nothing is idle
+function gIdleDev(c, live){ return c.col === "prog" && live instanceof Set && !live.has(c.id); }
 // <<< gantt-held
+// the cards live streams hold: streamsNow()'s list, and the other cards the same live streams (by name) hold
+function gLiveCards(){
+  if(!hubStatus) return null;
+  const sn = streamsNow().list, out = new Set(sn.map(s => s.card)), names = new Set(sn.map(s => s.name));
+  for(const s of Array.isArray(hubStatus.sessions) ? hubStatus.sessions : [])
+    if(s && names.has(s.name)) for(const id of Array.isArray(s.cards) ? s.cards : []) out.add(id);
+  return out;
+}
 // the plan: id -> {c, s, e, src, pool, kind: started|held|waiting|planned|milestone, dashed, overdue, waits}
 function ganttPlan(list, now){
   const byId = new Map(list.map(c => [c.id, c]));
   const out = new Map(), busy = {stream: [], coord: [], art: [], drawn: []}, limit = {stream: gStreamLimit(), coord: gCoordLimit(), art: Infinity, drawn: hubLimits().drawn};   // HUB424: ComfyUI art is jobs, no stream: no limit
   const est = c => Number(c.estimate) > 0 ? Number(c.estimate) : 0;
   const deps = c => [...new Set(String(c.blk || "").match(/\b[A-Z]+\d+[a-z]?\b/g) || [])].filter(id => id !== c.id && byId.has(id));
+  const live = gLiveCards();   // HUB487: a Development card no live stream holds is idle, not a working stream
   for(const c of list){   // the started cards and the releases first: they hold their place
     const started = c.col === "prog" || c.col === "test" || c.col === "built";
     if(cardKind(c) === "Release"){
@@ -5836,6 +5883,10 @@ function ganttPlan(list, now){
     }
     if(!started) continue;
     let s = gTime(c.started); if(isNaN(s)) s = gTime(c.colSince); if(isNaN(s)) s = now;
+    if(gIdleDev(c, live)){   // HUB487: drawn to now as idle, no stream slot; Exarch AI's core takes it out of Development
+      out.set(c.id, {c, s, e: Math.max(s, now), src: "idle: in Development with no live stream (stale; Exarch AI's core moves it out of Development)", pool: null, kind: "idle", waits: []});
+      continue;
+    }
     if(c.col === "prog" && gHeld(c, id => byId.has(id))){   // HUB213: blocked outside the plan: no planned end, no slot, its eta unused
       out.set(c.id, {c, s, e: Math.max(s, now), src: "none planned: blocked on no planned card (an outside party, a manual action or an answer)", pool: null, kind: "held", waits: []});
       continue;
@@ -6053,6 +6104,7 @@ function gTipText(it){
   if(cardKind(c)) lines.push("Type: " + cardKind(c));   // HUB218: the type alone
   if(it.kind === "milestone") lines.push("Release at: " + when(it.s), "From: " + it.src);
   else if(it.kind === "held") lines.push("Start: " + when(it.s), "End: " + it.src + "; drawn to now. A wait on an outside party is Parked with no ETA");
+  else if(it.kind === "idle") lines.push("Idle: no live stream works on it (HUB487); not counted as a stream", "In Development since: " + when(it.s));
   else if(it.kind === "past") lines.push("Started: " + when(it.s), (it.done < it.e ? "Gate passed: " + when(it.done) + "\n" : "") + "Done: " + when(it.e) + " (past work)");
   else lines.push("Start: " + when(it.s) + (it.kind === "planned" ? " (planned)" : ""), "End: " + when(it.e), "End from: " + it.src);
   if(it.kind === "waiting") lines.push("Work done: " + when(it.done != null ? it.done : it.s) + "; waits for the merge since then (no stream slot)");
@@ -6249,7 +6301,7 @@ function drawGantt(host){
       const testing = it.kind === "testing";   // HUB146: merged: no longer drawn like work in progress
       const was = it.kind === "past";   // HUB168: finished: solid while worked on, pale from its gate pass to Done
       const hatch = it.done != null && (it.kind === "waiting" || testing);   // HUB144: passed its gate, waiting for (or past) the merge
-      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "") + (c.col === "prog" && streamOf(c) ? " live" : "");   // HUB383: a stream works on it now
+      const cls = "gbar" + tcls + (it.kind === "planned" ? " planned" : it.kind === "held" ? " held" : it.kind === "idle" ? " held idle" : "") + (was ? " past" : "") + (testing ? " testing" : hatch ? " waiting" : "") + (it.dashed && !testing ? " dashed" : "") + (it.overdue ? " overdue" : "") + (c.col === "prog" && streamOf(c) && it.kind !== "idle" ? " live" : "");   // HUB487: idle is never live   // HUB383: a stream works on it now
       const w = Math.max(4, X(it.e) - X(it.s));
       // HUB133: work done (solid) up to when it went to Developed, then hatched while it waits for the merge
       const split = hatch || was ? Math.max(0, Math.min(w, X(it.done) - X(it.s))) : null;
@@ -6288,7 +6340,7 @@ function drawGantt(host){
 function gotoStreams(){ const t = $("#streams"); if(!t || t.hidden) showTab("streams"); }   // HUB399, HUB483: the Gantt's Streams goto button opens the Streams tab
 function ganttStrips(o){
   const {plan, list, now, t0, t1, X, sc, row, inner} = o;
-  const nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool).length;
+  const liveC = gLiveCards(), nowIn = pool => list.filter(c => c.col === "prog" && cardKind(c) !== "Release" && gPool(c) === pool && !gIdleDev(c, liveC)).length;   // HUB487: idle cards are no stream
   const sNow = streamsNow().n, sAll = streamsAllowed(), sPace = Number(usageNow().u && usageNow().u.streams_live), cNow = nowIn("coord"), dNow = nowIn("drawn"), sLim = plan.limit.stream, cLim = plan.limit.coord, dLim = plan.limit.drawn;
   // the resource strips: per slice, the most cards running at once against the limit: the plan from now on, and
   // (HUB168) before now what ran: every card's worked time (gWorked), finished ones too, drawn paler
@@ -6350,8 +6402,8 @@ function streamsModel(items, streams, now, own, opts){
   const holder = c => typeof c.assigned === "string" ? c.assigned.trim() : "";
   const mine = it => { const c = it.c; return (c.col === "prog" || c.col === "assign") && holder(c) && own(c); };
   const put = (r, it, role) => {   // a queued bar starts when the stream is free, and keeps its length
-    const len = Math.max(0, it.e - it.s), s = role === "now" ? it.s : Math.max(it.s, r.free), e = role === "now" ? it.e : s + len;
-    r.bars.push({it, role, s, e}); r.free = Math.max(r.free, e);
+    const fixed = role === "now" || role === "idle", len = Math.max(0, it.e - it.s), s = fixed ? it.s : Math.max(it.s, r.free), e = fixed ? it.e : s + len;
+    r.bars.push({it, role, s, e}); if(role !== "idle") r.free = Math.max(r.free, e);
     if(projOf && !r.proj) r.proj = projOf(it.c) || null;
     if(role === "now" && it.pool) r.pool = it.pool;
   };
@@ -6359,7 +6411,8 @@ function streamsModel(items, streams, now, own, opts){
   const held = items.filter(mine).sort(byStart);
   // a stream that holds a card is a row even when it is not in the live list: its claim is real, so not "predicted"
   const rowOf = n => { const r = rows.get(n) || mk(n, false); r.predicted = false; return r; };
-  for(const it of held.filter(x => x.c.col === "prog")) put(rowOf(holder(it.c)), it, "now");
+  // HUB487: a Development card no live stream holds (the plan's kind "idle") is drawn as idle, never as working now
+  for(const it of held.filter(x => x.c.col === "prog")) put(rowOf(holder(it.c)), it, it.kind === "idle" ? "idle" : "now");
   for(const it of held.filter(x => x.c.col === "assign")) put(rowOf(holder(it.c)), it, "assigned");
   const planned = items.filter(it => it.kind === "planned" && !holder(it.c) && it.c.col !== "assign" && it.c.col !== "prog").sort(byStart);
   for(const it of planned){
@@ -6378,7 +6431,8 @@ function streamsModel(items, streams, now, own, opts){
     put(best, it, "planned");
   }
   for(const r of rows.values()){
-    if(!r.bars.length){ const t = r.seen ? Date.parse(r.seen) : NaN; r.idleSince = isNaN(t) ? null : t; }
+    r.idle = r.bars.every(b => b.role === "idle");   // HUB487: no bars, or only idle Development cards: an idle row
+    if(r.idle){ const t = r.seen ? Date.parse(r.seen) : NaN; r.idleSince = isNaN(t) ? null : t; }
     r.bars.sort((a, b) => a.s - b.s);
   }
   return [...rows.values()].sort((a, b) => (b.bars.length ? 1 : 0) - (a.bars.length ? 1 : 0) || (a.predicted ? 1 : 0) - (b.predicted ? 1 : 0) || a.name.localeCompare(b.name));
@@ -6431,7 +6485,7 @@ function renderStreams(){   // a fault in this tab must never stop the board fro
 function drawStreams(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), live = streamLive();
-  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), streamsPausedNow(), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
+  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), streamsPausedList(), streamsPauseKeys(), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
     hubStatus && [hubStatus.machines, hubStatus.sessions], sessSort, tokMode, tokHours, [...tokens.entries()].map(([k, d]) => [k, d.end]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -6468,7 +6522,7 @@ function drawStreams(host){
   const strips = {plan, list, now, t0, t1, X, sc, row, inner};
   ganttStrips(strips);
   for(const r of rows){
-    const idle = !r.bars.length, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";
+    const idle = !r.bars.length || r.idle, ago = r.idleSince ? fmtDur(Math.max(0, now - r.idleSince)) : "";   // HUB487: only idle cards: idle
     const tip0 = r.name + (r.predicted ? " (predicted: no stream by this name yet; Exarch starts it for its planned card)" : "")
       + (idle ? "\nIdle" + (ago ? ": last seen " + ago + " ago" : "") : "");
     const lv = streamLiveness(r, now);
@@ -6476,13 +6530,13 @@ function drawStreams(host){
       el("span",{class:"gdot " + lv.k, role:"img", "aria-label":lv.label, title:lv.label}), el("span",{class:"gid"}, r.name), idle ? el("span",{class:"gt"}, "idle" + (ago ? " " + ago : "")) : null);
     const cell = r.bars.map(b => {
       const it = b.it, c = it.c, hue = epics.get(c.epic || "")?.hue, w = Math.max(4, X(b.e) - X(b.s));
-      const what = b.role === "now" ? "Working now" : b.role === "assigned" ? "Assigned to " + r.name + ", waits for its turn"
+      const what = b.role === "now" ? "Working now" : b.role === "idle" ? "Idle: in Development, but no live stream works on it (not counted as a stream; Exarch AI's core moves it out of Development)" : b.role === "assigned" ? "Assigned to " + r.name + ", waits for its turn"
         : "Planned for " + r.name + (r.predicted ? " (a stream not started yet)" : " (predicted: it takes the card when free)") + ", dashed until it claims the card";
       const est = Number(c.estimate) > 0 ? fmtDur(Number(c.estimate) * G_MIN) : "no estimate";
       const tip = what + "\n" + gTipText(Object.assign({}, it, {s: b.s, e: b.e})) + "\nEstimate: " + est;
       const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
         onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); openCard(c.id); } };
-      return el("button",{type:"button", class:"gbar gs" + (b.role === "now" ? "" : " planned") + (b.role === "planned" ? " pred" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : ""),
+      return el("button",{type:"button", class:"gbar gs" + (b.role === "now" ? "" : b.role === "idle" ? " held idle" : " planned") + (b.role === "planned" ? " pred" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : ""),
         style:"left:" + X(b.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : ""), "aria-label":tip, "data-card":c.id, ...hover}, c.id + (Number(c.estimate) > 0 ? " · " + est : ""));
     });
     inner.append(row("gstreamrow", lab, cell, {"data-stream":r.name}));
@@ -7638,8 +7692,8 @@ function renderSyncPop(){
   const usage = usageBreakdownRows(figs);
   const now = Date.now(), core = leadRows(), sn = streamsNow(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
     const pr = leadRow(k, p0, core), st = leadState(pr, now), n = Number(sn.by[k]) || 0;   // HUB482: streamsNow(), the same count as "Streams in use"
-    const streams = n + (n === 1 ? " stream" : " streams");
-    const also = n ? " · " + streams : "";   // HUB482: a project's live streams show whatever its Lead's state, so the rows add up to Streams in use
+    const streams = n + (n === 1 ? " stream" : " streams") + (streamsPausedFor(k) ? " · streams paused" : "");   // HUB488
+    const also = n || streamsPausedFor(k) ? " · " + streams : "";   // HUB482: a project's live streams show whatever its Lead's state, so the rows add up to Streams in use
     const txt = isHubProject(k, pr) ? (s.state === "halting" ? "Halting · " : "Active · ") + streams
       : st === "none" ? "No Lead yet" + also : st === "not_needed" ? "Lead not needed yet" + also
       : st === "snoozed" ? "Snoozed" + (pr.snooze_until ? " until " + (isNaN(Date.parse(pr.snooze_until)) ? String(pr.snooze_until) : fmtTime(pr.snooze_until)) : "") + also
@@ -7685,7 +7739,7 @@ function syncPopExtra(){
   const over = pace === "turbo" || !(u && u.streams_live != null) ? null : streamsOver(live, Number(allowed));
   return [popSec("Pace", kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Hub tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Hub tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
-    kv("Streams", streamsPausedNow() ? el("span",{class:"row wy"}, ico("alert-triangle", "wy", "Streams are paused"), "Paused · ", el("a",{href:"#streams", title:"Resume streams in the Streams tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("streams"); }}, "resume them in the Streams tab")) : "Running as the Pace allows"),
+    kv("Streams", streamsPausedList().length ? el("span",{class:"row wy"}, ico("alert-triangle", "wy", "Streams are paused"), (streamsPausedNow() ? "Paused for every project" : "Paused for " + streamsPausedList().map(k => String((projects.get(k) || {}).name || k)).join(", ")) + " · ", el("a",{href:"#streams", title:"Resume streams in the Streams tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("streams"); }}, "resume them in the Streams tab")) : "Running as the Pace allows"),
     kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: [streamsNow().list.map(s => s.name + " (" + s.card + ")").join(", "), u && u.allowance ? "Now: " + u.allowance : ""].filter(Boolean).join("\n") || null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null)];
 }
