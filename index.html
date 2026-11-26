@@ -17,7 +17,7 @@
   --p1:#b42318; --p2:#a15c07; --p3:#3f6b35; --p4:#6a4c93; --q:#8a5a00; --q-soft:#fff3d6;
   --pri-ink:#ffffff; --sheen:rgba(255,255,255,.85); --t-bug:#c62828; --t-bug-bg:#fdecea; --t-feature:#1f5fbf; --t-feature-bg:#e7f0fc; --t-technical:#c79a00; --t-technical-bg:#fff6d6; --t-admin:#7b8494; --t-admin-bg:#eceff3; --t-art:#2e7d32; --t-doc:#00838f; --t-art-bg:#e6f5e6; --t-rel:#c25e00; --t-rel-bg:#fdeedd; --t-test:#ad1457; --t-test-bg:#fce4ec; --t-plan:#6a3fb5; --t-plan-bg:#efe8fa; --t-spike:#795548; --t-spike-bg:#f3ece9;
   --c-decide:#a15c07; --c-refining:#5f6b12; --c-refined:#7a5a12; --c-prog:#1f4e8c; --c-assign:#2f6f8f; --c-built:#1f6f7a; --c-test:#6a4c93; --c-done:#3f6b35; --c-next:#b42318; --c-back:#586173; --c-park:#8b93a1; --c-rej:#7d4a4a;
-  --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c;
+  --chip-s:55%; --chip-l:90%; --chip-ink:#1b2230; --blk-bg:#fde2df; --blk-ink:#8f1d14; --pend-bg:#e3effb; --pend-fg:#1f4e8c; --st-ready:#1f5fbf; --st-active:#2e8b3e; --st-paused:#7b8494; --st-issue:#d4a300; --st-error:#c62828;
   --logo-gold:#a97b1f; --logo-gold2:#d3a846; --logo-por:#4b1d5e; --logo-por-a:.14;   /* HUB454: the header logo's imperial gold and porphyry */
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
@@ -32,7 +32,7 @@
     --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
   --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c; --t-rel:#f0a35e; --t-rel-bg:#3a2612; --t-test:#f48fb1; --t-test-bg:#3a1a28; --t-plan:#b39ddb; --t-plan-bg:#2a2138; --t-spike:#c8a99a; --t-spike-bg:#33261f;
     --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-assign:#7fc3dc; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
-    --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+    --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6; --st-ready:#5b9bf0; --st-active:#4cc063; --st-paused:#8a93a3; --st-issue:#e6c02e; --st-error:#ef6b6b;
   }
 }
 :root[data-theme="dark"]{
@@ -44,7 +44,7 @@
   --p1:#f2857a; --p2:#e9a55c; --p3:#93c483; --p4:#b9a0e0; --q:#f0c060; --q-soft:#3a2f14;
   --pri-ink:#0e131b; --sheen:rgba(255,255,255,.3); --t-bug:#f2857a; --t-bug-bg:#3a1c1a; --t-feature:#7fa9e6; --t-feature-bg:#172a44; --t-technical:#e6c555; --t-technical-bg:#3a3212; --t-admin:#9aa3b2; --t-admin-bg:#252c37; --t-art:#93c483; --t-doc:#5cc8d2; --t-art-bg:#17331c; --t-rel:#f0a35e; --t-rel-bg:#3a2612; --t-test:#f48fb1; --t-test-bg:#3a1a28; --t-plan:#b39ddb; --t-plan-bg:#2a2138; --t-spike:#c8a99a; --t-spike-bg:#33261f;
   --c-decide:#e9a55c; --c-refining:#c3cf72; --c-refined:#d8b56a; --c-prog:#7fa9e6; --c-assign:#7fc3dc; --c-built:#6cc4cf; --c-test:#b9a0e0; --c-done:#93c483; --c-next:#f2857a; --c-back:#9aa3b2; --c-park:#6b7483; --c-rej:#c99a9a;
-  --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6;
+  --chip-s:35%; --chip-l:24%; --chip-ink:#e5e9ef; --blk-bg:#4a1e1a; --blk-ink:#ffb4aa; --pend-bg:#1d2b40; --pend-fg:#7fa9e6; --st-ready:#5b9bf0; --st-active:#4cc063; --st-paused:#8a93a3; --st-issue:#e6c02e; --st-error:#ef6b6b;
 }
 [hidden]{display:none!important}   /* claude.ai's page frame added this; on its own the page must */
 *,*::before,*::after{box-sizing:border-box}
@@ -632,6 +632,15 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 @media (pointer:coarse){ .spswitch{width:48px; height:28px} .spswitch .knob{width:22px; height:22px} .spswitch[aria-checked="true"] .knob{left:22px} }
 .spfoot{display:flex; justify-content:flex-end}
 .sppace{margin:8px 0 0}
+/* HUB495: a project's state dot, one look in the Streams tab's Pause projects frame and the Sync popup's Projects frame */
+.pdot{display:inline-block; width:12px; height:12px; border-radius:50%; flex:none; vertical-align:middle; padding:0; border:0; background:var(--pc,var(--muted)); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--pc,var(--muted)); cursor:help}
+button.pdot{cursor:pointer}
+button.pdot:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+.pdot.ready{--pc:var(--st-ready)} .pdot.active{--pc:var(--st-active)} .pdot.paused{--pc:var(--st-paused)} .pdot.issue{--pc:var(--st-issue)} .pdot.error{--pc:var(--st-error)}
+.sptable .spdot{width:2em; text-align:center}
+.pkey{display:flex; flex-wrap:wrap; gap:2px 12px; margin:0; font-size:.78rem; color:var(--muted)}
+.pkey span{display:inline-flex; align-items:center; gap:6px}
+.syncpop .spause{margin:0; max-width:none}
 @media (max-width:480px){ .sptable th, .sptable td{padding:6px 4px} .sptable .spn{width:3.5em} }
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.85rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
@@ -4795,6 +4804,54 @@ function sessionsSection(){
 const PACES = [["conservative", "Conservative", "Streams are rationed to try to make every token limit last to its refresh; at least one always runs"],
   ["moderate", "Moderate", "A limit may run out a little before its refresh"],
   ["turbo", "Turbo", "Full speed: no limit on development streams, Exarch's hub cards or art Claude draws; only the paid usage credits, the local LLM and the machines' game slots still apply"]];
+// HUB495: a project's state, one of five, from data the export already has (docs/BOARD.md "Project states").
+// Order: Error, Paused, Active, Issue / No Lead, Ready. i: {n: streams running, paused, lead: has a Lead, ready: Next up cards
+// that can start, idle: cards idle over an hour, failed: the newest run of the project failed (its text)}
+// >>> project-state (tests/test_app.py runs this block)
+const PSTATES = {ready: "Ready", active: "Active", paused: "Paused", issue: "Issue / No Lead", error: "Error"};
+function projectState(i){
+  const pl = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  if(i.failed) return {k: "error", reason: "The newest Exarch run for this project failed" + (i.failed === true ? "" : ": " + i.failed)};
+  if(i.paused) return {k: "paused", reason: "This project's streams are paused" + (i.n ? "; " + pl(i.n, "stream") + " running finish their work" : "")};
+  if(i.n > 0) return {k: "active", reason: pl(i.n, "stream") + " running"};
+  if(!i.lead) return {k: "issue", reason: "No Lead yet: the project has no Lead to start its work"};
+  if(i.idle > 0) return {k: "issue", reason: pl(i.idle, "card") + " in Development, Developed or Testing idle for over an hour"};
+  return {k: "ready", reason: "Has a Lead, no stream running; " + (i.ready > 0 ? pl(i.ready, "card") + " ready to start" : "no cards ready yet")};
+}
+// <<< project-state
+const PSTATE_DEF = {ready: "Has a Lead, no stream running (cards ready or not yet)", active: "One or more streams running",
+  paused: "The project's streams are paused", issue: "No Lead, or a card idle for over an hour", error: "The newest Exarch run for the project failed"};
+// every project with its state, in the board's order: [{k, name, n, st: {k, reason}, label}]
+function projectStates(){
+  const now = Date.now(), core = leadRows(), by = streamsNow().by, runs = exarchNow().runs, byProj = {};
+  for(const c of cards.values()){
+    const k = cardProject(c); if(!k) continue;
+    const o = byProj[k] || (byProj[k] = {ready: 0, idle: 0});
+    if(c.col === "next" && !c.blk && !openQ(c)) o.ready++;
+    if(idleMin(c)) o.idle++;
+  }
+  const failed = {}, seenRun = new Set();
+  for(const r of runs){   // newest first: a project's first run decides, and only a recent one
+    const k = r.project || (r.card && cards.get(r.card) ? cardProject(cards.get(r.card)) : r.lead ? leadProject(r.lead)[0] : "");
+    if(!k || seenRun.has(k)) continue;
+    seenRun.add(k);
+    const t = Date.parse(r.ended || r.started || "");
+    if((r.state === "failed" || r.state === "error") && !isNaN(t) && now - t < 6 * 3600000) failed[k] = String(r.kind || "run") + " " + String(r.card || r.lead || "");
+  }
+  return [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
+    const pr = leadRow(k, p0, core), o = byProj[k] || {ready: 0, idle: 0}, n = Number(by[k]) || 0;
+    const st = projectState({n, paused: streamsPausedFor(k), lead: isHubProject(k, pr) || leadState(pr, now) !== "none", ready: o.ready, idle: o.idle, failed: failed[k] ? failed[k].trim() || true : false});
+    return {k, name: String(pr.name || k), n, st, label: PSTATES[st.k], hover: PSTATES[st.k] + ": " + st.reason};
+  });
+}
+// the state dot: a button that opens the Streams tab when `go` is given (the Sync popup), else a plain marker; the reason is its hover text
+function projectDot(r, go){
+  const a = {class: "pdot " + r.st.k, title: r.hover, "aria-label": r.hover};
+  return go ? el("button", Object.assign({type: "button", onclick: go}, a)) : el("span", Object.assign({role: "img"}, a));
+}
+function projectKey(){
+  return el("p",{class:"pkey", "aria-label":"What the dots mean"}, ...Object.keys(PSTATES).map(k => el("span",{title:PSTATE_DEF[k]}, el("span",{class:"pdot " + k}), PSTATES[k])));
+}
 // HUB479: streams paused or resumed by the user, apart from the Pace (usage.streams_paused; card "hub", field "streams.paused")
 // HUB488: per project. The export's usage.streams_paused_projects {project: true|false} (card "hub", field
 // "streams.paused.<project>") over the all-projects flag usage.streams_paused_all (field "streams.paused", which also
@@ -4844,22 +4901,24 @@ function streamsPausePending(){
 // on its way carries the syncing sheen, "Pause all projects" at the frame's bottom right.
 function streamsPauseBox(){
   const keys = streamsPauseKeys(), st = streamsPauseNow(), sp = streamsPausedOf(st, keys), every = sp.every, some = sp.list.length > 0;
-  const pend = streamsPausePending(), by = streamsNow().by;
+  const pend = streamsPausePending();
   const pname2 = k => String((projects.get(k) || {}).name || k);
-  const rows = keys.map(k => { const p = st.of(k), going = pend.all || pend.keys.has(k), n = by[k] || 0;
+  const ps = Object.fromEntries(projectStates().map(r => [r.k, r]));
+  const rows = keys.map(k => { const p = st.of(k), going = pend.all || pend.keys.has(k), r = ps[k];
     return el("tr",{class:"spproj" + (p ? " paused" : "") + (going ? " pending" : ""), "data-project":k},
+      el("td",{class:"spdot"}, projectDot(r)),
       el("th",{scope:"row", class:"spname"}, pname2(k)),
-      el("td",{class:"spstate"}, el("span",{class:p ? "wy" : "mu"}, going ? (p ? "Pausing…" : "Resuming…") : p ? "Paused" : "Active")),
-      el("td",{class:"spn"}, String(n)),
+      el("td",{class:"spn"}, String(r.n)),
       el("td",{class:"spsw"}, el("button",{type:"button", role:"switch", id:"streams-pause-" + k, class:"spswitch", disabled:readOnly ? true : null,
-        "aria-checked":String(p), "aria-label":"Pause " + pname2(k) + " streams", title:(p ? "Resume " : "Pause ") + pname2(k) + " streams",
+        "aria-checked":String(p), "aria-label":"Pause " + pname2(k) + " streams", title:(going ? (p ? "Pausing " : "Resuming ") : p ? "Resume " : "Pause ") + pname2(k) + " streams",
         onclick:() => streamsPausedSet(!p, k)}, el("span",{class:"knob"})))); });
   return el("section",{class:"spause" + (some ? " paused" : ""), "aria-labelledby":"spause-h"},
     el("h3",{id:"spause-h"}, "Pause projects"),
     el("p",{class:"note"}, "A paused project starts no new stream or card build and its Lead starts none, whatever the Pace allows; streams already running finish their work. The Pace and its limits stay as set."),
     el("table",{class:"sptable"},
-      el("thead",{}, el("tr",{}, el("th",{scope:"col"}, "Project"), el("th",{scope:"col"}, "State"), el("th",{scope:"col", class:"spn"}, "Streams"), el("th",{scope:"col", class:"spsw"}, "Paused"))),
+      el("thead",{}, el("tr",{}, el("th",{scope:"col", class:"spdot"}, "State"), el("th",{scope:"col"}, "Project"), el("th",{scope:"col", class:"spn"}, "Streams"), el("th",{scope:"col", class:"spsw"}, "Paused"))),
       el("tbody",{}, ...rows)),
+    projectKey(),
     el("div",{class:"spfoot"},
       el("button",{type:"button", id:"streams-pause", class:"pbtn" + (pend.all ? " pending" : ""), disabled:readOnly ? true : null, "aria-pressed":String(every),
         onclick:() => streamsPausedSet(!every)}, every ? "Resume all projects" : "Pause all projects")));
@@ -6565,7 +6624,7 @@ function renderStreams(){   // a fault in this tab must never stop the board fro
 function drawStreams(host){
   const now = Date.now(), scaleKey = GANTT_SCALES[filt.gscale] ? filt.gscale : "day", sc = GANTT_SCALES[scaleKey];
   const list = ganttCards(), live = streamLive();
-  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), streamsPausedList(), streamsPauseKeys(), (p => [p.all, [...p.keys].sort()])(streamsPausePending()), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
+  const sig = JSON.stringify([loaded, filt.j, readOnly, scaleKey, hubStatus && hubStatus.usage, streamsNow(), streamsPausedList(), streamsPauseKeys(), projectStates().map(r => [r.k, r.st.k, r.n, r.st.reason]), (p => [p.all, [...p.keys].sort()])(streamsPausePending()), usageNow().pace, Math.floor(now / (5 * G_MIN)), live,
     hubStatus && [hubStatus.machines, hubStatus.sessions], sessSort, tokMode, tokHours, [...tokens.entries()].map(([k, d]) => [k, d.end]),
     list.map(c => [c.id, c.t, c.col, c.pri, c.rank, c.started, c.colSince, c.eta, c.estimate, c.blk, c.type, c.assigned, c.epic, cardProject(c)])]);
   if(host.dataset.sig === sig && host.childElementCount) return;
@@ -7772,16 +7831,13 @@ function renderSyncPop(){
     el("div",{class:"row"}, changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
-  const now = Date.now(), core = leadRows(), sn = streamsNow(), rows = [...projects].sort((a, b) => (Number(a[1].order) || 0) - (Number(b[1].order) || 0)).map(([k, p0]) => {
-    const pr = leadRow(k, p0, core), st = leadState(pr, now), n = Number(sn.by[k]) || 0;   // HUB482: streamsNow(), the same count as "Streams in use"
-    const streams = n + (n === 1 ? " stream" : " streams") + (streamsPausedFor(k) ? " · streams paused" : "");   // HUB488
-    const also = n || streamsPausedFor(k) ? " · " + streams : "";   // HUB482: a project's live streams show whatever its Lead's state, so the rows add up to Streams in use
-    const txt = isHubProject(k, pr) ? (s.state === "halting" ? "Halting · " : "Active · ") + streams
-      : st === "none" ? "No Lead yet" + also : st === "not_needed" ? "Lead not needed yet" + also
-      : st === "snoozed" ? "Snoozed" + (pr.snooze_until ? " until " + (isNaN(Date.parse(pr.snooze_until)) ? String(pr.snooze_until) : fmtTime(pr.snooze_until)) : "") + also
-      : (s.state === "halting" ? "Halting · " : "Active · ") + streams;
-    return kv(String(pr.name || k), el("span",{class:st === "active" || isHubProject(k, pr) ? "" : "mu"}, txt));
-  });
+  // HUB495: one frame and table as the Streams tab's Pause projects: state dot (its hover is the reason; a click opens the Streams tab), project, streams
+  const go = () => { syncPopOpen(false); showTab("streams"); };
+  const prows = projectStates().map(r => el("tr",{class:"spproj", "data-project":r.k},
+    el("td",{class:"spdot"}, projectDot(r, go)), el("th",{scope:"row", class:"spname"}, r.name), el("td",{class:"spn"}, String(r.n))));
+  const rows = prows.length ? [el("div",{class:"spause"},
+    el("table",{class:"sptable"}, el("thead",{}, el("tr",{}, el("th",{scope:"col", class:"spdot"}, "State"), el("th",{scope:"col"}, "Project"), el("th",{scope:"col", class:"spn"}, "Streams"))), el("tbody",{}, ...prows)),
+    projectKey())] : [];
   const known = s.state !== "unknown";   // no exarch section in the export yet: neither on nor off
   const tg = el("button",{type:"button", class:"toggle" + (s.on && known ? "" : " off"), role:"switch", "aria-checked":String(s.on && known), id:"exarchsw",
     "aria-describedby":"exarchwarn", disabled:readOnly || !known ? true : null,
