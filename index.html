@@ -632,6 +632,11 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .spswitch[aria-checked="true"]{background:var(--q); border-color:var(--q)}
 .spswitch[aria-checked="true"] .knob{left:20px; background:var(--surface)}
 .spswitch:disabled{opacity:.5; cursor:default}
+.jobsrow{position:relative; overflow:hidden}
+.jobsrow.off .spswitch{border-color:var(--c-decide)}
+.jobsrow.pending{background:var(--pend-bg)}
+.jobsrow.pending::before{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(to right, transparent 0%, var(--sheen) 50%, transparent 100%); transform:translateX(-100%); animation:sheen 1s infinite}
+.jobswarn{margin:.4rem 0 0; padding:.4rem .6rem; border-left:3px solid var(--c-decide); background:var(--bg); font-size:.85em}
 .spswitch:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 @media (pointer:coarse){ .spswitch{width:48px; height:28px} .spswitch .knob{width:22px; height:22px} .spswitch[aria-checked="true"] .knob{left:22px} }
 .spfoot{display:flex; justify-content:flex-end}
@@ -1339,6 +1344,7 @@ function pendTab(ch){
   const f = String(ch.field);
   if(ch.card === "hub" && (f === "streams.paused" || f.startsWith("streams.paused."))) return "streams";   // HUB492
   if(ch.card === "hub" && (f === "pace" || f.startsWith("limit."))) return "hub";
+  if(ch.card === "hub" && f.startsWith("jobs.run.")) return "status";   // HUB506: a machine's Jobs toggle (Machines tab)
   if(f.startsWith("ans.") || f.startsWith("step.") || sessDocs.has(ch.card)) return "decisions";
   return "board";
 }
@@ -1368,6 +1374,7 @@ function changeText(ch){
   if(f === "exarch.on") return "Exarch AI turned " + (v ? "on" : "off");
   if(f === "streams.paused") return v ? "streams paused" : "streams resumed";   // HUB479
   if(f.startsWith("streams.paused.")) return f.slice(15) + " streams " + (v ? "paused" : "resumed");   // HUB488
+  if(f.startsWith("jobs.run.")) return f.slice(9) + " jobs " + (v ? "on" : "off");   // HUB506
   if(f === "exarch.model") return "default model: " + String(v);
   if(f === "exarch.plan") return "plan " + (v && v.act === "approve" ? "approved" : "discarded");
   if(f === "exarch.triage") return "triage request: " + (v && v.kind) + " " + (v && String(v.act).replace(/_/g, " "));
@@ -1427,6 +1434,15 @@ function changeSettled(id, ch, sent, exp){
   // ref of its own and can arrive after the board export that names the change applied: dropping the change then
   // showed the old state again (two paused projects back to Active). Such a change is settled once the status's
   // pace_set / limits_set / streams_paused_set (the node stores the change's own ts there) is at least the change's.
+  // HUB506: a machine's Jobs toggle is settled when that machine's status shows the value (its node-config job ran and
+  // the node reported it); until then it stays drawn, so the switch never flickers back
+  if(ch.card === "hub" && f.startsWith("jobs.run.")){
+    const m = (Array.isArray(exp.machines) ? exp.machines : []).find(x => x && String(x.machine) === f.slice(9));
+    if(m && m.jobs_run === ch.value) return "shown";
+    if(at && Date.parse(at) - Date.parse(sent) > PEND_GIVE_UP_MS)
+      return Array.isArray(exp.applied) && exp.applied.includes(id) ? "applied" : "expired";
+    return "";
+  }
   const hubSet = ch.card !== "hub" ? "" : f === "pace" ? "pace_set" : f.startsWith("limit.") ? "limits_set"
     : f === "streams.paused" || f.startsWith("streams.paused.") ? "streams_paused_set" : "";
   if(hubSet){
@@ -1550,7 +1566,7 @@ function settleChanges(data){
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
     const doc = raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null;
-    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at, doc, usage: hubStatus && hubStatus.usage || null});
+    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at, doc, usage: hubStatus && hubStatus.usage || null, machines: hubStatus && hubStatus.machines || null});
     if(!why) continue;
     changes.delete(k); sentAt.delete(k);
     if(why === "expired" && draftBack(v, doc)) refusedAdd(v.card, v.field, "the board did not take it");   // HUB346
@@ -4693,6 +4709,36 @@ function workTable(list){
       el("td",{}, w.note || ""));
   }));
 }
+// HUB506: a machine's Jobs switch. The node's status says `jobs_run` (true / false; null: a node from before the switch);
+// the user's toggle on its way (card "hub", field "jobs.run.<machine>") is drawn over it until the status shows it.
+function jobsState(m){
+  const name = String(m.machine);
+  let on = typeof m.jobs_run === "boolean" ? m.jobs_run : null, pending = false;
+  for(const ch of [...changes.values()].sort((a, b) => String(a.ts).localeCompare(String(b.ts))))
+    if(ch.card === "hub" && ch.field === "jobs.run." + name){ on = ch.value === true; pending = true; }
+  return {on, pending};
+}
+function jobsSet(m, v){
+  if(readOnly){ toast("This view is read-only."); return; }
+  const name = String(m.machine);
+  change({id: "hub", upd: null}, "jobs.run." + name, v === true);
+  renderMachines(); renderSyncPop();
+  const b = document.getElementById("jobs-" + name); if(b) b.focus({preventScroll:true});
+}
+function jobsRow(m){   // the Machines card's Jobs row: a switch, and a warning while it is off
+  const js = jobsState(m);
+  if(js.on === null) return null;
+  const name = String(m.machine), q = Number(m.queued) || 0;
+  const sw = el("button",{type:"button", role:"switch", id:"jobs-" + name, class:"spswitch", disabled:readOnly ? true : null,
+    "aria-checked":String(js.on), "aria-label":"Jobs on " + name,
+    title:(js.pending ? (js.on ? "Switching on " : "Switching off ") : js.on ? "Switch off " : "Switch on ") + "jobs on " + name,
+    onclick:() => jobsSet(m, !js.on)}, el("span",{class:"knob"}));
+  const who = m.jobs_hold_by === "user" ? "switched off here" : m.jobs_hold_by === "core" ? "switched off by Exarch AI" : "switched off";
+  return {sw, off: !js.on, pending: js.pending, label: js.on ? "Jobs on" : "Jobs off",
+    warn: js.on ? null : el("p",{class:"jobswarn", role:"status"},
+      "Jobs are off (" + who + "): this machine takes no test, gate, build or in-game job, so queued jobs wait" + (q ? " (" + q + " queued for it now)" : "") +
+      ". Switch it on, or ask for the project's work in a Lead chat: that switches it on again.")};
+}
 function renderMachines(){
   const now = Date.now();
   rebuildPanel("status", ["m", loaded, hubStatus && [hubStatus.machines, hubStatus.sessions, hubStatus.work], innerWidth, tokMode, tokHours, [...tokPicks],
@@ -4700,7 +4746,8 @@ function renderMachines(){
     hubStatus ? (hubStatus.machines || []).map(m => (now - new Date(m.seen)) / 60000 <= 30) : 0,
     hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => longCtx(ctxOf(s.name), s.started).long) : 0,
     sessSort, hubStatus && Array.isArray(hubStatus.sessions) ? hubStatus.sessions.map(s => (ctxOf(s.name) || {}).ctx || 0) : 0,
-    Math.floor(now / 600000)], host => {
+    Math.floor(now / 600000), [...changes.values()].filter(c => c.card === "hub" && String(c.field).startsWith("jobs.run.")).map(c => [c.field, c.value]),
+    hubStatus ? (hubStatus.machines || []).map(m => m.jobs_run) : 0], host => {
     graphWin = null; graphWin = graphWindow();   // HUB177: one window for every graph and rate drawn now
     try { drawMachines(host); } finally { graphWin = null; }
   });
@@ -4765,6 +4812,8 @@ function drawMachines(host){
       const add = (k, v) => dl.append(el("dt",{}, k), el("dd",{}, v == null || v === "" ? "-" : String(v)));
       dl.append(el("dt",{}, "Last report"), el("dd",{}, isNaN(age) ? "-" : agoEl(new Date(m.seen).getTime(), " ago")));
       if(local.length) add("Working on", local.join("; "));     // local work: the machine is not idle
+      const jr = jobsRow(m);   // HUB506
+      if(jr) dl.append(el("dt",{}, "Jobs"), el("dd",{class:"jobsrow" + (jr.off ? " off" : "") + (jr.pending ? " pending" : "")}, jr.sw, el("span",{class:"jobslbl"}, " " + jr.label + (jr.pending ? " (syncing)" : "")), jr.warn));
       add("Offers", m.offers);
       if(m.slots_max != null){   // the count follows the machine's load: "4 of 10 slots, lowered: ..." and how many are free now
         add("Test slots", (m.slots_note || `${m.slots} of ${m.slots_max} slots`) + `; ${m.slots_free} free (${m.tests})`);
