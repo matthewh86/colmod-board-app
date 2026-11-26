@@ -1376,8 +1376,21 @@ function sameValue(a, b){ return (a == null || a === "" ? null : a) === (b == nu
 const PEND_GIVE_UP_MS = 30 * 60 * 1000;
 function changeSettled(id, ch, sent, exp){
   if(!sent) return "";
-  if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   const doc = exp.doc, f = String(ch.field), at = String(exp.exported_at || "");
+  // HUB492: the Pace, a limit and a project's pause are shown from export/status.json (exp.usage), which travels on a
+  // ref of its own and can arrive after the board export that names the change applied: dropping the change then
+  // showed the old state again (two paused projects back to Active). Such a change is settled once the status's
+  // pace_set / limits_set / streams_paused_set (the node stores the change's own ts there) is at least the change's.
+  const hubSet = ch.card !== "hub" ? "" : f === "pace" ? "pace_set" : f.startsWith("limit.") ? "limits_set"
+    : f === "streams.paused" || f.startsWith("streams.paused.") ? "streams_paused_set" : "";
+  if(hubSet){
+    const u = exp.usage, t = u && u[hubSet] ? Date.parse(u[hubSet]) : NaN;
+    if(t >= Date.parse(ch.ts)) return "shown";
+    if(at && Date.parse(at) - Date.parse(sent) > PEND_GIVE_UP_MS)
+      return Array.isArray(exp.applied) && exp.applied.includes(id) ? "applied" : "expired";   // applied: a status that never caught up
+    return "";
+  }
+  if(Array.isArray(exp.applied) && exp.applied.includes(id)) return "applied";
   // a queue order, a new or edited thing (HUB120, HUB188), an Exarch AI chat item or Lead state (HUB331) and what is set
   // on Exarch AI itself (exarch.on, .model, .plan, .chat) have no doc in the export to compare with: only `applied` settles them
   const named = ["queue", "create", "edit", "item", "lead", "grouping"].includes(f) || f.startsWith("exarch.") || f === "streams.paused" || f.startsWith("streams.paused.");
@@ -1485,11 +1498,13 @@ function groupingChange(cs, cards, epics, project){
   return {v: 1, changeset: rest, base: {upd}};
 }
 // <<< cell-planner-adapter
+let lastExport = null;   // HUB492: the last board export, to settle again when only the status export moved
 function settleChanges(data){
+  lastExport = data;
   const applied = Array.isArray(data.applied) ? data.applied : null;
   for(const [k, v] of [...changes]){
     const doc = raw.get(v.card) || sessDocs.get(v.card) || artDocs.get(v.card) || manDocs.get(v.card) || null;
-    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at, doc});
+    const why = changeSettled(k, v, sentAt.get(k), {applied, exported_at: data.exported_at, doc, usage: hubStatus && hubStatus.usage || null});
     if(!why) continue;
     changes.delete(k); sentAt.delete(k);
     if(why === "expired" && draftBack(v, doc)) refusedAdd(v.card, v.field, "the board did not take it");   // HUB346
@@ -7141,7 +7156,7 @@ async function check(){
     lastCheck = new Date().toISOString();
     let fresh = false;
     const stFresh = await checkStatusRef();   // HUB466: the status export has a ref of its own (a 304 costs no quota)
-    if (stFresh) fresh = true;
+    if (stFresh){ fresh = true; if (lastExport && changes.size){ settleChanges(lastExport); pendSave(); } }   // HUB492
     if (r.status !== 304){
       const etag = r.headers.get("ETag");
       const sha = (await r.json()).object.sha;
@@ -7254,7 +7269,7 @@ async function load(sha){
   try { await loadUsage(sha); } catch { /* the graphs are an extra: the board still loads */ }
   // a change made here is done once this export names its file as applied, or shows what it asked for (see
   // changeSettled); until then it stays on screen whatever the export says
-  if(data) settleChanges(data);
+  if(data || (newStatus && lastExport)) settleChanges(data || lastExport);   // HUB492: a status-only change settles the Pace, limits and pauses too
   if(newRefused) try {
     const refused = await (await gh(`contents/export/phone-refused.json?ref=${sha}`, {raw: true})).json();
     dl.refused++; have.refused = sh && sh.refused;
@@ -7326,7 +7341,7 @@ function disconnect(){   // HUB245: the Hub tab's red Disconnect button, after a
   saveConn(null); conn = null; raw.clear(); cards.clear(); changes.clear(); sentAt.clear(); pendSave(); epics.clear(); themes.clear(); projects.clear(); ARCH.items = []; REL_DOCS.clear(); relFile.clear(); have.rel = null; relState = ""; FULL.clear();
   ex.doc = null; ex.at = 0; ex.was = false; ex.asked = 0; ex.note = ""; ex.missing = 0;
   aiClear();   // HUB338: the chats and their content keys leave this browser with the connection
-  tip = refEtag = null; loaded = false; hubStatus = null; have.board = have.status = have.refused = null; stEtag = stSha = null; stRef = false; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
+  tip = refEtag = null; loaded = false; hubStatus = null; lastExport = null; have.board = have.status = have.refused = null; stEtag = stSha = null; stRef = false; expTree = expShas = null; usage.clear(); usageEls.clear(); usageAt = 0; openId = null; edReset(); rank = null; renderRank();
   for (const p of blobs.values()) p.then(u => URL.revokeObjectURL(u), () => {});
   blobs.clear(); blobUrl.clear(); noPic.clear();
   setRO(true); if (selMode) setSelMode(false);
