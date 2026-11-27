@@ -7984,12 +7984,14 @@ function renderSyncPop(){
     el("div",{class:"row"}, syncMark(), changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
-  // HUB535: the 5-hour window beneath the weekly (the plan line above is whichever window is the tighter one: the other is added)
-  { const {wins} = usageNow(), shown = figs.find(f => f.k === "plan"), five = (wins || []).find(w => /5-hour/i.test(w.label));
-    if(five && !(shown && /5-hour/i.test(shown.label))){
-      const left = Math.max(0, 100 - Math.round(Number(five.pct) || 0)), v = left + " % left · refresh " + (five.resets_at ? fmtTime(five.resets_at) : "-");
-      const at = figs.indexOf(shown), row = kv(el("span",{class:"row"}, WARN_RANK[tokLevel(left)] ? ico("alert-triangle", WARN_CLASS[tokLevel(left)], tokLevel(left).slice(3) + " warning") : ico("circle-check", "ok", "Fine"), five.label), v, {title: usageLine(five)});
-      usage.splice(at >= 0 ? at + 1 : 0, 0, row); } }
+  // HUB554: the weekly and the 5-hour window are both always shown, the 5-hour beneath the weekly (the plan figure is only the tighter one)
+  { const {wins} = usageNow(), shown = figs.find(f => f.k === "plan"), at = figs.indexOf(shown);
+    const wk = (wins || []).find(w => /^weekly/i.test(w.label)), five = (wins || []).find(w => /5-hour/i.test(w.label));
+    const row = w => { const left = Math.max(0, 100 - Math.round(Number(w.pct) || 0)), lv = tokLevel(left);
+      return kv(el("span",{class:"row"}, WARN_RANK[lv] ? ico("alert-triangle", WARN_CLASS[lv], lv.slice(3) + " warning") : ico("circle-check", "ok", "Fine"), w.label), left + " % left · refresh " + (w.resets_at ? fmtTime(w.resets_at) : "-"), {title: usageLine(w)}); };
+    const two = [wk, five].filter(Boolean);
+    if(two.length && at >= 0) usage.splice(at, 1, ...two.map(row));
+    else if(two.length) usage.splice(0, 0, ...two.map(row)); }
   // HUB495: one frame and table as the Streams tab's Pause projects: state dot (its hover is the reason; a click opens the Streams tab), project, streams
   const go = () => { syncPopOpen(false); showTab("streams"); };
   const prows = projectStates().map(r => el("tr",{class:"spproj", "data-project":r.k},
