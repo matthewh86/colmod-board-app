@@ -1949,6 +1949,40 @@ function linkify(text){
   if(i < s.length) plain(s.slice(i));
   return out;
 }
+// HUB559: the chain of blocked cards: a card's Blocked text names the cards it waits on; follow each in turn (A waits on B
+// waits on C). Returns rows {id, depth, kind, card, why}: kind is "card", "cycle" (already on this path) or "missing" (no such card).
+function blockChain(id, getCard){
+  const get = getCard || (x => (typeof cards !== "undefined" ? cards.get(x) : null)), rows = [];
+  const walk = (cid, depth, path) => {
+    const c = get(cid);
+    if(!c){ rows.push({id: cid, depth, kind: "missing"}); return; }
+    if(path.includes(cid)){ rows.push({id: cid, depth, kind: "cycle", card: c}); return; }
+    rows.push({id: cid, depth, kind: "card", card: c, why: c.blk || ""});
+    const seen = new Set();
+    for(const m of String(c.blk || "").matchAll(/\b[A-Z]{2,}\d+\b/g)){
+      if(m[0] === cid || seen.has(m[0])) continue;
+      seen.add(m[0]); walk(m[0], depth + 1, path.concat(cid));
+    }
+  };
+  walk(id, 0, []);
+  return rows;
+}
+function blockChainText(rows){   // the chain as plain text lines (a tooltip)
+  return rows.map(r => "  ".repeat(r.depth) + (r.depth ? "waits on " : "") + r.id +
+    (r.kind === "missing" ? " (no such card)" : r.kind === "cycle" ? " (already in this chain: a cycle)" :
+      (r.card.t ? " " + r.card.t : "") + (r.why ? " [blocked: " + r.why + "]" : " [not blocked]"))).join("\n");
+}
+function blockChainEl(id){   // the chain as a list whose entries open their cards
+  const rows = blockChain(id), box = el("div",{class:"blkchain"});
+  for(const r of rows){
+    const name = r.kind === "missing" ? el("span",{}, r.id) :
+      el("a",{href:"#", class:"tlink cardlink", "data-card":r.id, title:"Open " + r.id, onclick:ev=>{ ev.preventDefault(); ev.stopPropagation(); openCard(r.id); }}, r.id);
+    box.append(el("div",{style:"margin-left:"+(r.depth*14)+"px"}, r.depth ? "↳ waits on " : "", name,
+      r.kind === "missing" ? " (no such card)" : r.kind === "cycle" ? " (already in this chain: a cycle)" :
+      " " + (r.card.t || "") + (r.why ? " - blocked: " + r.why : " - not blocked")));
+  }
+  return box;
+}
 // HUB419: card links (in linkify's text and in rendered Markdown) are anchors with data-card: one click handler opens the card
 document.addEventListener("click", ev => {
   const a = ev.target && ev.target.closest ? ev.target.closest("a.cardlink[data-card]") : null;
@@ -2079,10 +2113,14 @@ function cardEl(c, full=false){
   const tip = c.col === "prog" ? colTip(c) : ""; if(tip && !full) e.title = tip;
   // HUB215: the Blocked and warning indicators: in the card window's top row; on a board card, each on a line of its
   // own under the title
-  const blkWhy = c.blk && full ? el("div",{class:"blkb", id:"blkwhy", hidden:true}, el("b",{},"🚩 Blocked: "), linkify(c.blk)) : null;   // HUB401: the reason shows on a click of the flag
-  const flags = [c.blk ? (full ? el("button",{type:"button", class:"blk blkflag", "aria-expanded":"false", "aria-controls":"blkwhy", title:"Blocked: click to show why",
+  const blkWhy = c.blk && full ? el("div",{class:"blkb", id:"blkwhy", hidden:true}, el("b",{},"🚩 Blocked: "), linkify(c.blk), blockChain(c.id).length > 1 ? blockChainEl(c.id) : null) : null;   // HUB401: the reason shows on a click of the flag
+  const flags = [c.blk ? (full ? el("button",{type:"button", class:"blk blkflag", "aria-expanded":"false", "aria-controls":"blkwhy", title:"Blocked: click to show why" + (blockChain(c.id).length > 1 ? "\n" + blockChainText(blockChain(c.id)) : ""),
       onclick:ev=>{ ev.stopPropagation(); const on = blkWhy.hidden; blkWhy.hidden = !on; ev.currentTarget.setAttribute("aria-expanded", String(on)); }}, "🚩 Blocked")
-    : el("span",{class:"blk", title:"Blocked: "+c.blk}, "🚩 Blocked")) : null,
+    : el("span",{class:"blk blkflag", title:"Blocked: "+c.blk + (blockChain(c.id).length > 1 ? "\n" + blockChainText(blockChain(c.id)) : ""),
+        onclick:ev=>{ ev.stopPropagation(); const nx = ev.currentTarget.closest(".card").querySelector(".blkchain-pop");
+          if(nx){ nx.remove(); return; }
+          const pop = el("div",{class:"blkb blkchain-pop", onclick:ev2=>ev2.stopPropagation()}, el("b",{},"🚩 Blocked: "), linkify(c.blk), blockChainEl(c.id));
+          ev.currentTarget.closest(".card").querySelector(".top").after(pop); }}, "🚩 Blocked")) : null,
     syncIssue(c) ? el("span",{class:"blk", title:syncIssue(c)}, "⚠ Not synced") : null,
     refusedNote(c.id) ? el("span",{class:"blk", title:refusedNote(c.id)}, "⚠ Sync refused") : null,
     handback(c) ? el("span",{class:"lab pend", title:"Handed back to the Lead by "+handback(c).by+": "+handback(c).why}, "⏳ Handed back") : null].filter(Boolean);
