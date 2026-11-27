@@ -653,6 +653,7 @@ button.pdot:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 .pkey{display:flex; flex-wrap:wrap; gap:2px 12px; margin:0; font-size:.78rem; color:var(--muted)}
 .pkey span{display:inline-flex; align-items:center; gap:6px}
 .syncpop .spause{margin:0}
+.syncpop .spplain{display:grid; gap:8px; margin:0}   /* HUB535: the Sync popup's project table: no frame, no accent edge */
 @media (max-width:480px){ .sptable th, .sptable td{padding:6px 4px} .sptable .spn{width:3.5em} }
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.85rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
@@ -866,6 +867,11 @@ table.st th button.sorth:hover, table.st th button.sorth.on{color:var(--fg, inhe
 table.st th button.sorth:focus-visible{outline:2px solid currentColor; outline-offset:2px}
 table.st th{text-align:left; color:var(--muted); font-weight:600; padding:5px 10px 5px 0; border-bottom:1px solid var(--line); white-space:nowrap}
 table.st td{padding:5px 10px 5px 0; border-bottom:1px solid var(--line); vertical-align:top}
+/* HUB538: a "Release per project" row is a filter of the Releases tab; the chosen one is marked */
+table.st tr.relrow{cursor:pointer} table.st tr.relrow:hover td, table.st tr.relrow.on td{background:var(--accent-soft)}
+table.st tr.relrow.on td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+button.relpick{all:unset; cursor:pointer; font-weight:600; color:var(--accent); padding:0 4px} button.relpick:focus-visible{outline:2px solid currentColor; outline-offset:2px}
+.rellines{display:grid; gap:10px}
 table.st td small{color:var(--muted)}
 /* the usage graph on each machine: processor and memory lines on one 0-100 % axis, the test games below on their own */
 :root{--u-cpu:#2a78d6; --u-mem:#eb6834; --u-games:#1baf7a}
@@ -1238,6 +1244,7 @@ const RELEASES_OUT = [];          // HUB147: [{id, t, at}] Done release cards of
 const RELEASES = [];              // HUB182: every Release card with its cards (export releases): not out yet first, then out, newest first
 const REL_DOCS = new Map();       // HUB199: the archived Release cards themselves (export releases[].doc), opened read-only
 const relFile = new Set();         // HUB462: ids of the REL_DOCS read from export/releases.json (declared here: the tabs draw before the data section runs)
+let relProj = "";   // HUB538: the project a "Release per project" row chose ("" = none): the Releases tab only (declared here: the tabs draw before the Releases section runs)
 let relState = "", relBusy = null, curTip = null;   // relState "" | "loading" | "failed"; curTip: the commit the export was read at
 const areas = new Map();        // HUB145: key -> {name,hue,...}: the part of the game or system a card touches (card field cat)
 const projects = new Map();     // key -> {name,hue,order,id_prefixes,folder}: the board's projects (HUB47)
@@ -2340,9 +2347,28 @@ function modelRow(c){   // the card view: the model Exarch AI builds this card w
   return el("div",{class:"row"}, el("span",{class:"lbl"}, "Model"), modelSeg(cur, "Model", m => { edPut(c, "model", m, own); renderModal(); }, dflt === "auto" ? "Auto" : "Auto (" + modelName(dflt) + ")"),
     said ? el("span",{class:"small mu"}, said) : null);
 }
+// HUB535: what each option of the default model does; the box below the control says the hovered (or focused) one, like the Pace's
+const MODEL_HELP = {
+  auto: "Sonnet for docs and cards of 1 h or less; Opus for other builds; Fable for spikes, cards over a day and a retry after an Opus bounce (on API credits, the retry only)",
+  sonnet: "Every build runs on Sonnet: the fastest and the cheapest on the plan's usage",
+  opus: "Every build runs on Opus: stronger on larger or harder cards, and it uses more of the plan",
+  fable: "Every build runs on Fable: the strongest model, for the hardest cards, and it uses the most of the plan"};
 function defaultModelSec(){   // the Hub tab, under the pace
-  return [el("h3",{}, "Default stream model"), el("div",{}, modelSeg(defaultModel(), "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); }, null, true)),
-    el("p",{class:"note"}, "Auto: Sonnet for docs and cards of 1 h or less; Opus for other builds; Fable for spikes, cards over a day and a retry after an Opus bounce (on API credits, the retry only). A card's own model wins.")];
+  const cur = defaultModel();
+  const help = el("p",{class:"note pacehelp modelhelp", id:"model-help", "aria-live":"polite"}, ...MODELS.map(m =>
+    el("span",{"data-k":m}, el("b",{}, modelName(m) + (m === cur ? "" : " (not chosen)") + ": "), MODEL_HELP[m] + ". A card's own model wins.")));
+  const say = k => {
+    for(const sp of help.children){ const on = sp.dataset.k === k; sp.classList.toggle("on", on); sp.setAttribute("aria-hidden", String(!on)); }
+    help.classList.toggle("preview", k !== cur);
+  };
+  const seg = modelSeg(cur, "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); }, null, true);
+  [...seg.children].forEach((b, i) => {
+    const k = MODELS[i]; b.setAttribute("aria-describedby", "model-help");
+    b.addEventListener("pointerenter", () => say(k)); b.addEventListener("focus", () => say(k)); b.addEventListener("blur", () => say(cur));
+  });
+  seg.addEventListener("pointerleave", () => { const f = document.activeElement; say(seg.contains(f) && f.dataset ? MODELS[[...seg.children].indexOf(f)] || cur : cur); });
+  say(cur);
+  return [el("h3",{}, "Default stream model"), el("div",{}, seg), help];
 }
 let lastFocus = null;
 // >>> comment-drafts (tests/test_app.py runs this block)
@@ -2546,6 +2572,7 @@ function rankAt(colKey, index, exclude){
 }
 function moveTo(id, colKey, index){
   const c = cards.get(id); if(!c) return;
+  if(c.col===colKey && colCards(colKey).findIndex(x=>x.id===id) === index){ render(); return; }   // HUB535: back in its own place: no write, no sync
   const r = rankAt(colKey, index, id);
   if(c.col===colKey && c.rank===r){ render(); return; }
   write(id, {col:colKey, rank:r});
@@ -2554,6 +2581,8 @@ function moveTo(id, colKey, index){
 function moveMany(ids, colKey, index){
   const set = new Set(ids);
   const list = colCards(colKey).filter(c=>!set.has(c.id));
+  { const all = colCards(colKey), at = all.findIndex(c=>set.has(c.id));   // HUB535: the same cards back in the same places: no write
+    if(at === index && ids.every(i => cards.get(i) && cards.get(i).col === colKey) && all.slice(at, at + ids.length).every(c => set.has(c.id)) && all.filter(c=>set.has(c.id)).length === ids.length){ render(); return; } }
   const prev = list[index-1], next = list[index], n = ids.length;
   let lo, hi;
   if(prev && next){ lo = prev.rank??0; hi = next.rank??0; }
@@ -5130,8 +5159,9 @@ function exarchLine(s, now){
   const t = now == null ? Date.now() : now;
   const onPlan = r => !(r.auth === "api" || (!r.auth && Number(r.cost_usd) > 0));
   const plan = (s.runs || []).filter(onPlan), running = plan.filter(r => r.state === "running").length;
-  const word = {on: "On", off: "Off", halting: "Halting", unseen: "On, but not seen lately", unknown: "No reading in the export yet"}[s.state] || String(s.state);
-  const tick = s.quiet == null ? "no tick seen yet" : s.quiet < 1 ? "last tick under a minute ago" : "last tick " + s.quiet + " min ago";
+  const word = {on: "On", off: "Off", halting: "Halting", unseen: "On, but not seen lately", stalled: "On, but its core is not ticking (the node restarts itself)", unknown: "No reading in the export yet"}[s.state] || String(s.state);
+  const long = s.h && s.h.state === "long" ? "; a tick has run " + s.h.min + " min" : "";   // HUB539: a long tick is not a core that is gone
+  const tick = (s.quiet == null ? "no tick seen yet" : s.quiet < 1 ? "last tick under a minute ago" : "last tick " + s.quiet + " min ago") + long;
   const runs = plan.length + (plan.length === 1 ? " run" : " runs") + " on the plan" + (running ? " (" + running + " running)" : "");
   return {value: word + "; " + tick + "; " + runs, state: s.state, t};
 }
@@ -5691,34 +5721,61 @@ function renderHubTab(){
   });
 }
 
-// ---------- Releases: testing and the release line of each project
+// ---------- Releases: the release line of each project, then its releases
+// HUB538 (the user, 2026-11-27): "Release per project" is first and each of its rows is a button that shows only that
+// project in the rest of the tab (again: all of them); "Testing and release" is, per project, State, Next release and
+// Promoted release (with when it went out: release_out), in that order. Testing is a state, not a row of its own.
+function relLines(){   // [[key, line]] of the projects with a release line that the project switcher shows
+  const rel = hubStatus && hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
+  return rel.filter(([k, r]) => r && typeof r === "object" && (!filt.j || k === filt.j));
+}
+function relPick(lines){ return relProj && lines.some(([k]) => k === relProj) ? relProj : ""; }
+function relPromoted(r){ return [r.release_promoted, r.release_out].filter(Boolean).map(String).join(" · ") || "-"; }
+function relLineRows(r){   // the three rows of a project's line, in the order the user set
+  return [["State", String(r.release_state || "-")], ["Next release", String(r.release_next || "-")], ["Promoted release", relPromoted(r)]];
+}
+function relLineCard(k, r, named){
+  const dl = el("dl",{class:"facts"});
+  for(const [l, v] of relLineRows(r)) dl.append(el("dt",{}, l), el("dd",{}, v));
+  const card = el("div",{class:"mcard", "data-rel-line":k}, named ? el("h3",{class:"mn"}, String(r.name || k)) : null);
+  const done = Number(r.testing_done), total = Number(r.testing_total);
+  if(total > 0){
+    const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
+    card.append(el("div",{}, `${done} of ${total} cards of the next release finished`), el("div",{class:"meter"}, bar));
+  }
+  card.append(dl);
+  return card;
+}
+function relChoose(k){
+  relProj = relProj === k ? "" : k;
+  renderReleases();
+  const b = document.querySelector('#releases button.relpick[data-rel-proj="' + k + '"]');
+  if(b) b.focus();
+}
+function relTable(lines, pick){
+  // HUB244: the version of a project's latest release out (RELEASES is newest first) and the scheme its versions follow
+  const verOf = k => { const x = RELEASES.find(q => q.project === k && q.col === "done" && q.version); return x ? String(x.version) : "-"; };
+  const schemeOf = k => String((projects.get(k) || {}).version_scheme || "");
+  return stTable(["Project", "Version", "State", "Next", "Promoted"], lines.map(([k, r]) => {
+    const on = pick === k, name = String(r.name || k);
+    return el("tr",{class:"relrow" + (on ? " on" : ""), onclick:() => relChoose(k)},
+      el("td",{}, el("button",{type:"button", class:"relpick", "data-rel-proj":k, "aria-pressed":String(on),
+        title:on ? "Show every project again" : "Show only " + name + " below", onclick:ev => { ev.stopPropagation(); relChoose(k); }}, name)),
+      el("td",{title: schemeOf(k) ? "scheme " + schemeOf(k) : null}, verOf(k)), el("td",{}, String(r.release_state || "-")),
+      el("td",{}, String(r.release_next || "-")), el("td",{}, relPromoted(r)));
+  }));
+}
 function renderReleases(){
-  rebuildPanel("releases", ["r", loaded, hubStatus && [hubStatus.facts, hubStatus.releases], filt.j, RELEASES, [...cards.values()].map(c => [c.id, c.col]), ARCH.items.length, REL_DOCS.size, relState], host => {   // HUB200: each card's column marks it done or planned
-    const {fact} = statusFacts();
-    const done = Number(fact("Done")), total = Number(fact("Total"));
-    const dl = el("dl",{class:"facts"});
-    for(const [k, l] of [["Testing now", "Now testing"], ["Note", "Note"], ["Promoted release", "Promoted release"], ["Next release", "Next release"], ["State", "State"]]){
-      const v = fact(l); if(v) dl.append(el("dt",{}, k), el("dd",{}, v));
-    }
-    const upd = fact("Development state written");
-    if(upd) dl.append(el("dt",{}, "Written"), el("dd",{}, fmtTime(upd)));
-    const tcard = el("div",{class:"mcard"}, dl);
-    if(total > 0){
-      const bar = el("span"); bar.style.width = Math.min(100, 100 * done / total) + "%";
-      tcard.prepend(el("div",{}, `${done} of ${total} finished`), el("div",{class:"meter"}, bar));
-    }
-    host.append(el("h2",{}, "Testing and release"), tcard);
-    // the release line of each project (HUB47): all of them, or the one the project switcher shows
-    const rel = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.entries(hubStatus.releases) : [];
-    const relShown = rel.filter(([k, r]) => r && typeof r === "object" && (!filt.j || k === filt.j));
-    // HUB244: the version of a project's latest release out (RELEASES is newest first) and the scheme its versions follow
-    const verOf = k => { const x = RELEASES.find(q => q.project === k && q.col === "done" && q.version); return x ? String(x.version) : "-"; };
-    const schemeOf = k => String((projects.get(k) || {}).version_scheme || "");
-    if(relShown.length) host.append(el("h2",{}, "Release per project"), stTable(["Project", "Version", "Promoted", "Next", "State"],
-      relShown.map(([k, r]) => el("tr",{}, el("td",{}, String(r.name || k)), el("td",{title: schemeOf(k) ? "scheme " + schemeOf(k) : null}, verOf(k)), el("td",{}, String(r.release_promoted || "-")),
-        el("td",{}, String(r.release_next || "-")), el("td",{}, String(r.release_state || "-"))))));
-    else if(rel.length) host.append(el("p",{class:"note"}, "The project chosen has no release line of its own; choose all projects to see the others."));
-    releaseLists(host);
+  rebuildPanel("releases", ["r", loaded, hubStatus && hubStatus.releases, filt.j, relProj, RELEASES, [...cards.values()].map(c => [c.id, c.col]), ARCH.items.length, REL_DOCS.size, relState], host => {   // HUB200: each card's column marks it done or planned
+    const all = hubStatus.releases && typeof hubStatus.releases === "object" ? Object.keys(hubStatus.releases).length : 0;
+    const lines = relLines(), pick = relPick(lines);
+    if(lines.length) host.append(el("h2",{}, "Release per project"), relTable(lines, pick),
+      el("p",{class:"note"}, pick ? "Only " + String((lines.find(([k]) => k === pick) || [0, {}])[1].name || pick) + " is shown below. Click its row again for every project."
+        : "Click a project to show only its line and its releases below."));
+    else if(all) host.append(el("p",{class:"note"}, "The project chosen has no release line of its own; choose all projects to see the others."));
+    const shown = lines.filter(([k]) => !pick || k === pick);
+    if(shown.length) host.append(el("h2",{}, "Testing and release"), el("div",{class:"rellines"}, ...shown.map(([k, r]) => relLineCard(k, r, shown.length > 1 || !!pick))));
+    releaseLists(host, pick || filt.j);
   });
 }
 // HUB182 (the user, 2026-11-19): each release with the cards that went out in it (its inventory, HUB116), and the
@@ -5786,8 +5843,8 @@ function releaseEl(r, open){
     el("small",{}, [when, count].filter(Boolean).join(" · ")));
   return el("details",{class:"rel", open: open ? "" : null}, head, body);
 }
-function releaseLists(host){
-  const mine = RELEASES.filter(r => !filt.j || !r.project || r.project === filt.j);
+function releaseLists(host, pick = filt.j){   // HUB538: pick = the project a "Release per project" row chose, else the switcher's
+  const mine = RELEASES.filter(r => !pick || !r.project || r.project === pick);
   const now = mine.filter(r => r.col !== "done"), past = mine.filter(r => r.col === "done");
   if(now.length) host.append(el("h2",{}, "Next releases"), el("div",{class:"rels"}, ...now.map(r => releaseEl(r, true))));   // HUB201
   if(relState) host.append(el("p",{class:"note", role:"status"}, relState === "loading" ? "Loading the archived release cards…" : "The archived release cards could not be loaded. ",
@@ -7765,7 +7822,33 @@ function aiCardText(host, text, ids){   // a card id the board knows opens that 
   return host;
 }
 // ---- Exarch AI's state, for the compass, the Sync indicator and the Sync popup
-const EX_STALE_MIN = 10;   // EXARCH gap 5: the core not seen for 10 min
+const EX_STALE_MIN = 10, EX_STUCK_MIN = 30;   // EXARCH gap 5: no sign of life (or a tick running) for 10 min; one step for 30 min is stuck
+// HUB539: the core's last tick is written when a tick ENDS, and a tick under a busy board ran 5 to 14 minutes, so "not seen
+// for 14 min" was said of a core that never stopped. The export's beat (written by a thread of the node's own) says the
+// node is alive and whether a tick runs: {state: ok | long | stuck | stalled | gone, min, step}, as hub/exarch/core.py health()
+// >>> exarch-health
+function exarchHealth(core, now){
+  const c = core && typeof core === "object" ? core : {};
+  const mins = v => { const t = v ? Date.parse(v) : NaN; return isNaN(t) ? null : Math.max(0, Math.floor((now - t) / 60000)); };
+  const quiet = mins(c.last_tick), beat = mins(c.beat), run = mins(c.tick_started), step = String(c.step || "");
+  if(beat == null) return {state: quiet != null && quiet > EX_STALE_MIN ? "gone" : "ok", min: quiet, step: ""};   // an export from before the beat
+  if(beat > EX_STALE_MIN + 1) return {state: "gone", min: beat, step: ""};   // the exported beat is cut to the minute
+  if(run != null){
+    const since = mins(c.step_since);
+    if(since != null && since >= EX_STUCK_MIN) return {state: "stuck", min: since, step};
+    return {state: run > EX_STALE_MIN ? "long" : "ok", min: run, step};
+  }
+  return {state: quiet == null || quiet > EX_STALE_MIN ? "stalled" : "ok", min: quiet, step: ""};
+}
+function exarchHealthText(h){   // the words for each state that is not plain "on"
+  const step = h.step ? ", step " + h.step : "";
+  if(h.state === "gone") return "Exarch AI not seen for " + h.min + " min";
+  if(h.state === "stuck") return "Exarch AI's core is stuck (" + h.min + " min" + step + "): the node restarts itself";
+  if(h.state === "stalled") return "Exarch AI's core has not ticked for " + (h.min == null ? "over " + EX_STALE_MIN : h.min) + " min: the node restarts itself";
+  if(h.state === "long") return "Exarch AI is on: a long tick, " + h.min + " min so far" + step;
+  return "Exarch AI is on and running";
+}
+// <<< exarch-health
 function exarchNow(){
   const x = hubStatus && hubStatus.exarch && typeof hubStatus.exarch === "object" ? hubStatus.exarch : null;
   let on = x ? x.on !== false : true;
@@ -7774,22 +7857,23 @@ function exarchNow(){
   const running = runs.filter(r => r.state === "running").length;
   const tick = x && x.core && x.core.last_tick ? Date.parse(x.core.last_tick) : NaN;
   const quiet = isNaN(tick) ? null : Math.round((Date.now() - tick) / 60000);
-  const state = !x ? "unknown" : on ? (quiet != null && quiet > EX_STALE_MIN ? "unseen" : "on") : running ? "halting" : "off";
-  return {x, on, runs, running, state, quiet, history: x && Array.isArray(x.history) ? x.history.filter(h => h && typeof h === "object") : []};
+  const h = exarchHealth(x && x.core, Date.now());   // HUB539: a long tick is on (and working); gone is unseen; stuck / stalled restart by themselves
+  const state = !x ? "unknown" : on ? ({gone: "unseen", stuck: "stalled", stalled: "stalled"}[h.state] || "on") : running ? "halting" : "off";
+  return {x, on, runs, running, state, quiet, h, history: x && Array.isArray(x.history) ? x.history.filter(h => h && typeof h === "object") : []};
 }
 function exarchStateIcon(s){
   if(s.state === "halting") return ico("hourglass", "wo", "Exarch AI is halting: " + s.running + (s.running === 1 ? " run" : " runs") + " finishing");
   if(s.state === "off") return ico("zzz", "mu", "Exarch AI is off");
-  if(s.state === "unseen") return ico("compass", "wy", "Exarch AI not seen for " + s.quiet + " min");
+  if(s.state === "unseen" || s.state === "stalled") return ico("compass", "wy", exarchHealthText(s.h));
   if(s.state === "unknown") return ico("compass", "mu", "Exarch AI: no reading in the export yet");
-  return ico("compass", "ok", "Exarch AI is on and running");
+  return ico("compass", "ok", exarchHealthText(s.h));
 }
 function exarchStateText(s){   // HUB394: the popup says it in words beside the icon
   if(s.state === "halting") return "Halting: " + s.running + (s.running === 1 ? " run" : " runs") + " finishing";
   if(s.state === "off") return "Exarch AI is off";
-  if(s.state === "unseen") return "Exarch AI not seen for " + s.quiet + " min";
+  if(s.state === "unseen" || s.state === "stalled") return exarchHealthText(s.h);
   if(s.state === "unknown") return "Exarch AI: no reading yet";
-  return "Exarch AI is on and running";
+  return exarchHealthText(s.h);
 }
 // ---- the usage figures (the former Gantt pills, HUB281-HUB285, HUB290), each with its tokLevel; HUB283's scale
 const WARN_RANK = {"tk-yellow": 1, "tk-orange": 2, "tk-red": 3};
@@ -7900,11 +7984,17 @@ function renderSyncPop(){
     el("div",{class:"row"}, syncMark(), changes.size ? el("button",{type:"button", class:"syncpill", title:"Show the changes on their way", onclick:() => { syncPopOpen(false); gotoSyncing(); }}, st) : st),
     el("div",{class:"note", title:SAVE_NOTE}, meta.exported_at ? "Board as of " + fmtTime(meta.exported_at) : "No board export yet: the desktop's node writes it."));
   const usage = usageBreakdownRows(figs);
+  // HUB535: the 5-hour window beneath the weekly (the plan line above is whichever window is the tighter one: the other is added)
+  { const {wins} = usageNow(), shown = figs.find(f => f.k === "plan"), five = (wins || []).find(w => /5-hour/i.test(w.label));
+    if(five && !(shown && /5-hour/i.test(shown.label))){
+      const left = Math.max(0, 100 - Math.round(Number(five.pct) || 0)), v = left + " % left · refresh " + (five.resets_at ? fmtTime(five.resets_at) : "-");
+      const at = figs.indexOf(shown), row = kv(el("span",{class:"row"}, WARN_RANK[tokLevel(left)] ? ico("alert-triangle", WARN_CLASS[tokLevel(left)], tokLevel(left).slice(3) + " warning") : ico("circle-check", "ok", "Fine"), five.label), v, {title: usageLine(five)});
+      usage.splice(at >= 0 ? at + 1 : 0, 0, row); } }
   // HUB495: one frame and table as the Streams tab's Pause projects: state dot (its hover is the reason; a click opens the Streams tab), project, streams
   const go = () => { syncPopOpen(false); showTab("streams"); };
   const prows = projectStates().map(r => el("tr",{class:"spproj", "data-project":r.k},
     el("td",{class:"spdot"}, projectDot(r, go)), el("th",{scope:"row", class:"spname"}, r.name), el("td",{class:"spn"}, String(r.n))));
-  const rows = prows.length ? [el("div",{class:"spause"},
+  const rows = prows.length ? [el("div",{class:"spplain"},   // HUB535: a plain table, not the blue framed look
     el("table",{class:"sptable"}, el("thead",{}, el("tr",{}, el("th",{scope:"col", class:"spdot"}, "State"), el("th",{scope:"col"}, "Project"), el("th",{scope:"col", class:"spn"}, "Streams"))), el("tbody",{}, ...prows)),
     projectKey())] : [];
   const known = s.state !== "unknown";   // no exarch section in the export yet: neither on nor off
@@ -7914,9 +8004,10 @@ function renderSyncPop(){
   const ex = [el("div",{class:"row"}, tg, el("label",{for:"exarchsw"}, !known ? "Not known yet" : s.on ? "On" : "Off")),
     el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
-  if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), "Exarch AI not seen for " + s.quiet + " min: the node may be down (start it by hand)."));
+  if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + ": the node gave no sign of life. Its supervisor starts a node that stopped again by itself; only after the PC itself restarted is the node started there."));
+  if(s.state === "stalled") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + " (nothing to do)."));
   const kids = [el("div",{class:"phead"}, el("h2",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
-    popSec("Exarch AI", ...ex), popSec("Board", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]), el("p",{class:"note spstreams"}, el("a",{href:"#streams", id:"streamslink", title:"Pause or resume projects in the Streams tab", onclick:ev => { ev.preventDefault(); go(); }}, "Open the Streams tab")))];
+    popSec("Exarch AI", ...ex), popSec("Status", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]), el("p",{class:"note spstreams"}, el("a",{href:"#streams", id:"streamslink", title:"Pause or resume projects in the Streams tab", onclick:ev => { ev.preventDefault(); go(); }}, "Open the Streams tab")))];
   // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
   // the nodes stay as they are unless what they show changed (every handler closes over values that are part of the markup)
   const sig = kids.map(k => k.outerHTML).join("");
