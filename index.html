@@ -5159,7 +5159,7 @@ function exarchLine(s, now){
   const t = now == null ? Date.now() : now;
   const onPlan = r => !(r.auth === "api" || (!r.auth && Number(r.cost_usd) > 0));
   const plan = (s.runs || []).filter(onPlan), running = plan.filter(r => r.state === "running").length;
-  const word = {on: "On", off: "Off", halting: "Halting", unseen: "On, but not seen lately", stalled: "On, but its core is not ticking (the node restarts itself)", unknown: "No reading in the export yet"}[s.state] || String(s.state);
+  const word = {on: "On", off: "Off", halting: "Halting", unseen: "On, but not seen lately", stalled: "On, but its core is not ticking", unknown: "No reading in the export yet"}[s.state] || String(s.state);
   const long = s.h && s.h.state === "long" ? "; a tick has run " + s.h.min + " min" : "";   // HUB539: a long tick is not a core that is gone
   const tick = (s.quiet == null ? "no tick seen yet" : s.quiet < 1 ? "last tick under a minute ago" : "last tick " + s.quiet + " min ago") + long;
   const runs = plan.length + (plan.length === 1 ? " run" : " runs") + " on the plan" + (running ? " (" + running + " running)" : "");
@@ -7844,7 +7844,7 @@ function exarchHealthText(h){   // the words for each state that is not plain "o
   const step = h.step ? ", step " + h.step : "";
   if(h.state === "gone") return "Exarch AI not seen for " + h.min + " min";
   if(h.state === "stuck") return "Exarch AI's core is stuck (" + h.min + " min" + step + "): the node restarts itself";
-  if(h.state === "stalled") return "Exarch AI's core has not ticked for " + (h.min == null ? "over " + EX_STALE_MIN : h.min) + " min: the node restarts itself";
+  if(h.state === "stalled") return "Exarch AI's core has finished no tick for " + (h.min == null ? "over " + EX_STALE_MIN : h.min) + " min, though the node is alive";
   if(h.state === "long") return "Exarch AI is on: a long tick, " + h.min + " min so far" + step;
   return "Exarch AI is on and running";
 }
@@ -8005,7 +8005,7 @@ function renderSyncPop(){
     el("div",{class:"warnbox", id:"exarchwarn"}, EXARCH_OFF_WARN)];
   if(s.state === "halting") ex.push(el("div",{class:"row small"}, ico("hourglass", "wo"), "Halting: " + s.running + (s.running === 1 ? " run finishing" : " runs finishing")));
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + ": the node gave no sign of life. Its supervisor starts a node that stopped again by itself; only after the PC itself restarted is the node started there."));
-  if(s.state === "stalled") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + " (nothing to do)."));
+  if(s.state === "stalled") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + ". Nothing to do here: the next tick follows a node update by itself, a stuck node restarts itself after 30 min, and the primarch Lead is told what holds it up."));
   const kids = [el("div",{class:"phead"}, el("h2",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
     popSec("Exarch AI", ...ex), popSec("Status", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]), el("p",{class:"note spstreams"}, el("a",{href:"#streams", id:"streamslink", title:"Pause or resume projects in the Streams tab", onclick:ev => { ev.preventDefault(); go(); }}, "Open the Streams tab")))];
   // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
