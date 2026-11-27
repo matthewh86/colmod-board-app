@@ -51,6 +51,7 @@
 html,body{min-height:100%}
 body{background:var(--bg); color:var(--ink); font:14px/1.45 var(--f-body); margin:0}
 .wrap{padding-inline:16px; padding-block:0 24px}
+:root{--content-w:1280px}   /* HUB537: THE content width of every tab but Board, Gantt and Streams (which use the full width) */
 header.top{padding-block:14px 4px; display:grid; gap:8px}
 .tally:empty{display:none}
 .budget{display:inline-flex; align-items:center; gap:4px; margin-left:6px; white-space:nowrap}   /* HUB272 */
@@ -529,6 +530,8 @@ body.modal-open{overflow:hidden}
 body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 /* machines and jobs */
 .status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
+/* HUB537: every main tab but Board, Gantt and Streams is ONE centred column of var(--content-w); sections and rows inside it fill that column, none has a width of its own */
+#decisions, #status, #hub, #queues, #releases, #artifacts{width:100%; max-width:var(--content-w); margin-inline:auto; grid-template-columns:minmax(0,1fr)}
 /* HUB438: one style per heading level in every tab (the page title is the h1 in the header): h2 a section, h3 a part of it */
 .status h2{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink)}
 .status h3{margin:4px 0 0; font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
@@ -609,9 +612,9 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .gscale button{font:inherit; font-size:.8rem; border:0; background:var(--surface); color:var(--ink); padding:4px 12px; cursor:pointer; min-height:30px}
 .gscale button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
 /* HUB175: the Hub tab's pace selector, three equal segments; the help below follows the hovered or focused one */
-.pacebox{display:grid; gap:6px; max-width:560px}
+.pacebox{display:grid; gap:6px}
 /* HUB479, HUB488, HUB492: the Streams tab's Pause projects table, below the Gantt, in a frame of its own */
-.spause{display:grid; gap:8px; max-width:640px; box-sizing:border-box; margin:12px 0; padding:10px 12px; border:1px solid var(--line); border-left:3px solid var(--accent); background:var(--surface); border-radius:0 8px 8px 0}
+.spause{display:grid; gap:8px; box-sizing:border-box; margin:12px 0; padding:10px 12px; border:1px solid var(--line); border-left:3px solid var(--accent); background:var(--surface); border-radius:0 8px 8px 0}
 .spause.paused{border-left-color:var(--q)}
 .spause h3{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink)}   /* HUB480: a real h3, not the .status h3 label look */
 .spause p{margin:0}
@@ -649,7 +652,7 @@ button.pdot:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 .sptable .spdot{width:2em; text-align:center}
 .pkey{display:flex; flex-wrap:wrap; gap:2px 12px; margin:0; font-size:.78rem; color:var(--muted)}
 .pkey span{display:inline-flex; align-items:center; gap:6px}
-.syncpop .spause{margin:0; max-width:none}
+.syncpop .spause{margin:0}
 @media (max-width:480px){ .sptable th, .sptable td{padding:6px 4px} .sptable .spn{width:3.5em} }
 .pacesel{display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
 .pacesel button{font:inherit; font-size:.85rem; font-weight:600; border:0; border-left:1px solid var(--line); background:none; color:var(--ink); padding:8px 6px; cursor:pointer; min-height:40px}
@@ -675,7 +678,7 @@ button.pdot:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 .pacehelp.preview{border-left-style:dashed}
 .pacehelp.preview b{color:var(--pc, var(--accent))}
 /* HUB171/HUB173: the settable limits, each with what it caps and the suggested value */
-.limits{display:grid; gap:8px; max-width:860px}
+.limits{display:grid; gap:8px}
 /* HUB388: the limits beside the pace (two columns where there is room; stacked on a narrow screen) */
 .pacelim{display:grid; grid-template-columns:minmax(0,560px); gap:6px; align-items:start}   /* HUB395: one column: the pace, its limits and the default model under it */
 .pacelim .limbox h3{margin-top:0}
@@ -715,8 +718,8 @@ body.gdragbody, body.gdragbody *{cursor:grabbing !important}
 .glab.gstream.pred{font-style:italic}
 .gdot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; flex:none; border:2px solid var(--c-park); box-sizing:border-box}   /* HUB433 */
 .gdot.alive{background:var(--c-done); border-color:var(--c-done)} .gdot.quiet{background:var(--c-decide); border-color:var(--c-decide)} .gdot.cold{background:var(--c-next); border-color:var(--c-next)} .gdot.unknown{border-style:dashed}
-.bgraph{max-width:560px; margin:4px 0 8px} .bhead{display:flex; gap:4px 12px; font-size:12px; flex-wrap:wrap} .bhead span{color:var(--muted); font-variant-numeric:tabular-nums}
-svg.burn{display:block; width:100%; height:auto} .ubreak{max-width:560px; display:grid; gap:3px; margin-top:6px}   /* HUB427 */
+.bgraph{margin:4px 0 8px} .bhead{display:flex; gap:4px 12px; font-size:12px; flex-wrap:wrap} .bhead span{color:var(--muted); font-variant-numeric:tabular-nums}
+svg.burn{display:block; width:100%; height:auto} .ubreak{display:grid; gap:3px; margin-top:6px}   /* HUB427 */
 /* HUB437: the budget graph: its pace, time scale and vertical scale buttons, caption and the numbers list */
 .bkey i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px} .bkey b{color:var(--ink); font-weight:600}
 .bzoom{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:6px 0 2px}
@@ -952,6 +955,11 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aipanel .dtabs button{background:none; border:0; border-bottom:2px solid transparent; border-radius:0; padding:7px 0; color:var(--muted)}
 .aipanel .dtabs button[aria-selected="true"]{color:var(--ink); font-weight:600; border-bottom-color:var(--ink)}
 .dtabs .right{margin-left:auto}
+.aipanel .dtabs #aitab-notes{display:inline-flex; align-items:center}
+.nlist{display:grid; gap:6px} .nrow{display:grid; gap:2px; text-align:left; width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:10px; background:none; color:var(--ink); cursor:pointer; font:inherit; font-size:.85rem}
+.nrow .nt{display:flex; gap:8px; justify-content:space-between; color:var(--muted); font-size:.75rem} .nrow .nx{overflow-wrap:anywhere; white-space:pre-wrap}
+.nhit{outline:2px solid var(--accent); outline-offset:1px; transition:outline-color 1s}
+.nbanner .wlist{display:flex; flex-wrap:wrap; gap:6px}
 .aichat{display:flex; flex-direction:column; flex:1; min-height:0}
 .ctabs{display:flex; gap:6px; align-items:flex-start; padding:6px 12px; border-bottom:1px solid var(--line); font-size:.75rem}
 .ctabs .strip{flex:1; min-width:0; display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding-bottom:3px; scroll-snap-type:x proximity; overscroll-behavior-x:contain}
@@ -1030,14 +1038,11 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
 /* HUB439: the Exarch (hub) tab's sections are panels; HUB484: one column, never side by side; a row stays as wide as it reads */
 #hub{grid-template-columns:minmax(0,1fr); align-items:start; gap:14px 32px}
-.hsec{display:grid; gap:10px; align-content:start; min-width:0; max-width:760px}
-.hsec.wide{grid-column:1 / -1; max-width:none}
-.hsec.wide .tblwrap{max-width:1200px}
-.status > .tblwrap, .status > .mcard, .status > .mach.rows, .status > .rels, .status > details{max-width:1300px}   /* the other tabs: a table or card stops where its label and value are still read together */
-.status > p.note{max-width:100ch}
+.hsec{display:grid; gap:10px; align-content:start; min-width:0}
+.hsec.wide{grid-column:1 / -1}
 table.hubdet td:first-child{width:11em; white-space:nowrap}
 .finding .fbody{display:grid; gap:6px}
-.runs{display:grid; max-width:640px}   /* HUB332: Exarch AI runs, two lines each (the Sync popup and the Hub tab) */
+.runs{display:grid}   /* HUB332: Exarch AI runs, two lines each (the Sync popup and the Hub tab) */
 .runs > div{display:grid; grid-template-columns:auto 1fr auto; gap:0 8px; padding:5px 0; border-bottom:1px solid var(--line); font-size:.8rem; font-variant-numeric:tabular-nums}
 .runs > div:last-child{border-bottom:0}
 .runs .t{color:var(--muted)} .runs .d{grid-column:2 / 4; color:var(--muted)}
@@ -1180,7 +1185,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
 <aside class="aipanel" id="aipanel" role="complementary" aria-label="Exarch AI" hidden>
   <div class="airesize" id="airesize" role="separator" aria-orientation="vertical" aria-label="Width of the Exarch AI drawer" tabindex="0" title="Drag to resize (arrow keys too; double-click resets it)"></div>
   <div class="aihead"><h2><span class="ico" id="aihico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2" stroke-linecap="round"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="var(--surface)" stroke="none"/></svg></span>Exarch AI</h2><button type="button" id="aiclose" aria-label="Close the drawer">✕</button></div>
-  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-leads">Leads</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button></div>
+  <div class="dtabs" role="tablist" aria-label="Drawer"><button type="button" role="tab" id="aitab-chat">Chat</button><button type="button" role="tab" id="aitab-leads">Leads</button><button type="button" role="tab" id="aitab-arch">Archived</button><button type="button" role="tab" id="aitab-dev" class="right">Devices</button><button type="button" role="tab" id="aitab-notes" aria-label="Notifications" title="Notifications"><svg class="i" aria-hidden="true"><use href="#i-bell"/></svg></button></div>
   <div class="offpanel" id="aioff" role="status" hidden></div>
   <div class="nbanner" id="ainotify" hidden></div>
   <div class="nbanner" id="aiwhy" role="status" hidden></div>
@@ -1196,6 +1201,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
     <form class="aiform" id="aiform"><div class="aigrip" id="aigrip" role="separator" aria-orientation="horizontal" aria-label="Height of the message box" tabindex="0" title="Drag up to make the box taller (arrow keys too; double-click resets it)"></div><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
   </div>
   <div class="aipane" id="aidev" hidden></div>
+  <div class="aipane" id="ainotes" hidden></div>
   <div class="aipane" id="aiarch" hidden></div>
 </aside>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -7542,7 +7548,7 @@ const AI_KEY = "hub.exarch", AI_OLD = "hub.assistant", AI_MSGS = 60, AI_ARCH_DAY
 const AI_WAIT_MS = 6 * 60 * 1000, AI_POLL_UNTIL_MS = 60 * 60 * 1000;   // "No answer yet" after 6 min; a late answer still lands for an hour
 const DW_KEY = "hub.drawer.w", DW_MIN = 320, DW_DEF = 420, DW_MAX = .7;   // the drawer's width on a desktop, kept per device
 const ai = {chats: [], arch: [], cur: "", tab: "chat", hfilt: "all", mfilt: "both", last: {}, menu: false, confirm: "", pop: false, rect: null, seen: {}, polling: new Set(), notes: [], gone: [],
-            gen: 0, stored: null, last: "", lastCur: ""};   // gen: raised when the chats are cleared; stored: the text this tab last read or wrote; last: its content
+            gen: 0, whyItems: [], stored: null, last: "", lastCur: ""};   // gen: raised when the chats are cleared; stored: the text this tab last read or wrote; last: its content
 const aiId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 function ico(name, cls, title){   // a Tabler-style icon from the sprite at the top of the page
   const s = el("span",{class:"ico" + (cls ? " " + cls : ""), title:title || null, "aria-hidden":title ? null : "true", role:title ? "img" : null, "aria-label":title || null});
@@ -7598,7 +7604,7 @@ function aiForget(){   // the chats and their keys leave this page; what is on i
 // <<< drawer-store
 function aiClear(){    // Disconnect, or this device was removed: nothing of the chats stays in this browser
   aiForget();
-  try{ for(const k of [AI_KEY, AI_OLD, EX_IMP, EX_PAIRED]) localStorage.removeItem(k); }catch(e){}
+  try{ for(const k of [AI_KEY, AI_OLD, EX_IMP, EX_PAIRED, NOTES_KEY]) localStorage.removeItem(k); }catch(e){}
   if(!$("#aipanel").hidden) aiDraw(); else renderExarchHeader();
 }
 // >>> drawer-rules (tests/test_app.py runs this block)
@@ -7991,11 +7997,49 @@ function notify(title, body, conv){
     n.onclick = () => { window.focus(); if(conv){ ai.cur = conv; ai.tab = aiTabOf(ai.chats.find(c => c.conv === conv)); } else { ai.tab = "chat"; ai.cur = ""; ai.mfilt = "both"; } aiOpen(true); n.close(); };
   }catch(e){ /* a browser that shows notifications only from a service worker: the compass count still says it */ }
 }
+// HUB536: the notification log (this device's, kept beside the chats) and what each waiting item is
+const NOTES_KEY = "hub.exarch.log", NOTES_MAX = 100;
+function notePart(k, c, m){   // what one notification is: kind (plan | lead | esc), the chat, the message's key, who, the words
+  return {kind: k, conv: c.conv, key: aiMsgKey(m), at: String(m.at || ""), who: k === "plan" ? "Exarch AI" : c.lead || "Exarch AI",
+    text: (m.plan && m.plan.title ? m.plan.title + ": " : "") + String(m.text || "")};
+}
+function noteLog(){ const l = ls(NOTES_KEY); return Array.isArray(l) ? l.filter(x => x && typeof x === "object" && typeof x.key === "string") : []; }
+function noteAdd(p){   // once per message; oldest first, the newest NOTES_MAX kept
+  const l = noteLog(), id = p.conv + "|" + p.key;
+  if(l.some(x => x.id === id)) return;
+  l.push({id, kind: p.kind, conv: p.conv, key: p.key, at: p.at || new Date().toISOString(), who: String(p.who || "").slice(0, 60), text: String(p.text || "").slice(0, 200)});
+  ls(NOTES_KEY, l.slice(-NOTES_MAX));
+  if(!$("#aipanel").hidden && ai.tab === "notes") aiDrawNotes();
+}
+function noteGo(conv, key){   // open the chat the notification is about and select its message
+  const c = conv ? ai.chats.find(x => x.conv === conv) : ai.chats.find(x => x.kind === "exarch");
+  if(conv && !c){ toast("That chat is gone."); return; }
+  if(c){ c.hidden = false; ai.cur = c.conv; ai.tab = aiTabOf(c); }
+  else { ai.tab = "chat"; ai.cur = ""; }
+  ai.mfilt = "both"; ai.pop = false; ai.menu = false; ai.confirm = "";
+  if($("#aipanel").hidden) aiOpen(true); else aiDraw();
+  setTimeout(() => {
+    const t = [...$("#aimsgs").children].find(x => x.dataset && x.dataset.k === key);
+    if(!t){ toast("That message is no longer in the chat."); return; }
+    t.scrollIntoView({block: "center"}); t.classList.add("nhit"); setTimeout(() => t.classList.remove("nhit"), 2500);
+  }, 320);
+}
+function aiDrawNotes(){
+  const l = noteLog(), box = $("#ainotes"), kind = {plan: "Plan to approve", lead: "Lead reply", esc: "Needs the user"};
+  box.replaceChildren(el("p",{class:"small mu"}, "What Exarch AI's mark and this device's alerts told the user, oldest first. A tap opens the chat and selects the message."),
+    ...(l.length ? [el("div",{class:"nlist", role:"list"}, ...l.map(x => el("button",{type:"button", class:"nrow", role:"listitem", onclick:() => noteGo(x.conv, x.key)},
+      el("span",{class:"nt"}, el("b",{}, (kind[x.kind] || "Notification") + " · " + (x.who || "")), el("span",{title:x.at ? new Date(x.at).toLocaleString() : null}, x.at ? new Date(x.at).toLocaleString(undefined, {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "")),
+      el("span",{class:"nx"}, String(x.text || "").slice(0, 140)))))]
+      : [el("p",{class:"note"}, "No notifications yet.")]));
+  box.scrollTop = box.scrollHeight;
+}
 function aiWaitingParts(){   // HUB417: what the compass count is made of
-  const out = {plan: 0, lead: 0, esc: 0}, leads = chatLeads();
-  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs){ const k = notifyKind(m, c); if(k && !m.seen) out[k]++; }
+  const out = {plan: 0, lead: 0, esc: 0, items: []}, leads = chatLeads();
+  for(const c of ai.chats) if(c.kind !== "lead" || leads.includes(c.lead)) for(const m of c.msgs){ const k = notifyKind(m, c); if(k && !m.seen){ out[k]++; out.items.push(notePart(k, c, m)); } }
   const since = ai.seen.status || "";
-  out.esc = exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since).length;
+  const esc = exarchNow().history.filter(h => h.tag === "fail" && h.kind === "escalation" && String(h.at || "") > since);
+  out.esc = esc.length;
+  for(const h of esc) out.items.push({kind: "esc", conv: "", key: "h|" + String(h.at || ""), at: String(h.at || ""), who: "Exarch AI", text: String(h.text || "")});
   return out;
 }
 function aiWaitingText(o){   // "2 plans to approve, 1 Lead reply, 1 failure needing the user"
@@ -8009,7 +8053,7 @@ let exSeenHist = null;   // the newest history line notified, so a reload does n
 function exarchWatch(){   // on each new export: an escalation the user must act on is notified once
   const h = exarchNow().history, top = h.length ? String(h[0].at || "") : "";
   if(exSeenHist === null){ exSeenHist = ai.seen.notified || top; return; }
-  for(const x of h) if(String(x.at || "") > exSeenHist && x.kind === "escalation") notify("Exarch AI: needs the user", x.text, "");
+  for(const x of h) if(String(x.at || "") > exSeenHist && x.kind === "escalation"){ noteAdd({kind: "esc", conv: "", key: "h|" + String(x.at || ""), at: String(x.at || ""), who: "Exarch AI", text: x.text}); notify("Exarch AI: needs the user", x.text, ""); }
   if(top > exSeenHist){ exSeenHist = top; ai.seen.notified = top; aiSave(); }
 }
 // ---- devices (mock-up section 6, HUB338): the devices that read the encrypted chats, and this device's notifications
@@ -8037,10 +8081,10 @@ function aiDraw(){
   const s = exarchNow(), c = aiConv(), leads = chatLeads(), row = chatRow(ai.chats, leads, aiGroup());
   $("#aihico").classList.toggle("mu", s.state === "off" || s.state === "halting");
   $("#aihico").classList.toggle("ok", s.state === "on");   // HUB381: green while Exarch AI is on
-  for(const t of ["chat", "leads", "arch", "dev"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
+  for(const t of ["chat", "leads", "arch", "dev", "notes"]){ const b = $("#aitab-" + t); b.setAttribute("aria-selected", String(ai.tab === t)); }
   const fails = s.history.filter(h => h.tag === "fail" && String(h.at || "") > (ai.seen.status || "")).length;   // HUB502: Status is part of the Chat tab now
   $("#aitab-chat").replaceChildren("Chat", fails ? el("span",{class:"err small"}, " " + fails) : "");
-  $("#aichat").hidden = ai.tab !== "chat" && ai.tab !== "leads"; $("#aiarch").hidden = ai.tab !== "arch"; $("#aidev").hidden = ai.tab !== "dev";
+  $("#aichat").hidden = ai.tab !== "chat" && ai.tab !== "leads"; $("#aiarch").hidden = ai.tab !== "arch"; $("#aidev").hidden = ai.tab !== "dev"; $("#ainotes").hidden = ai.tab !== "notes";
   $("#ainew").hidden = ai.tab === "leads";
   // off: the panel with Turn on (the chats stay readable below it)
   const offp = $("#aioff"); offp.hidden = !(s.state === "off" || s.state === "halting");
@@ -8053,7 +8097,9 @@ function aiDraw(){
   const wb = $("#aiwhy");   // HUB417: the compass mark's reason, shown while the drawer is open, until dismissed
   wb.hidden = !ai.why;
   if(ai.why) wb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Waiting for the user: "), ai.why),
-    el("span",{class:"row"}, el("button",{type:"button", onclick:() => { ai.why = ""; aiDraw(); }}, "Seen")));
+    ...(ai.whyItems.length ? [el("span",{class:"wlist"}, ...ai.whyItems.slice(0, 6).map(x => el("button",{type:"button", class:"small", title:x.text, onclick:() => noteGo(x.conv, x.key)},
+      (x.kind === "plan" ? "Plan" : x.kind === "esc" ? "Failure" : x.who) + ": " + x.text.slice(0, 40) + (x.text.length > 40 ? "…" : ""))))] : []),
+    el("span",{class:"row"}, el("button",{type:"button", onclick:() => { ai.why = ""; ai.whyItems = []; aiDraw(); }}, "Seen")));
   const pend = exConfirmCards(), pb = $("#aipair");   // HUB338: a new device waits for its code to be confirmed here
   pb.hidden = !pend.length; pb.replaceChildren(...pend);
   if(!nb.hidden) nb.replaceChildren(el("span",{class:"row"}, ico("bell"), el("b",{}, "Notify this device?")),
@@ -8064,6 +8110,7 @@ function aiDraw(){
     if(ai.tab === "chat" && c && c.kind === "exarch" && ai.mfilt !== "messages" && !$("#aipanel").hidden) ai.seen.status = s.history.length ? String(s.history[0].at || "") : ai.seen.status;   // the failures were shown
   }
   else if(ai.tab === "dev") $("#aidev").replaceChildren(devicesSec());   // HUB381: moved here from the Sync popup (HUB380)
+  else if(ai.tab === "notes") aiDrawNotes();
   else aiDrawArch();
   aiSave(); renderExarchHeader();
 }
@@ -8202,7 +8249,7 @@ function aiItems(c){   // the open chat: messages, and for the Exarch chat and a
     : "Ask about the board (what is blocked, what changed) or list new work for any project. With Plan on, a request comes back as a plan to approve."));
   if(f === "status" && !items.length) out.push(el("p",{class:"note"}, exarchNow().x ? "Nothing to show here." : "No Exarch AI status in the export yet."));
   for(const it of items){
-    if(it.h){ out.push(el("div",{class:"hl" + (it.h.tag === "fail" ? " err" : ""), title:"Status, for reference: not sent to the Lead"},   // HUB418: the same look as the Status tab's lines
+    if(it.h){ out.push(el("div",{class:"hl" + (it.h.tag === "fail" ? " err" : ""), "data-k":"h|" + String(it.h.at || ""), title:"Status, for reference: not sent to the Lead"},   // HUB418: the same look as the Status tab's lines
       el("span",{class:"t", title:it.h.at ? new Date(it.h.at).toLocaleString() : null}, it.h.at ? new Date(it.h.at).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"}) : ""),
       aiCardText(el("span",{}), String(it.h.text || ""), it.h.card ? [it.h.card] : []))); continue; }
     out.push(aiMsg(c, it.m));
@@ -8223,6 +8270,7 @@ function aiTime(at){
 }
 function aiMsg(c, m){
   const box = aiMsg0(c, m), t = m.role === "moved" || m.wait ? null : aiTime(m.at);
+  box.dataset.k = aiMsgKey(m);   // HUB536: what a notification selects
   if(t) box.append(t);
   return box;
 }
@@ -8475,6 +8523,7 @@ function aiLand(c, n, r){   // a reply into its own chat (shown or not); a moved
   }
   const where = to || c;
   const nk = notifyKind(msg, where);
+  if(nk) noteAdd(notePart(nk, where, msg));
   if(nk) notify(nk === "lead" ? where.lead + " replied" : "Plan ready to approve", (msg.plan && msg.plan.title ? msg.plan.title + ": " : "") + msg.text, where.conv);
   aiDraw();
 }
@@ -8607,7 +8656,7 @@ function aiOpen(v){
   const still = !p.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(!v){
     if(p.hidden) return;
-    ai.why = "";   // HUB417: seen
+    ai.why = ""; ai.whyItems = [];   // HUB417: seen
     const done = () => { p.hidden = true; document.body.classList.remove("ai-open"); b.setAttribute("aria-expanded", "false"); b.focus(); renderExarchHeader(); };
     if(still || !ai.rect) return done();
     p.animate([{clipPath:"inset(0px 0px 0px 0px round 0px)"}, {clipPath:aiClip(ai.rect, p.getBoundingClientRect())}],
@@ -8620,7 +8669,7 @@ function aiOpen(v){
   if(!still) p.animate([{clipPath:aiClip(r, p.getBoundingClientRect())}, {clipPath:"inset(0px 0px 0px 0px round 0px)"}],
     {duration:280, easing:"cubic-bezier(.2,.8,.2,1)"});
   exStart();
-  ai.why = aiWaitingText(aiWaitingParts());   // HUB417: what the mark was for, kept until the user has seen it
+  const wp = aiWaitingParts(); ai.why = aiWaitingText(wp); ai.whyItems = wp.items;   // HUB536: and which messages; HUB417: what the mark was for, kept until the user has seen it
   aiDraw.jump = true; aiDraw();
   aiRestart();
   const cur = aiConv(); if(cur && !exLocked() && cur.msgs.some(m => itemsOf(m).some(x => !x.done))) aiRefresh(cur);   // another device may have tapped them
@@ -8687,7 +8736,7 @@ $("#aiclose").addEventListener("click", () => aiOpen(false));
 $("#ainew").addEventListener("click", aiNewChat);
 $("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
 $("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); });
-for(const t of ["chat", "leads", "arch", "dev"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
+for(const t of ["chat", "leads", "arch", "dev", "notes"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
 $("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
 // ---------- HUB338: encrypted chats (docs/EXARCH.md section L, mock-ups section 6). This device makes its own
