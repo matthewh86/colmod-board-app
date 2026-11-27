@@ -7091,7 +7091,16 @@ function manDay(iso){
   return when && !isNaN(when) ? when.toLocaleDateString([], {day:"numeric", month:"short"}) : "";
 }
 function manProjOrder(k){ const p = projects.get(k); return p && p.order != null ? Number(p.order) : 1e9; }
-function manCardBtn(id){ return id && cards.has(String(id)) ? el("button",{type:"button", title:"Open " + id, onclick:()=>openCard(String(id))}, String(id)) : String(id || ""); }
+// HUB560: a card's id as a link that opens the card (Manual actions and Past decisions, on any device); the card's title follows
+function cardLink(id){
+  id = String(id || "");
+  if(!id) return "";
+  const c = cards.get(id);
+  if(!c) return id;
+  return el("span",{}, el("a",{href:"#" + id, class:"tlink cardlink", "data-card":id, title:"Open " + id + (c.t ? ": " + c.t : ""), onclick:ev=>{ ev.preventDefault(); ev.stopPropagation(); openCard(id); }}, id),
+    c.t ? el("div",{class:"note"}, c.t) : null);
+}
+function manCardBtn(id){ return cardLink(id); }
 function drawManual(host){   // Active, then INACTIVE: Snoozed and Past manual actions (HUB435)
   const all = [...manDocs.values()];
   const sig = JSON.stringify([readOnly, loaded, all.map(d => [d.id, d.t, d.d, d.project, d.card, d.machine, d.added, d.done_at, d.note, manDone(d), manSnoozed(d)])]);
@@ -7312,7 +7321,7 @@ function pastDecisionsEl(){
       const q = ch.field.replace(/^(ans|step)\./, "").replace(new RegExp(OTHER + "$"), ""), k = ch.field.startsWith("step.") ? "step." + q : q;
       if(String(ch.ts || "") > String(at[k] || "")) at[k] = ch.ts;
     }
-    const open = () => el("button",{type:"button", title:"Open "+c.id+" (change the answer there)", onclick:()=>openCard(c.id)}, c.id);
+    const open = () => cardLink(c.id);   // HUB560
     for(const o of Array.isArray(c.opts) ? c.opts : []) if(o && o.id && a[o.id])
       add(at[o.id], open(), linkify(o.q || o.id), [el("b",{}, answerText(o, a)), " ", pendNote(c.id, o.id)]);
     for(const x of qList(c)) if(String(a[x.id]||"").trim())
