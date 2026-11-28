@@ -2607,6 +2607,8 @@ function renderModal(){
   if(openEpic && !epics.has(openEpic)) openEpic = null;
   const old = box.querySelector(".mpanel");
   const keepScroll = old ? old.scrollTop : 0, keepBox = box.scrollTop, same = old && old.dataset.id === c.id;
+  const FOCUSABLE = "button, input, select, a, [tabindex]";   // HUB586: a redraw keeps the focus on the same control (the n-th focusable one) of the same card
+  const ae = document.activeElement, keepFocus = same && ae && ae !== document.body && old.contains(ae) ? [...old.querySelectorAll(FOCUSABLE)].indexOf(ae) : -1;
   box.textContent = "";
   const col = COLS.find(x=>x.k===c.col);
   const panel = el("div",{class:"mpanel" + (arch ? " arch" : ""), role:"dialog", "aria-modal":"true", "aria-label":c.id+" "+(c.t||""), "data-id":c.id},
@@ -2619,6 +2621,7 @@ function renderModal(){
   box.append(panel);
   box.hidden = false; document.body.classList.add("modal-open");
   if(same){ panel.scrollTop = keepScroll; box.scrollTop = keepBox; }   // a redraw of the open card keeps its place
+  if(keepFocus >= 0){ const f = panel.querySelectorAll(FOCUSABLE)[keepFocus]; if(f) f.focus({preventScroll:true}); }
   if(!openEpic) wantFull(c.id);
 }
 
