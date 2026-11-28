@@ -5792,7 +5792,8 @@ function relChoose(k){
 }
 function relTable(lines, pick){
   // HUB244: the version of a project's latest release out (RELEASES is newest first) and the scheme its versions follow
-  const verOf = k => { const x = RELEASES.find(q => q.project === k && q.col === "done" && q.version); return x ? String(x.version) : "-"; };
+  // HUB579: the version is the line's own (the newest Release card out, the same as Promoted), never a search of the list
+  const verOf = k => { const l = lines.find(([q]) => q === k); return l && l[1].release_version ? String(l[1].release_version) : "-"; };
   const schemeOf = k => String((projects.get(k) || {}).version_scheme || "");
   return stTable(["Project", "Version", "State", "Next", "Promoted"], lines.map(([k, r]) => {
     const on = pick === k, name = String(r.name || k);
