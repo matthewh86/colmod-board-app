@@ -531,7 +531,7 @@ body.noconn .bar, body.noconn .main, body.noconn #empty{display:none}
 /* machines and jobs */
 .status{display:grid; gap:14px; margin:14px 0 16px; font-size:15px}
 /* HUB537: every main tab but Board, Gantt and Streams is ONE centred column of var(--content-w); sections and rows inside it fill that column, none has a width of its own */
-#decisions, #status, #hub, #queues, #releases, #artifacts{width:100%; max-width:var(--content-w); margin-inline:auto; grid-template-columns:minmax(0,1fr)}
+#decisions, #pace, #status, #hub, #queues, #releases, #artifacts{width:100%; max-width:var(--content-w); margin-inline:auto; grid-template-columns:minmax(0,1fr)}
 /* HUB438: one style per heading level in every tab (the page title is the h1 in the header): h2 a section, h3 a part of it */
 .status h2{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink)}
 .status h3{margin:4px 0 0; font:600 .74rem/1.2 var(--f-body); text-transform:uppercase; letter-spacing:.07em; color:var(--muted)}
@@ -613,10 +613,9 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 .gscale button[aria-pressed=true]{background:var(--accent); color:var(--on-accent)}
 /* HUB175: the Hub tab's pace selector, three equal segments; the help below follows the hovered or focused one */
 .pacebox{display:grid; gap:6px}
-/* HUB479, HUB488, HUB492: the Streams tab's Pause projects table, below the Gantt, in a frame of its own */
+/* HUB479, HUB488, HUB492: the Pause projects table in a frame of its own (HUB571: on the Pace tab) */
 .spause{display:grid; gap:8px; box-sizing:border-box; margin:12px 0; padding:10px 12px; border:1px solid var(--line); border-left:3px solid var(--accent); background:var(--surface); border-radius:0 8px 8px 0}
 .spause.paused{border-left-color:var(--q)}
-.spause h3{margin:0; font:600 1.05rem/1.3 var(--f-body); text-transform:none; letter-spacing:0; color:var(--ink)}   /* HUB480: a real h3, not the .status h3 label look */
 .spause p{margin:0}
 .sptable{width:100%; border-collapse:collapse; font-size:.88rem}
 .sptable th, .sptable td{padding:6px 8px; text-align:left; border-top:1px solid var(--line); vertical-align:middle}
@@ -644,7 +643,7 @@ ul.rcards{margin:6px 0 2px; padding-left:18px; display:grid; gap:2px; overflow-w
 @media (pointer:coarse){ .spswitch{width:48px; height:28px} .spswitch .knob{width:22px; height:22px} .spswitch[aria-checked="true"] .knob{left:22px} }
 .spfoot{display:flex; justify-content:flex-end}
 .sppace{margin:8px 0 0}
-/* HUB495: a project's state dot, one look in the Streams tab's Pause projects frame and the Sync popup's Projects frame */
+/* HUB495: a project's state dot, one look in the Pace tab's Pause projects frame and the Sync popup's Projects frame */
 .pdot{display:inline-block; width:12px; height:12px; border-radius:50%; flex:none; vertical-align:middle; padding:0; border:0; background:var(--pc,var(--muted)); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--pc,var(--muted)); cursor:help}
 button.pdot{cursor:pointer}
 button.pdot:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
@@ -978,16 +977,18 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .ctabs .ct.lead{border:1.5px solid var(--pc)}
 .ctabs .ct.ex{cursor:pointer}
 .aipanel .ctabs .ct.on{color:var(--ink); font-weight:600; background:color-mix(in srgb, var(--pc) 16%, var(--surface))}
-.aiframe{position:relative; flex:1; min-height:0; display:flex; flex-direction:column}   /* HUB367: the chat menu button sits top right of the message frame */
-.aipanel .aiframe .tm{position:absolute; right:14px; top:4px; z-index:3; width:20px; height:20px; padding:0; justify-content:center; font-size:10px; line-height:1; color:var(--muted); background:var(--surface); border-radius:6px}
-.aipanel .aiframe .tm:hover,.aipanel .aiframe .tm.open{color:var(--ink); background:color-mix(in srgb, var(--accent) 14%, var(--surface))}
+.aiframe{position:relative; flex:1; min-height:0; display:flex; flex-direction:column}
+.aibar{position:relative; display:flex; align-items:center; gap:6px}   /* HUB524: the Messages / Status / Both switch and the chat menu button share one row */
+.aibar[hidden]{display:none}
+.aipanel .aibar .tm{margin-left:auto; margin-right:14px; flex:none; z-index:3; width:20px; height:20px; padding:0; justify-content:center; font-size:10px; line-height:1; color:var(--muted); background:var(--surface); border-radius:6px}
+.aipanel .aibar .tm:hover,.aipanel .aibar .tm.open{color:var(--ink); background:color-mix(in srgb, var(--accent) 14%, var(--surface))}
 .ctabs .ct.drag,.crow.drag{outline:1px dashed var(--accent); opacity:.6}
 .ctabs .ct.over{box-shadow:-3px 0 0 var(--accent)}
 .ctabs .ct.over.after{box-shadow:3px 0 0 var(--accent)}
 .crow.over{box-shadow:0 -3px 0 var(--accent)}
 .crow.over.after{box-shadow:0 3px 0 var(--accent)}
 .cnt{font-variant-numeric:tabular-nums}
-.tmenu{position:absolute; right:12px; top:28px; z-index:4; min-width:220px; max-width:calc(100% - 24px); border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:4px; display:grid; gap:2px; font-size:.8rem; box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.tmenu{position:absolute; right:12px; top:100%; z-index:4; min-width:220px; max-width:calc(100% - 24px); border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:4px; display:grid; gap:2px; font-size:.8rem; box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .aipanel .tmenu .it{display:grid; grid-template-columns:auto 1fr; gap:2px 8px; padding:5px 8px; border-radius:6px; background:none; border:0; text-align:left; justify-items:start}
 .tmenu .it:hover{background:color-mix(in srgb, var(--accent) 10%, var(--surface))}
 .tmenu .it .small{grid-column:2}
@@ -1043,7 +1044,7 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .syncpop .phead h2{flex:1; margin:0; font:700 1rem/1.3 var(--f-body)}   /* HUB480: the popup's title is a heading */
 .syncpop .pclose{font:inherit; background:none; border:0; cursor:pointer; color:var(--muted)}
 /* HUB439: the Exarch (hub) tab's sections are panels; HUB484: one column, never side by side; a row stays as wide as it reads */
-#hub{grid-template-columns:minmax(0,1fr); align-items:start; gap:14px 32px}
+#hub, #pace{grid-template-columns:minmax(0,1fr); align-items:start; gap:14px 32px}
 .hsec{display:grid; gap:10px; align-content:start; min-width:0}
 .hsec.wide{grid-column:1 / -1}
 table.hubdet td:first-child{width:11em; white-space:nowrap}
@@ -1102,6 +1103,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
     <button class="tab" role="tab" id="tab-gantt" data-tab="gantt" aria-controls="gantt" type="button">Gantt</button>
     <button class="tab" role="tab" id="tab-streams" data-tab="streams" aria-controls="streams" type="button">Streams</button>
     <button class="tab" role="tab" id="tab-decisions" data-tab="decisions" aria-controls="decisions" type="button">Decisions</button>
+    <button class="tab" role="tab" id="tab-pace" data-tab="pace" aria-controls="pace" type="button">Pace</button>
     <button class="tab" role="tab" id="tab-status" data-tab="status" aria-controls="status" type="button">Machines</button>
     <button class="tab" role="tab" id="tab-hub" data-tab="hub" aria-controls="hub" type="button">Exarch</button>
     <button class="tab" role="tab" id="tab-queues" data-tab="queues" aria-controls="queues" type="button">Queues</button>
@@ -1163,6 +1165,7 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
     </div>
     <div class="empty" id="empty" hidden></div>
   </div>
+  <section class="status" id="pace" role="tabpanel" aria-labelledby="tab-pace" hidden></section>
   <section class="status" id="status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
   <section class="status" id="hub" role="tabpanel" aria-labelledby="tab-hub" hidden></section>
   <section class="status" id="queues" role="tabpanel" aria-labelledby="tab-queues" hidden></section>
@@ -1200,11 +1203,12 @@ table.hubdet td:first-child{width:11em; white-space:nowrap}
     <div class="ctabs"><div class="strip" id="aitabs" role="tablist" aria-label="Chats"></div><span class="tools"><button type="button" id="aichats" aria-haspopup="true" aria-expanded="false" title="Chats: show, hide and reorder"><svg class="i" aria-hidden="true"><use href="#i-tabs"/></svg><span class="cnt" id="aicnt">0</span></button><button type="button" id="ainew" title="New chat" aria-label="New chat">+</button></span></div>
     <div class="chatspop" id="aichatspop" hidden></div>
     <div class="aiwho" id="aiwho" hidden></div>
-    <div class="seg" id="aifilt" role="group" aria-label="Show" hidden></div>
-    <div class="aiframe"><button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
-      <div class="tmenu" id="aimenu" hidden></div>
+    <div class="aibar" id="aibar" hidden><div class="seg" id="aifilt" role="group" aria-label="Show" hidden></div>
+      <button type="button" class="tm" id="aimenubtn" title="Chat menu: Clear, Archive, Close" aria-label="Chat menu" aria-haspopup="true" aria-expanded="false" hidden>&#9660;</button>
+      <div class="tmenu" id="aimenu" hidden></div></div>
+    <div class="aiframe">
       <div class="aimsgs" id="aimsgs" aria-live="polite"></div></div>
-    <form class="aiform" id="aiform"><div class="aigrip" id="aigrip" role="separator" aria-orientation="horizontal" aria-label="Height of the message box" tabindex="0" title="Drag up to make the box taller (arrow keys too; double-click resets it)"></div><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
+    <form class="aiform" id="aiform"><div class="aigrip" id="aigrip" role="separator" aria-orientation="horizontal" aria-label="Height of the message box" tabindex="0" title="Drag up to make the box taller (arrow keys too; double-click resets it)"></div><textarea id="aiq" rows="2" maxlength="2000" placeholder="Ask Exarch AI, or list work to add" aria-label="Message"></textarea><div class="aiact"><label class="row small"><input type="checkbox" id="aiplan"> Plan</label><label class="row small" title="Off: Enter sends and Shift+Enter starts a new line. On: Enter starts a new line and Shift+Enter sends. The Send button always works."><input type="checkbox" id="aishiftsend" aria-label="Shift+Enter sends"> Shift+Enter sends</label><button type="submit" class="pbtn aisend" id="aisend">Send</button></div></form>
   </div>
   <div class="aipane" id="aidev" hidden></div>
   <div class="aipane" id="ainotes" hidden></div>
@@ -1355,8 +1359,8 @@ function pendTab(ch){
   if(manDocs.has(ch.card)) return "decisions";   // HUB220: Manual actions is a section of Decisions
   if(artDocs.has(ch.card)) return "artifacts";
   const f = String(ch.field);
-  if(ch.card === "hub" && (f === "streams.paused" || f.startsWith("streams.paused."))) return "streams";   // HUB492
-  if(ch.card === "hub" && (f === "pace" || f.startsWith("limit."))) return "hub";
+  if(ch.card === "hub" && (f === "streams.paused" || f.startsWith("streams.paused."))) return "pace";   // HUB492; HUB571: Pause projects is on the Pace tab
+  if(ch.card === "hub" && (f === "pace" || f.startsWith("limit.") || f === "exarch.model")) return "pace";   // HUB571
   if(ch.card === "hub" && f.startsWith("jobs.run.")) return "status";   // HUB506: a machine's Jobs toggle (Machines tab)
   if(f.startsWith("ans.") || f.startsWith("step.") || sessDocs.has(ch.card)) return "decisions";
   return "board";
@@ -2399,7 +2403,7 @@ function defaultModelSec(){   // the Hub tab, under the pace
     for(const sp of help.children){ const on = sp.dataset.k === k; sp.classList.toggle("on", on); sp.setAttribute("aria-hidden", String(!on)); }
     help.classList.toggle("preview", k !== cur);
   };
-  const seg = modelSeg(cur, "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderHubTab(); }, null, true);
+  const seg = modelSeg(cur, "Default stream model", m => { change({id: "hub", upd: null}, "exarch.model", m); renderPaceTab(); }, null, true);
   [...seg.children].forEach((b, i) => {
     const k = MODELS[i]; b.setAttribute("aria-describedby", "model-help");
     b.addEventListener("pointerenter", () => say(k)); b.addEventListener("focus", () => say(k)); b.addEventListener("blur", () => say(cur));
@@ -4637,7 +4641,7 @@ function tickAgo(host){
 // The four tabs drawn from export/status.json (HUB90): Machines (an Overview of the graphs, then one card per machine
 // with its facts, its sessions and agents with their tokens, and its local work), Hub, Queues and Releases.
 function renderStatus(){
-  renderMachines(); renderHubTab(); renderQueues(); renderReleases();
+  renderMachines(); renderPaceTab(); renderHubTab(); renderQueues(); renderReleases();
 }
 // The page checks for changes in the background: a tab is only rebuilt when what it shows has changed, and then keeps
 // its place on the page (it used to jump to the top on every refresh, HUB40). The ages count on in place.
@@ -5011,7 +5015,7 @@ function streamsPausedNow(){ return streamsPausedOf(streamsPauseNow(), streamsPa
 function streamsPausedSet(v, k){
   if(readOnly){ toast("This view is read-only."); return; }
   change({id: "hub", upd: null}, k ? "streams.paused." + k : "streams.paused", v === true);
-  renderStreams(); renderSyncPop();
+  renderPaceTab(); renderStreams(); renderSyncPop();
   const b = document.getElementById(k ? "streams-pause-" + k : "streams-pause"); if(b) b.focus({preventScroll:true});
 }
 // HUB492: which pause changes of this page are still on their way: {all: bool, keys: Set of project keys}
@@ -5024,8 +5028,8 @@ function streamsPausePending(){
   }
   return {all, keys};
 }
-// the Streams tab's pause controls, one per project and one for every project: separate from the Pace, which keeps
-// its limits and everything else as set. HUB492: a table below the Gantt (project, state, streams, a switch), a row
+// the Pace tab's pause controls (HUB571; they were the Streams tab's), one per project and one for every project: separate from the Pace, which keeps
+// its limits and everything else as set. HUB492: a table (project, state, streams, a switch), a row
 // on its way carries the syncing sheen, "Pause all projects" at the frame's bottom right.
 function streamsPauseBox(){
   const keys = streamsPauseKeys(), st = streamsPauseNow(), sp = streamsPausedOf(st, keys), every = sp.every, some = sp.list.length > 0;
@@ -5041,7 +5045,6 @@ function streamsPauseBox(){
         "aria-checked":String(p), "aria-label":"Pause " + pname2(k) + " streams", title:(going ? (p ? "Pausing " : "Resuming ") : p ? "Resume " : "Pause ") + pname2(k) + " streams",
         onclick:() => streamsPausedSet(!p, k)}, el("span",{class:"knob"})))); });
   return el("section",{class:"spause" + (some ? " paused" : ""), "aria-labelledby":"spause-h"},
-    el("h3",{id:"spause-h"}, "Pause projects"),
     el("p",{class:"note"}, "A paused project starts no new stream or card build and its Lead starts none, whatever the Pace allows; streams already running finish their work. The Pace and its limits stay as set."),
     el("table",{class:"sptable"},
       el("thead",{}, el("tr",{}, el("th",{scope:"col", class:"spdot"}, "State"), el("th",{scope:"col"}, "Project"), el("th",{scope:"col", class:"spn"}, "Streams"), el("th",{scope:"col", class:"spsw"}, "Paused"))),
@@ -5051,11 +5054,11 @@ function streamsPauseBox(){
       el("button",{type:"button", id:"streams-pause", class:"pbtn" + (pend.all ? " pending" : ""), disabled:readOnly ? true : null, "aria-pressed":String(every),
         onclick:() => streamsPausedSet(!every)}, every ? "Resume all projects" : "Pause all projects")));
 }
-// HUB492: the Pace note under the Streams Gantt, with the live Pace's name and a link to the Exarch tab
+// HUB492: the Pace note under the Streams Gantt, with the live Pace's name and a link to the Pace tab (HUB571)
 function streamsPaceNote(){
   const pace = usageNow().pace, pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
   return el("p",{class:"note sppace"}, "The Pace is " + pname + ": it sets how many streams may run when they are not paused. ",
-    el("a",{href:"#hub", title:"Change the Pace in the Exarch tab", onclick:ev => { ev.preventDefault(); showTab("hub"); }}, "Change the Pace in the Exarch tab"));
+    el("a",{href:"#pace", title:"Change the Pace or pause projects in the Pace tab", onclick:ev => { ev.preventDefault(); showTab("pace"); }}, "Change the Pace or pause projects in the Pace tab"));
 }
 var streamsInfoOpen = false;   // HUB492: the Streams legend's info stays open across the tab's redraws
 function usageNow(){
@@ -5178,7 +5181,7 @@ function extraBudgetInput(u){
   const inp = el("input",{type:"number", id:"limit-extra", min:"0", max:"5000", step:"1", value:String(extraBudget(u) || ""), placeholder:"not set",
     class:"budgetin", "aria-label":"Usage credits budget in US dollars (0 = not set)", disabled:readOnly ? true : null,
     onchange:ev => { const v = Math.max(0, Math.min(5000, Math.round(Number(ev.target.value) || 0)));
-      if(v !== extraBudget(hubStatus && hubStatus.usage)) change({id: "hub", upd: null}, "limit.extra", v); renderHubTab(); }});
+      if(v !== extraBudget(hubStatus && hubStatus.usage)) change({id: "hub", upd: null}, "limit.extra", v); renderPaceTab(); }});
   return el("label",{class:"budget"}, "Budget $", inp);
 }
 function extraLine(x){
@@ -5505,13 +5508,13 @@ function usageSection(host){
   const {u, pace, wins} = usageNow();
   const rw = usageRunway(u), cr = usageCredits(u), ex = usageExtra(u);
   addKids(host, el("h2",{}, "Pace"),
-    el("div",{class:"pacelim"}, paceSelector(pace, "hub"), paceAutoHint(u, pace), limitsSection(), ...defaultModelSec()),   // HUB395: the limits and the default model under the pace
+    el("div",{class:"pacelim"}, paceSelector(pace, "pace"), paceAutoHint(u, pace), limitsSection(), ...defaultModelSec()),   // HUB395: the limits and the default model under the pace
     el("h2",{}, "Usage"),
     el("h3",{}, "Budget"),
     budgetPanel(u, wins, cr, ex, pace),   // HUB437: one curve of the whole budget, then the Sync popup's breakdown
     ex ? el("div",{class:"row small"}, extraBudgetInput(u)) : null,
     el("div",{class:"ubreak"}, ...usageBreakdownRows(usageFigures())),
-    el("h2",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's
+    el("h2",{id:"spause-h"}, "Pause projects"), streamsPauseBox());   // HUB571: from the Streams tab; the frame is labelled by this heading
 }
 // HUB210: the hub dropped the pace to Conservative by itself when the API credits started being used; said under the
 // pace until one is picked again (the export's pace_auto is then gone)
@@ -5572,8 +5575,8 @@ function paceSparks(x, y){
 }
 // HUB175: the pace as one segmented control; the help below it says what the hovered (or focused) pace does, and goes
 // back to the chosen one's when the pointer or focus leaves
-function paceSelector(pace, where){   // HUB332: where = "hub" (the Hub tab) or "syncpop" (the Sync popup): its own help id
-  where = where === "syncpop" ? "syncpop" : "hub";
+function paceSelector(pace, where){   // HUB332: where = "pace" (the Pace tab, HUB571) or "syncpop" (the Sync popup): its own help id
+  where = where === "syncpop" ? "syncpop" : "pace";
   const helpId = "pace-help-" + where;
   const desc = k => PACES.find(x => x[0] === k) || PACES[1];
   // HUB257: all three texts stay in the box (one cell), only the hovered one visible: its height never changes
@@ -5588,7 +5591,7 @@ function paceSelector(pace, where){   // HUB332: where = "hub" (the Hub tab) or 
   const back = () => say(pace);
   const group = el("div",{class:"pacesel", role:"group", "aria-label":"Development pace"}, ...PACES.map(([k, name]) => {
     const b = el("button",{type:"button", "data-k":k, "aria-pressed":String(k === pace), "aria-describedby":helpId,
-      onclick:(e)=>{ if(k === "turbo") paceSparks(e.clientX, e.clientY); if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderHubTab(); renderSyncPop();
+      onclick:(e)=>{ if(k === "turbo") paceSparks(e.clientX, e.clientY); if(k !== pace) change({id: "hub", upd: null}, "pace", k); renderPaceTab(); renderSyncPop();
         const again = document.querySelector('#' + where + ' .pacesel button[data-k="' + k + '"]'); if(again) again.focus({preventScroll:true}); }}, name);
     b.addEventListener("pointerenter", () => say(k));
     b.addEventListener("focus", () => say(k));
@@ -5609,7 +5612,7 @@ function limitsSection(){   // HUB388: the chosen pace's own limits, drawn besid
   const rows = HUB_LIMITS.map(L => {
     const id = "limit-" + L.k;
     const sel = el("select",{id, "aria-describedby":id + "-what", disabled:readOnly ? true : null,
-      onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits(pace)[L.k]) change({id: "hub", upd: null}, "limit." + pace + "." + L.k, v); renderHubTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
+      onchange:ev => { const v = Number(ev.target.value); if(v !== hubLimits(pace)[L.k]) change({id: "hub", upd: null}, "limit." + pace + "." + L.k, v); renderPaceTab(); const back = document.getElementById(id); if(back) back.focus({preventScroll:true}); }});
     for(let v = L.min; v <= L.max; v++) sel.append(el("option",{value:String(v), selected:v === lim[L.k] ? true : null}, String(v) + (v === limitDef(L, pace) ? " (default)" : "")));
     const lifted = (L.k === "streams" || L.k === "coord" || L.k === "drawn") && pace === "turbo";   // HUB174, HUB196, HUB292
     return el("div",{class:"limrow" + (lifted ? " lifted" : "")},
@@ -5730,9 +5733,17 @@ function sectionPanels(host, wide){
     cur.append(k);
   }
 }
+// HUB571 (the user, 2026-11-27): the Pace tab, left of Machines: the Pace with its limits and the default stream model,
+// the usage, and the Pause projects table (from the Exarch and Streams tabs)
+function renderPaceTab(){
+  rebuildPanel("pace", ["p", loaded, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), defaultModel(), readOnly,
+    streamsNow(), streamsPausedList(), streamsPauseKeys(), projectStates().map(r => [r.k, r.st.k, r.n, r.st.reason]), (p => [p.all, [...p.keys].sort()])(streamsPausePending())], host => {
+    usageSection(host);      // HUB172: the pace first; HUB193: the limits inside it, right under the pace
+    sectionPanels(host, ["Pause projects"]);
+  });
+}
 function renderHubTab(){
-  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.usage, usageNow().pace, hubLimits(), hubLimits("conservative"), hubLimits("moderate"), hubLimits("turbo"), hubStatus && hubStatus.exarch && hubStatus.exarch.runs, defaultModel(), readOnly, hubStatus && hubStatus.triage], host => {
-    usageSection(host);      // HUB172: tokens and pace first; HUB193: the limits inside it, right under the pace
+  rebuildPanel("hub", ["h", loaded, hubStatus && hubStatus.facts, hubStatus && hubStatus.jobs, cards.size, hubStatus && hubStatus.exarch && hubStatus.exarch.runs, readOnly, hubStatus && hubStatus.triage], host => {
     const {facts, fact} = statusFacts();
     // the published App (this page) is behind the hub's own: the primary node publishes it by itself and says here
     // what stops it (T50)
@@ -5752,10 +5763,11 @@ function renderHubTab(){
       + (queued.length ? queued.length + " queued: " + queued.map(j => j.kind + (j.card ? " " + j.card : "")).join(", ") + " (the Queues tab orders them)."
       : "No hub job is queued.")));
     jobTables(host, hubJobs, {h: "h3", running: "Running hub jobs", finished: "Finished hub jobs"});
+    host.append(el("h2",{}, "Exarch AI runs"), runsTable(exarchNow().runs));   // HUB332: the same table as the Sync popup's
     host.append(el("div",{class:"discon"}, el("button",{type:"button", class:"dangerbtn", id:"signout",
       title:"Forget this browser's connection to the board",
       onclick:() => { if(confirm("Disconnect this browser from the board? The connection details have to be entered again to reconnect.")) disconnect(); }}, "Disconnect")));
-    sectionPanels(host, ["Hub jobs"]);     // HUB439
+    sectionPanels(host, ["Hub jobs", "Exarch AI runs"]);     // HUB439
   });
 }
 
@@ -6800,7 +6812,7 @@ function drawStreams(host){
   host.append(el("div",{class:"ghead"}, el("h2",{}, "Streams"), info));
   if(!streamsNow().n) host.append(el("p",{class:"note nostreams", role:"status"}, "No streams active" + (rows.length ? ": the rows below are queued cards, not a running plan." : ".")));   // HUB457
   const sessions = () => { graphWin = graphWindow(); try { return sessionsSection(); } finally { graphWin = null; } };   // HUB177: one window for every rate
-  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams active or queued" + (filt.j ? " with this project filter." : ".")), streamsPaceNote(), streamsPauseBox()); host.append(...sessions()); return; }
+  if(!rows.length){ host.append(el("p",{class:"note"}, "No streams active or queued" + (filt.j ? " with this project filter." : ".")), streamsPaceNote()); host.append(...sessions()); return; }
   const hour = t => Math.floor(t / G_H) * G_H;
   const t0 = hour(now - 3 * G_H);
   const end = rows.reduce((m, r) => r.bars.reduce((x, b) => Math.max(x, b.e), m), now);
@@ -6841,7 +6853,7 @@ function drawStreams(host){
   }
   inner.append(el("span",{class:"gline", style:"left:calc(var(--glw) + " + X(now) + "px)"}, el("span",{}, "now")));
   const wrap = el("div",{class:"gwrap", "data-scale":scaleKey, onscroll:() => gTip(null, "")}, inner);
-  host.append(wrap, streamsPaceNote(), streamsPauseBox(), ...sessions());   // HUB479, HUB492: the Pace note and the pause table below the Gantt
+  host.append(wrap, streamsPaceNote(), ...sessions());   // HUB479, HUB492: the Pace note below the Gantt (HUB571: the pause table is on the Pace tab)
   wrap.scrollLeft = keepX != null ? keepX : Math.max(0, X(now) - 2 * sc.pxh * (scaleKey === "day" ? 1 : 12));
 }
 
@@ -7016,7 +7028,7 @@ document.addEventListener("touchmove", ev => { if(gDrag && gDrag.active) ev.prev
 document.addEventListener("contextmenu", ev => { if(gDrag) ev.preventDefault(); });   // nor opens the long-press menu
 
 // ---------- tabs (the address's #board / #status picks one, so a bookmark opens there)
-const TABS = ["board", "gantt", "streams", "decisions", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
+const TABS = ["board", "gantt", "streams", "decisions", "pace", "status", "hub", "queues", "releases", "artifacts"];   // the tab order (the user, 2026-11-17, HUB90; Gantt beside Board, HUB105)
 // ---------- published artifacts of this work (export/board.json `artifacts`: {id: {t, url, kind, card, session, pub,
 // del}}): pages a Claude session published. The user marks one for deletion here; the coordinator session deletes it.
 const artDocs = new Map();
@@ -8040,8 +8052,8 @@ function renderSyncPop(){
     const two = [wk, five].filter(Boolean);
     if(two.length && at >= 0) usage.splice(at, 1, ...two.map(row));
     else if(two.length) usage.splice(0, 0, ...two.map(row)); }
-  // HUB495: one frame and table as the Streams tab's Pause projects: state dot (its hover is the reason; a click opens the Streams tab), project, streams
-  const go = () => { syncPopOpen(false); showTab("streams"); };
+  // HUB495: one frame and table as the Pace tab's Pause projects: state dot (its hover is the reason; a click opens the Pace tab, HUB571), project, streams
+  const go = () => { syncPopOpen(false); showTab("pace"); };
   const prows = projectStates().map(r => el("tr",{class:"spproj", "data-project":r.k},
     el("td",{class:"spdot"}, projectDot(r, go)), el("th",{scope:"row", class:"spname"}, r.name), el("td",{class:"spn"}, String(r.n))));
   const rows = prows.length ? [el("div",{class:"spplain"},   // HUB535: a plain table, not the blue framed look
@@ -8057,7 +8069,7 @@ function renderSyncPop(){
   if(s.state === "unseen") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + ": the node gave no sign of life. Its supervisor starts a node that stopped again by itself; only after the PC itself restarted is the node started there."));
   if(s.state === "stalled") ex.push(el("div",{class:"row small"}, ico("compass", "wy"), exarchHealthText(s.h) + ". Nothing to do here: the next tick follows a node update by itself, a stuck node restarts itself after 30 min, and the primarch Lead is told what holds it up."));
   const kids = [el("div",{class:"phead"}, el("h2",{}, "Sync"), el("button",{type:"button", class:"pclose", "aria-label":"Close", onclick:() => syncPopOpen(false)}, "✕")),
-    popSec("Exarch AI", ...ex), popSec("Status", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]), el("p",{class:"note spstreams"}, el("a",{href:"#streams", id:"streamslink", title:"Pause or resume projects in the Streams tab", onclick:ev => { ev.preventDefault(); go(); }}, "Open the Streams tab")))];
+    popSec("Exarch AI", ...ex), popSec("Status", sync), popSec("Usage", ...usage), popSec("Projects", ...syncPopExtra(), ...(rows.length ? rows : [el("p",{class:"note"}, "No projects in the export yet.")]))];   // HUB571: no link at the bottom: the Pace link above opens the Pace tab
   // HUB458: the board refreshes often and the popup used to be torn down and rebuilt each time, so its text (the "change it in the Hub tab" link) flashed;
   // the nodes stay as they are unless what they show changed (every handler closes over values that are part of the markup)
   const sig = kids.map(k => k.outerHTML).join("");
@@ -8085,7 +8097,7 @@ function syncPopExtra(){
   const x = hubStatus && hubStatus.exarch, held = x && (Array.isArray(x.held_wakes) ? x.held_wakes.length : Number(x.held_wakes));
   const pname = (PACES.find(x => x[0] === pace) || PACES[1])[1];
   const over = pace === "turbo" || !(u && u.streams_live != null) ? null : streamsOver(live, Number(allowed));
-  return [kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#hub", id:"pacelink", title:"Change the Pace in the Exarch tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("hub"); }}, "change it in the Exarch tab"))),
+  return [kv("Pace", el("span",{}, pname + " · ", el("a",{href:"#pace", id:"pacelink", title:"Change the Pace in the Pace tab", onclick:ev => { ev.preventDefault(); syncPopOpen(false); showTab("pace"); }}, "change it in the Pace tab"))),
     USAGE_STAGES[st] ? kv("Stage", USAGE_STAGES[st]) : null,
     kv("Streams in use", over ? el("span",{class:"row " + over.cls, title:"Over the Pace by " + over.by}, ico("alert-triangle", over.cls, "Over the Pace by " + over.by), inUse) : inUse, {title: [streamsNow().list.map(s => s.name + " (" + s.card + ")").join(", "), u && u.allowance ? "Now: " + u.allowance : ""].filter(Boolean).join("\n") || null}),
     held > 0 ? kv("Lead wakes held by the Pace", String(held)) : null];
@@ -8273,7 +8285,7 @@ function aiDrawChat(c, row, leads){
   const hid = hiddenCount(ai.chats, leads, aiGroup()), cnt = $("#aicnt");
   cnt.textContent = String(hid); $("#aichats").title = "Chats: show, hide and reorder (" + hid + " hidden)";
   $("#aichats").setAttribute("aria-expanded", String(ai.pop));
-  const mb = $("#aimenubtn"); mb.hidden = !c; mb.classList.toggle("open", !!ai.menu); mb.setAttribute("aria-expanded", String(!!ai.menu));
+  $("#aibar").hidden = !c; const mb = $("#aimenubtn"); mb.hidden = !c; mb.classList.toggle("open", !!ai.menu); mb.setAttribute("aria-expanded", String(!!ai.menu));
   aiDrawMenu(c); aiDrawChatsPop(leads); aiDrawFilt(c);
   const who = $("#aiwho");
   who.textContent = !c ? "" : c.kind === "exarch" ? "Talking to Exarch: the Hub and Exarch AI themselves"
@@ -8879,7 +8891,9 @@ $("#aichats").addEventListener("click", () => { ai.pop = !ai.pop; aiDraw(); });
 $("#aimenubtn").addEventListener("click", ev => { ev.stopPropagation(); ai.menu = !ai.menu; ai.confirm = ""; aiDraw(); });
 for(const t of ["chat", "leads", "arch", "dev", "notes"]) $("#aitab-" + t).addEventListener("click", () => { ai.tab = t; ai.menu = false; ai.confirm = ""; aiDraw(); });
 $("#aiform").addEventListener("submit", ev => { ev.preventDefault(); const t = $("#aiq").value.trim(), c = aiConv(); if(!t || !c || c.msgs.some(m => m.wait && !m.late)) return; $("#aiq").value = ""; aiAsk(t); });
-$("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
+(() => { const k = "hub.ai.shiftsend", b = $("#aishiftsend"); try{ b.checked = localStorage.getItem(k) === "1"; }catch(e){}   // HUB525: a browser setting only
+  b.addEventListener("change", () => { try{ localStorage.setItem(k, b.checked ? "1" : "0"); }catch(e){} }); })();
+$("#aiq").addEventListener("keydown", ev => { if(ev.key === "Enter" && ev.shiftKey === $("#aishiftsend").checked){ ev.preventDefault(); $("#aiform").requestSubmit(); } });
 // ---------- HUB338: encrypted chats (docs/EXARCH.md section L, mock-ups section 6). This device makes its own
 // RSA-OAEP key pair with WebCrypto; the private key is not extractable and stays in this browser's IndexedDB. Each
 // chat has an AES-256-GCM content key, wrapped by the node for itself and every paired device, so the board data holds
