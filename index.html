@@ -824,6 +824,8 @@ svg.burn{display:block; width:100%; height:auto} .ubreak{display:grid; gap:3px; 
 .gbar.dashed{background:color-mix(in srgb, var(--gc) 18%, transparent); border:2px dashed var(--gc)}
 .gbar.overdue{box-shadow:inset -4px 0 0 var(--p1)}
 .gbar.held{border-right:3px dotted var(--p1); border-top-right-radius:0; border-bottom-right-radius:0}   /* HUB213: blocked outside the plan: no planned end */
+.gbar.stale{outline:2px dashed #d99a00; outline-offset:-2px}   /* HUB557: held, no update for over 15 min */
+.lab.stale{color:#8a5a00; border:1px dashed #d99a00}
 .gbar.idle{opacity:.45; background-image:repeating-linear-gradient(135deg, transparent 0 6px, rgba(127,127,127,.35) 6px 8px)}   /* HUB487: in Development, no live stream */
 .gbar:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .gms{position:absolute; top:calc(var(--grow) / 2 - 7px); width:14px; height:14px; margin-left:-7px; transform:rotate(45deg); background:var(--t-rel); border:1px solid var(--surface); padding:0; cursor:pointer}
@@ -1009,6 +1011,12 @@ body.dwresizing, body.dwresizing *{cursor:ew-resize !important; user-select:none
 .aimsg.plan{border-color:var(--accent)}
 .aimsg.wait{color:var(--muted); font-style:italic}
 .aimsg .meta{white-space:normal}
+.aimsg .md{white-space:normal; min-width:0}   /* HUB523: rendered markdown: blocks carry their own spacing */
+.aimsg .md > *{margin:0 0 6px} .aimsg .md > :last-child{margin-bottom:0}
+.aimsg .md ul,.aimsg .md ol{padding-left:1.3em} .aimsg .md p{white-space:pre-wrap}
+.aimsg .md .mdh{font-weight:700; font-size:.9rem}
+.aimsg .md code{font-family:ui-monospace,Consolas,monospace; font-size:.8rem; background:var(--sunk); padding:0 3px; border-radius:3px; overflow-wrap:anywhere}
+.aimsg .md pre{overflow-x:auto; background:var(--sunk); padding:6px 8px; border-radius:6px; white-space:pre} .aimsg .md pre code{background:none; padding:0; overflow-wrap:normal}
 .factdo{margin-top:2px; white-space:normal} .nowrun th[scope=row]{text-align:left; white-space:nowrap}   /* HUB387 */
 .aimsg .cmark{font-size:.7rem} .aimsg .undo{margin-left:8px}   /* HUB390 */
 .aimsg .mtime{justify-self:end; font-size:.7rem; font-variant-numeric:tabular-nums} .aimsg.user .mtime{display:block; text-align:right}   /* HUB381 */
@@ -1757,8 +1765,8 @@ function actSplit(t){
 // activity = an activity entry, a column move, an edit, or a job for the card (one queued or running = busy).
 // Worked out here from the data already read, so it is current without waiting for the board.
 const IDLE_MIN = 60, WORKING = ["prog", "built", "test"], JOB_BUSY = ["queued", "claimed", "running"];
-function idleMin(c){
-  if(!WORKING.includes(c.col) || c.blk) return 0;      // a blocked card says why it waits: not idle
+function quietMin(c, cols, limit){   // minutes since the card's last activity when over `limit`, else 0
+  if(!cols.includes(c.col) || c.blk) return 0;         // a blocked card says why it waits: not idle
   let last = 0;
   const seen = t => { const v = Date.parse(t || ""); if(v > last) last = v; };
   for(const j of (hubStatus && hubStatus.jobs) || []){
@@ -1772,7 +1780,16 @@ function idleMin(c){
   for(const a of Array.isArray(c.log) ? c.log : []) if(a) seen(a.ts);
   if(!last) return 0;
   const ms = Date.now() - last;
-  return ms > IDLE_MIN*60000 ? Math.floor(ms/60000) : 0;
+  return ms > limit*60000 ? Math.floor(ms/60000) : 0;
+}
+function idleMin(c){ return quietMin(c, WORKING, IDLE_MIN); }
+// HUB557: a held Development card (a stream holds it, not blocked) with no update for over 15 minutes (the rule of
+// HUB556, `pm.py check` "progress:"); between 15 and 60 minutes only, an hour or more is the Idle label.
+const PROGRESS_STALE_MIN = 15;
+function staleMin(c){
+  if(c.col !== "prog" || !streamOf(c)) return 0;
+  const m = quietMin(c, ["prog"], PROGRESS_STALE_MIN);
+  return m && m <= IDLE_MIN ? m : 0;
 }
 function idleText(m){
   if(m >= 1440) return "💤 Idle " + Math.floor(m/1440) + "d";
@@ -2134,6 +2151,7 @@ function cardEl(c, full=false){
     el("span",{class:"id"}, c._new ? "NEW" : c.id),
     artTool(c) ? el("span",{class:"lab arttool", title:ART_TOOL[artTool(c)][1]}, ART_TOOL[artTool(c)][0]) : null,
     ...(full ? flags : []),
+    staleMin(c) ? el("span",{class:"lab stale", title:"No update for "+staleMin(c)+" min"}, "Stale "+PROGRESS_STALE_MIN+"m ("+staleMin(c)+" min)") : null,
     idleMin(c) ? el("span",{class:"lab idle", title:"No activity entry, move, edit or job for "+fmtDur(idleMin(c)*60000)}, idleText(idleMin(c))) : null,
     c._pending && full ? el("span",{class:"lab pend", title:"Your change is kept here until the board shows it"}, c._pending+(c._pending===1?" change":" changes")+" sent, waiting for the board") : null,
     el("span",{class:"pri"}, c.pri?PRI[c.pri]:""),
@@ -2850,7 +2868,7 @@ function cardSig(c){
   let j; try{ j = JSON.stringify(c); }catch(e){ return null; }   // null: never reused
   const ep = epics.get(c.epic), eta = etaText(c);
   return [j, readOnly ? 1 : 0, picked.has(c.id) ? 1 : 0, cards.has(c.id) ? 1 : 0, ep ? [ep.name, ep.hue, ep.blurb || ""].join("") : "", cardKind(c), artTool(c),
-    syncIssue(c), refusedNote(c.id), idleMin(c), eta ? eta.text + eta.late : "", c.col === "prog" ? colTip(c) : ""].join("");
+    syncIssue(c), refusedNote(c.id), idleMin(c), staleMin(c), eta ? eta.text + eta.late : "", c.col === "prog" ? colTip(c) : ""].join("");
 }
 // puts `want` (nodes) into `parent` in that order with the fewest moves; anything else in `parent` is removed
 function reconcileKids(parent, want){
@@ -2937,7 +2955,10 @@ function render(){
   markSyncTabs(); renderSyncOnly();   // HUB68: the count itself is the sync pill beside the checked time
   if(onBoard && focusId && !openId){ const f = document.querySelector('.card[data-id="'+CSS.escape(focusId)+'"]'); if(f) f.focus({preventScroll:true}); }
   renderSelBar();
-  renderModal();
+  // HUB577: a refresh never redraws the open card while it is being edited (unsaved changes, or a field in it has the focus):
+  // it would move the scroll, drop the focus and lose typed text. The card is redrawn when the focus leaves, once nothing is unsaved.
+  if(openId && (edDirty() || (ae && ae.closest && ae.closest("#modal") && /^(INPUT|SELECT)$/.test(ae.tagName)))){ if(!edDirty()) render.later = true; }
+  else renderModal();
   board.style.minHeight = "";
   if(window.scrollX !== px || window.scrollY !== py) window.scrollTo(px, py);
 }
@@ -4004,7 +4025,7 @@ function autoScroll(board, box){
 }
 autoScroll($("#board"), () => $("#board"));
 autoScroll($("#gantt"), () => $("#gantt .gwrap"));
-document.addEventListener("focusout", ev=>{ if(ev.target.tagName==="TEXTAREA") setTimeout(()=>{ if(render.later) render(); }, 0); });
+document.addEventListener("focusout", ev=>{ if(/^(TEXTAREA|INPUT|SELECT)$/.test(ev.target.tagName)) setTimeout(()=>{ if(render.later) render(); }, 0); });
 
 // ---------- processor and memory use over time (status/load-<machine>.json, one per machine, written by its node)
 const usage = new Map(), usageEls = new Map();   // machine -> its history / {sig, node}: nothing is redrawn without a change
@@ -6846,7 +6867,7 @@ function drawStreams(host){
       const tip = what + "\n" + gTipText(Object.assign({}, it, {s: b.s, e: b.e})) + "\nEstimate: " + est;
       const hover = { onpointerenter: ev => gTip(ev, tip), onpointermove: ev => gTip(ev, tip), onpointerleave: () => gTip(null, ""),
         onfocus: ev => gTip(ev, tip), onblur: () => gTip(null, ""), onclick: () => { gTip(null, ""); openCard(c.id); } };
-      return el("button",{type:"button", class:"gbar gs" + (b.role === "now" ? "" : b.role === "idle" ? " held idle" : " planned") + (b.role === "planned" ? " pred" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : ""),
+      return el("button",{type:"button", class:"gbar gs" + (b.role === "now" ? "" : b.role === "idle" ? " held idle" : " planned") + (b.role === "planned" ? " pred" : "") + (it.dashed ? " dashed" : "") + (it.overdue ? " overdue" : "") + (b.role === "now" && staleMin(c) ? " stale" : ""),
         style:"left:" + X(b.s) + "px; width:" + w + "px" + (hue != null ? "; --h:" + hue : ""), "aria-label":tip, "data-card":c.id, ...hover}, c.id + (Number(c.estimate) > 0 ? " · " + est : ""));
     });
     inner.append(row("gstreamrow", lab, cell, {"data-stream":r.name}));
@@ -7872,13 +7893,85 @@ function aiNewChat(){
   ai.chats.push({conv: aiId(), kind: "user", lead: "", project: "", title: "", n: 0, msgs: [], hidden: false});
   ai.cur = ai.chats[ai.chats.length - 1].conv; ai.tab = "chat"; aiDraw(); $("#aiq").focus();
 }
-function aiCardText(host, text, ids){   // a card id the board knows opens that card
-  const known = new Set(ids || []);
+// >>> ai-markdown
+// HUB523: basic markdown for assistant and plan messages. Two pure steps: cmBlocks() makes a small tree of plain data
+// (text is only ever a string), and aiCardText() draws it with el() and text nodes: never an HTML string, so markup in a message is shown as text.
+function cmInline(s){
+  const out = []; let buf = "", i = 0;
+  const flush = () => { if(buf){ out.push({t:"text", v:buf}); buf = ""; } };
+  while(i < s.length){
+    const ch = s[i];
+    if(ch === "`"){
+      const j = s.indexOf("`", i + 1);
+      if(j > i + 1){ flush(); out.push({t:"code", v:s.slice(i + 1, j)}); i = j + 1; continue; }
+    } else if(ch === "["){
+      const m = /^\[([^\[\]\n]+)\]\(([^()\s]+)\)/.exec(s.slice(i));
+      if(m){
+        if(/^https?:\/\/\S+$/i.test(m[2])){ flush(); out.push({t:"a", href:m[2], kids:[{t:"text", v:m[1]}]}); }
+        else buf += m[0];   // javascript:, data: and the rest stay plain text
+        i += m[0].length; continue;
+      }
+    } else if(ch === "*" && s[i + 1] === "*"){
+      const j = s.indexOf("**", i + 2);
+      if(j > i + 2){ flush(); out.push({t:"b", kids:cmInline(s.slice(i + 2, j))}); i = j + 2; continue; }
+    } else if((ch === "*" || ch === "_") && s[i + 1] !== ch && s[i + 1] !== " " && s[i + 1] !== undefined && !(ch === "_" && /\w/.test(s[i - 1] || ""))){
+      let j = i + 1;
+      while((j = s.indexOf(ch, j)) > 0 && (s[j - 1] === " " || (ch === "_" && /\w/.test(s[j + 1] || "")))) j++;
+      if(j > i + 1){ flush(); out.push({t:"i", kids:cmInline(s.slice(i + 1, j))}); i = j + 1; continue; }
+    }
+    buf += ch; i++;
+  }
+  flush();
+  return out;
+}
+function cmBlocks(text){
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n"), out = [], item = /^\s*([-*]|\d+\.)\s+(\S.*)$/; let para = [], i = 0;
+  const endPara = () => { if(para.length){ out.push({t:"p", kids:cmInline(para.join("\n"))}); para = []; } };
+  while(i < lines.length){
+    const ln = lines[i];
+    if(/^```/.test(ln)){
+      const j = lines.findIndex((x, k) => k > i && /^```\s*$/.test(x));
+      if(j > i){ endPara(); out.push({t:"pre", v:lines.slice(i + 1, j).join("\n")}); i = j + 1; continue; }   // unclosed: stays literal
+    }
+    let m = /^(#{1,3})\s+(\S.*)$/.exec(ln);
+    if(m){ endPara(); out.push({t:"h", kids:cmInline(m[2])}); i++; continue; }
+    m = item.exec(ln);
+    if(m){
+      endPara(); const ol = /\d/.test(m[1]), items = [];
+      while(i < lines.length && (m = item.exec(lines[i])) && /\d/.test(m[1]) === ol){ items.push(cmInline(m[2])); i++; }
+      out.push({t: ol ? "ol" : "ul", items}); continue;
+    }
+    if(!ln.trim()) endPara(); else para.push(ln);
+    i++;
+  }
+  endPara();
+  return out;
+}
+// <<< ai-markdown
+function aiIdNodes(text, known){   // card ids in plain text become the open-card buttons
+  const out = [];
   for(const part of String(text || "").split(/\b([A-Z]{1,6}-?\d{1,5})\b/)){
     if((known.has(part) || /^[A-Z]{1,6}-?\d{1,5}$/.test(part)) && raw.has(part))
-      host.append(el("button",{type:"button", class:"aicard", title:"Open " + part, onclick:() => openCard(part)}, part));
-    else host.append(part);
+      out.push(el("button",{type:"button", class:"aicard", title:"Open " + part, onclick:() => openCard(part)}, part));
+    else if(part) out.push(part);
   }
+  return out;
+}
+function cmInlineNodes(kids, known){
+  return kids.map(k => k.t === "text" ? aiIdNodes(k.v, known)
+    : k.t === "code" ? el("code",{}, k.v)
+    : k.t === "a" ? el("a",{href:k.href, target:"_blank", rel:"noopener noreferrer"}, cmInlineNodes(k.kids, known))
+    : el(k.t === "b" ? "strong" : "em", {}, cmInlineNodes(k.kids, known))).flat();
+}
+function aiCardText(host, text, ids, md){   // a card id the board knows opens that card; md: draw basic markdown (assistant and plan messages)
+  const known = new Set(ids || []);
+  if(!md){ host.append(...aiIdNodes(text, known)); return host; }
+  host.classList.add("md");
+  for(const b of cmBlocks(text))
+    host.append(b.t === "pre" ? el("pre",{}, el("code",{}, b.v))
+      : b.t === "h" ? el("div",{class:"mdh"}, cmInlineNodes(b.kids, known))
+      : b.t === "p" ? el("p",{}, cmInlineNodes(b.kids, known))
+      : el(b.t, {}, b.items.map(it => el("li",{}, cmInlineNodes(it, known)))));
   return host;
 }
 // ---- Exarch AI's state, for the compass, the Sync indicator and the Sync popup
@@ -8318,18 +8411,18 @@ function aiDrawMenu(c){
   if(m.hidden) return;
   const who = c.kind === "lead" ? c.lead : c.kind === "exarch" ? "Exarch" : "";
   const item = (k, icon, name, text) => el("button",{type:"button", class:"it", onclick:() => { ai.confirm = k; aiDraw(); }}, el("span",{"aria-hidden":"true"}, icon), el("b",{}, name), el("span",{class:"small mu"}, text));
-  setKids(m, item("clear", "🧹︎", "Clear", "Empty this chat and keep the tab. Nothing is kept" + (who && c.kind === "lead" ? "; " + who + " keeps its notes and charter." : ".")),
-    item("archive", "🗄︎", "Archive", c.kind === "user" ? "Move this chat to Archived, with its history; no new chat opens." : "Move this chat to Archived, with its history; a fresh chat" + (who ? " with " + who : "") + " opens in its place."),
-    c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Close this chat's tab only. The chat and its history stay in the Chats list; Archive moves it to Archived.") : null,   // HUB397: Close is never offered for a Lead (or the Exarch chat)
-    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Close this chat's tab? The chat stays in the Chats list." : "Archive this chat" + (who ? " with " + who : "") + "?"),
+  setKids(m, item("clear", "🧹︎", "Clear", "Empty this chat, keep the tab."),
+    item("archive", "🗄︎", "Archive", "Keep this chat and its history in Archived."),
+    c.kind === "user" ? item("close", "\u2715\ufe0e", "Close", "Delete this chat and its history.") : null,   // HUB397/HUB528: Close is never offered for a Lead (or the Exarch chat)
+    ai.confirm ? el("div",{class:"confirm"}, el("span",{}, ai.confirm === "clear" ? "Clear this chat" + (who ? " with " + who : "") + "? This cannot be undone." : ai.confirm === "close" ? "Delete this chat and its history?" : "Archive this chat" + (who ? " with " + who : "") + "?"),
       el("button",{type:"button", class:"pbtn", onclick:() => aiChatAct(c, ai.confirm)}, ai.confirm === "clear" ? "Clear" : ai.confirm === "close" ? "Close" : "Archive"),
       el("button",{type:"button", onclick:() => { ai.confirm = ""; aiDraw(); }}, "Cancel")) : null);
 }
 function aiChatAct(c, act){   // Clear empties the chat; Archive keeps it (Archived) and opens a fresh one in its place; Close (custom chats only) just closes its tab
-  if(act === "close"){   // HUB397: only closes: the chat stays in the Chats list with its history, nothing is archived, the node keeps its copy
+  if(act === "close"){   // HUB528: Close deletes a custom chat and its history (nothing kept, nothing in Archived); the node drops its copy
     if(c.kind !== "user") return;
-    if(c.msgs.length){ c.hidden = true; }
-    else{ const k = ai.chats.indexOf(c); if(k >= 0) ai.chats.splice(k, 1); if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: "clear"}); }   // an empty one has nothing to keep
+    const k = ai.chats.indexOf(c); if(k >= 0) ai.chats.splice(k, 1);
+    if(conn && !readOnly) change({id: "exarch", upd: null}, "exarch.chat", {conv: c.conv, act: "clear"});
     ai.cur = ""; ai.menu = false; ai.confirm = ""; aiDraw(); return;
   }
   if(act === "archive" && c.msgs.length) ai.arch.unshift(Object.assign({}, c, {archived: new Date().toISOString(), msgs: c.msgs.filter(m => !m.wait)}));
@@ -8439,13 +8532,13 @@ function aiMsg0(c, m){
   const box = el("div",{class:"aimsg assistant" + (m.plan ? " plan" : "")});
   if(m.plan){
     const p = m.plan;
-    box.append(el("div",{class:"row"}, el("b",{}, "Plan · " + String(p.title || "")), aiMeta(m)), aiCardText(el("span",{class:"mu"}), p.text || m.text, m.cards));
+    box.append(el("div",{class:"row"}, el("b",{}, "Plan · " + String(p.title || "")), aiMeta(m)), aiCardText(el("div",{class:"mu"}), p.text || m.text, m.cards, true));
     const says = planSays(p); if(p.refused) box.append(el("span",{class:"small err"}, "Refused: " + String(p.refused)));
     box.append(says ? el("span",{class:"small mu"}, says)
       : el("div",{class:"row"}, el("button",{type:"button", class:"pbtn", onclick:() => aiTap(c, m, "plan", p, "approve")}, "Approve"),
         el("button",{type:"button", onclick:() => aiRevise(c, m, p)}, "Revise"),
         el("button",{type:"button", onclick:() => aiTap(c, m, "plan", p, "discard")}, "Discard")));
-  } else box.append(aiCardText(el("span",{}), m.text, m.cards));
+  } else box.append(aiCardText(el("div",{}), m.text, m.cards, true));
   if(Array.isArray(m.drafts) && m.drafts.length){
     box.append(el("b",{}, "Drafts"), ...m.drafts.map(d => el("div",{class:"draft"}, d.editing ? el("input",{type:"text", class:"dedit", value:String(d.t || ""), "aria-label":"Card title", "data-item":c.conv + "/" + m.n + "/" + String(d.id || ""),
         oninput:ev => { d.t = ev.target.value; d.edited = true; }, onkeydown:ev => { if(ev.key === "Enter"){ d.t = ev.target.value; d.edited = true; d.editing = false; aiDraw(); } }}) : el("b",{}, String(d.t || "")),
